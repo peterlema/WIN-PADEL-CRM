@@ -1,36 +1,26 @@
 import { useState } from 'react'
-import { supabase } from '../supabaseClient.js'
 
-export default function Login() {
-  const [email, setEmail] = useState('')
-  const [clave, setClave] = useState('')
+export default function Login({ onLogin }) {
+  const [username, setUsername] = useState('')
+  const [pin, setPin] = useState('')
   const [error, setError] = useState('')
-  const [enviando, setEnviando] = useState(false)
+  const [busy, setBusy] = useState(false)
 
-  async function ingresar(e) {
-    e.preventDefault()
+  async function submit(event) {
+    event.preventDefault()
+    if (!/^\d{6}$/.test(pin)) { setError('Ingresá un PIN de seis dígitos.'); return }
+    setBusy(true)
     setError('')
-    setEnviando(true)
-    const { error: err } = await supabase.auth.signInWithPassword({ email, password: clave })
-    setEnviando(false)
-    if (err) setError('Email o clave incorrectos.')
+    try { await onLogin(username.trim(), pin) }
+    catch (err) { setError(err.message || 'No se pudo ingresar.') }
+    finally { setPin(''); setBusy(false) }
   }
 
-  return (
-    <main className="centro">
-      <form className="tarjeta" onSubmit={ingresar}>
-        <h1>WIN Gestión</h1>
-        <label>
-          Email
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="username" />
-        </label>
-        <label>
-          Clave
-          <input type="password" value={clave} onChange={(e) => setClave(e.target.value)} required autoComplete="current-password" />
-        </label>
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={enviando}>{enviando ? 'Ingresando…' : 'Ingresar'}</button>
-      </form>
-    </main>
-  )
+  return <main className="centro"><form className="tarjeta" onSubmit={submit}>
+    <h1>WIN Gestión</h1>
+    <label>Nombre de usuario<input value={username} onChange={e=>setUsername(e.target.value)} required autoComplete="username" /></label>
+    <label>PIN<input type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,'').slice(0,6))} required autoComplete="off" /></label>
+    {error && <p className="error" role="alert">{error}</p>}
+    <button type="submit" disabled={busy}>{busy ? 'Ingresando…' : 'Ingresar'}</button>
+  </form></main>
 }
