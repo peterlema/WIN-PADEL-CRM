@@ -46,6 +46,7 @@ export default function Administracion() {
   const [customEnd,setCustomEnd]=useState(today())
   const [report,setReport]=useState(null)
   const [previous,setPrevious]=useState(null)
+  const [control,setControl]=useState(null)
   const [loading,setLoading]=useState(false)
   const [error,setError]=useState('')
   const [detail,setDetail]=useState(null)
@@ -68,8 +69,9 @@ export default function Administracion() {
     setLoading(true);setError('')
     Promise.all([
       callApi('admin.finance',bounds),
-      callApi('admin.finance',previousBounds)
-    ]).then(([current,prior])=>{if(active){setReport(current);setPrevious(prior)}})
+      callApi('admin.finance',previousBounds),
+      section === 'control' ? callApi('admin.control',bounds) : Promise.resolve(null)
+    ]).then(([current,prior,controlReport])=>{if(active){setReport(current);setPrevious(prior);if(controlReport)setControl(controlReport)}})
       .catch(e=>{if(active){setError(e.message||'No se pudieron consultar los reportes.');setReport(null);setPrevious(null)}})
       .finally(()=>{if(active)setLoading(false)})
     return ()=>{active=false}
@@ -179,6 +181,14 @@ export default function Administracion() {
           <div className="admin-plan"><strong>Correcciones y auditoría</strong><span>Pendiente de interfaz y aprobaciones administrativas</span></div>
           <div className="admin-plan"><strong>Exportaciones</strong><span>Pendiente de migrar sin perder funciones del sistema anterior</span></div>
         </div>
+      </section>
+      <section className="admin-card">
+        <div className="admin-section-head"><h3>Turnos de caja y arqueos registrados</h3><span>Hasta 200 turnos del período</span></div>
+        <div className="admin-table-wrap"><table><thead><tr><th>Jornada</th><th>Responsable</th><th>Estado</th><th>Efectivo esperado</th><th>Contado</th><th>Diferencia</th></tr></thead><tbody>
+          {(control?.shifts||[]).map(s=><tr key={s.id}><td>{s.businessDate}</td><td>{s.responsible}</td><td>{s.status==='OPEN'?'Abierta':'Cerrada'}</td><td>{money(s.expectedCash)}</td><td>{s.countedCash===null?'—':money(s.countedCash)}</td><td>{s.cashDifference===null?'—':money(s.cashDifference)}</td></tr>)}
+          {control&&!control.shifts.length&&<tr><td colSpan={6}>No hay turnos registrados para estas fechas.</td></tr>}
+        </tbody></table></div>
+        <p className="admin-disclaimer">Efectivo esperado y arqueos reflejan registros del sistema. Todavía no equivalen a conciliación bancaria, validación de comprobantes ni cierre general de la jornada.</p>
       </section>
       <section className="admin-card"><h3>Control por período</h3>
         <div className="admin-stats">
