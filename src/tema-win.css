@@ -198,3 +198,18 @@ dialog.modal::backdrop { background: #12122bcc; }
 .subnav a.activa { background:#c43b59; }
 .win-login-card button[type="submit"], .win-bar-form>button, .win-rec-form button { background:#c43b59; }
 @media(max-width:700px){ .cal {padding-left:12px;padding-right:12px;} }
+
+/* Ingreso: tarjeta más grande y legible (campos altos, PIN con dígitos grandes y espaciados). */
+.win-login { padding: 24px 22px 64px; }
+.win-login-card { width: min(500px, 100%); gap: 24px; padding: 44px 44px 36px; border-radius: 22px; border-top: 5px solid var(--rosa); }
+.win-login-heading h1 { font-size: 2rem; letter-spacing: -.03em; }
+.win-login-heading p { font-size: 1.0625rem; }
+.win-login-card label { font-size: 1rem; gap: 10px; }
+.win-login-card input { min-height: 56px; font-size: 1.125rem; padding: 12px 16px; border-radius: 12px; }
+.win-login-card input[type="password"] { font-size: 1.5rem; letter-spacing: .45em; }
+.win-login-card button[type="submit"] { min-height: 58px; font-size: 1.125rem; border-radius: 12px; margin-top: 4px; }
+.win-login-note { font-size: .875rem; }
+@media (max-width: 700px) {
+  .win-login-card { padding: 30px 22px 26px; gap: 20px; }
+  .win-login-heading h1 { font-size: 1.625rem; }
+}
