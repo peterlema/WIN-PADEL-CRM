@@ -21,6 +21,14 @@ alter table public.win_price_list drop constraint if exists win_price_list_code_
 alter table public.win_price_list drop constraint if exists win_price_list_code_dur_from_key;
 alter table public.win_price_list add constraint win_price_list_code_dur_from_key unique (code, duration_min, valid_from);
 
+-- La versión sin duración informa el precio del turno de 90 minutos.
+create or replace function public.win_court_price_(p_date date, p_method text)
+returns numeric language sql stable set search_path = '' as $$
+  select case p_method when 'CASH' then amount_cash when 'TRANSFER' then amount_transfer end
+  from public.win_price_list where code = 'COURT_TURN' and duration_min = 90 and valid_from <= p_date
+  order by valid_from desc limit 1
+$$;
+
 create or replace function public.win_court_price_(p_date date, p_method text, p_duration integer)
 returns numeric language sql stable set search_path = '' as $$
   select case p_method when 'CASH' then amount_cash when 'TRANSFER' then amount_transfer end

@@ -111,6 +111,7 @@ const pas60 = await book('tok-admin', U(60), 'C2', ayer, '14:00', 60, 'RESERVA',
 ok((await err(`select public.win_courts_pay('tok-recep',$1,$2,null,null,'CASH')`, [U(61), pas60.id])).includes('PRICE_MISSING'), 'turno de 60 min sin precio cargado: no se cobra (PRICE_MISSING)')
 await db.query(`insert into public.win_price_list(code, duration_min, amount_cash, amount_transfer, valid_from) values ('COURT_TURN', 60, 65000, 70000, date '2020-01-01')`)
 ok(Number((await pay('tok-recep', U(61), pas60.id, null, null, 'TRANSFER')).monto) === 70000, 'con el precio de 60 min cargado, la transferencia cobra $ 70.000')
+ok(Number((await one(`select public.win_court_price_($1::date,'CASH') p`, [hoy])).p) === 90000, 'el precio base (90 min) no se mezcla con el de otras duraciones')
 // 5. Abonos fijos
 await book('tok-recep', U(30), 'C1', d14, '18:00', 90)
 const abo = (tok, req, court, date, start, nombre = 'Laura Pérez', wpp = '1122223333', met = 'CASH') =>
