@@ -12,7 +12,7 @@ create table if not exists public.win_ops_records (
  status text not null default 'ACTIVE' check(status in ('ACTIVE','VOID')),
  activity_date date, start_time time, duration_min int, courts text[] not null default '{}', played boolean not null default false,
  teacher_id uuid references public.win_coaches(id), participants int, class_kind text,
- gross numeric(14,2), teacher_pay numeric(14,2), win_net numeric(14,2) not null default 0, win_pct numeric(5,2),
+ gross numeric(14,2), teacher_pay numeric(14,2), win_net numeric(14,2) not null default 0, win_pct numeric(5,2), configured_win_pct numeric(5,2),
  cash numeric(14,2) not null default 0, transfer numeric(14,2) not null default 0, refund_cash numeric(14,2) not null default 0,
  category text, note text not null default '', exception_reason text not null default '', review_note text not null default '',
  booking_id uuid references public.win_court_bookings(id), abono_id uuid references public.win_court_abonos(id), payment_date date,
@@ -135,7 +135,7 @@ $$;
 
 create or replace function public.win_ops_save(p_token text,p jsonb) returns jsonb language plpgsql set search_path='' as $$
 declare a uuid; sh public.win_cash_shifts; o public.win_ops_records; old public.win_ops_requests; req uuid;
- typ text; dt date; tm time; dur int; ct text[]; played boolean; pax int; teacher uuid; pct numeric; gross numeric; remuneration numeric; net numeric;
+ typ text; dt date; tm time; dur int; ct text[]; played boolean; pax int; teacher uuid; pct numeric; configured_pct numeric; gross numeric; remuneration numeric; net numeric;
  cash numeric; tr numeric; refund numeric; note text; reason text; cat text; review text; classkind text;
  st timestamptz; en timestamptz; total numeric; credit numeric; due numeric; allocated numeric:=0; item jsonb;
  mid uuid; uid uuid; meth text; val numeric; bk public.win_court_bookings; bid uuid; abid uuid; priorpaid numeric:=0;
@@ -211,12 +211,13 @@ begin
   if not played then raise exception 'ACTIVITY_INVALID';end if;
   if exists(select 1 from public.win_ops_records c where c.type='CLASE' and c.status='ACTIVE' and c.teacher_id=teacher and public.win_courts_starts_at_(c.activity_date,c.start_time)<en and public.win_courts_starts_at_(c.activity_date,c.start_time)+make_interval(mins=>c.duration_min)>st) then raise exception 'COACH_OVERLAP';end if;
   select r.win_pct into pct from public.win_ops_coach_rates r where r.teacher_id=teacher and r.valid_from<=dt order by valid_from desc limit 1;
-  if classkind='PARTIDO' then net=public.win_ops_money(p,'winAmount');
+  configured_pct=pct;
+  if classkind='PARTIDO' then net=public.win_ops_money(p,'winAmount');pct=null;
   else
    if pax is null or pax not between 1 and 4 then raise exception 'PARTICIPANTS_REQUIRED';end if;
    if coalesce((p->>'exception')::boolean,false) then
     if length(reason)<5 then raise exception 'EXCEPTION_REASON_REQUIRED';end if;
-    gross=public.win_ops_money(p,'gross');remuneration=public.win_ops_money(p,'teacherPay');net=gross-remuneration;
+    gross=public.win_ops_money(p,'gross');remuneration=public.win_ops_money(p,'teacherPay');net=gross-remuneration;pct=case when gross>0 then round(net/gross*100,2) else null end;
    else
     if pct is null then raise exception 'HISTORIC_RATE_MISSING';end if;
     select amount_cash into gross from public.win_price_list where code='CLASS_'||pax and duration_min=dur and valid_from<=dt order by valid_from desc limit 1;
@@ -241,8 +242,8 @@ begin
   end loop;
   if allocated>cash+tr+credit or (cash+tr+refund=0 and jsonb_array_length(coalesce(p->'allocations','[]'))=0) then raise exception 'ALLOCATION_INVALID';end if;
  end if;
- insert into public.win_ops_records(request_id,shift_id,actor_id,type,activity_date,start_time,duration_min,courts,played,teacher_id,participants,class_kind,gross,teacher_pay,win_net,win_pct,cash,transfer,refund_cash,category,note,exception_reason,review_note,booking_id,abono_id)
- values(req,sh.id,a,typ,dt,tm,dur,ct,played,teacher,pax,classkind,gross,remuneration,net,pct,cash,tr,refund,cat,note,reason,review,bid,abid) returning * into o;
+ insert into public.win_ops_records(request_id,shift_id,actor_id,type,activity_date,start_time,duration_min,courts,played,teacher_id,participants,class_kind,gross,teacher_pay,win_net,win_pct,configured_win_pct,cash,transfer,refund_cash,category,note,exception_reason,review_note,booking_id,abono_id)
+ values(req,sh.id,a,typ,dt,tm,dur,ct,played,teacher,pax,classkind,gross,remuneration,net,pct,configured_pct,cash,tr,refund,cat,note,reason,review,bid,abid) returning * into o;
  if typ='ABONO' and cash+tr>0 then update public.win_ops_records set payment_date=coalesce(nullif(p->>'paymentDate','')::date,dt) where id=o.id returning * into o;end if;
  if played then insert into public.win_ops_resources(operation_id,court,starts_at,ends_at) select o.id,unnest(ct),st,en;end if;
  if typ='RENDICION' then

@@ -49,7 +49,7 @@ begin
  select coalesce(jsonb_agg(jsonb_build_object('id',n.id,'sourceType',n.source_type,'sourceId',n.source_id,'message',n.message,'author',u.display_name,'createdAt',n.created_at,'resolvedAt',n.resolved_at,'resolution',n.resolution) order by n.created_at desc),'[]') into notices from public.win_ops_notices n join win_auth.login_accounts u on u.id=n.actor_id where n.resolved_at is null or n.resolved_at>now()-interval '30 days';
  select coalesce(jsonb_agg(to_jsonb(x) order by business_date desc),'[]') into days from (
  select distinct s.business_date from public.win_cash_shifts s left join public.win_ops_day_controls d on d.business_date=s.business_date
- where s.status='CLOSED' and s.business_date>=public.win_config_today_()-31 and (d.business_date is null or d.status<>'CONFIRMED') limit 31)x;
+ where s.status='CLOSED' and (d.business_date is null or d.status<>'CONFIRMED') order by s.business_date desc limit 366)x;
  if sh.id is not null then
   select jsonb_build_object('cashExpected',sh.opening_cash+coalesce(sum(amount_signed) filter(where payment_method='CASH'),0),
    'transferReceived',coalesce(sum(amount_signed) filter(where payment_method='TRANSFER'),0),'cashIncome',coalesce(sum(amount_signed) filter(where payment_method='CASH' and amount_signed>0),0),'cashOut',coalesce(sum(-amount_signed) filter(where payment_method='CASH' and amount_signed<0),0)) into stats from public.win_ops_ledger where shift_id=sh.id;
