@@ -48,6 +48,7 @@ Deno.serve(async req=>{
     if(action==="logout") { await db.rpc("win_pin_logout",{p_token:token});return reply({ok:true},200,origin); }
     let name="", params:Record<string,unknown>={p_token:token};
     if(action==="admin.finance"){name="win_admin_finance_report";params.p_start=data.start;params.p_end=data.end;}
+    else if(action==="admin.control"){name="win_admin_cash_control";params.p_start=data.start;params.p_end=data.end;}
     else if(action==="reception.overview") name="win_reception_overview";
     else if(action==="cash.state") name="win_cash_state";
     else if(action==="cash.open"){name="win_cash_open";params.p_amount=data.amount;}
