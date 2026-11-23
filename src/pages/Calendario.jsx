@@ -186,7 +186,7 @@ export default function Calendario() {
   async function cobrarBarPendiente(e){
     e.preventDefault()
     if(ocupado||!barPayment)return
-    const n=Number(String(barPayment.amount).replace(/\\./g,'').replace(',','.'))
+    const n=Number(String(barPayment.amount).replace(/\./g,'').replace(',','.'))
     if(!Number.isFinite(n)||n<=0||n>Number(barPayment.balance)){setBarError('Importe inválido para esta deuda.');return}
     if(!window.confirm('¿Confirmás el cobro del Bar por '+money(n)+'?'))return
     setOcupado(true);setBarError('')
