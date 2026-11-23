@@ -27,10 +27,9 @@ jobs:
       - run: npm run build
         env:
           VITE_BASE: /WIN-PADEL-CRM/
-          # Variables del repo (Settings > Secrets and variables > Actions > Variables).
-          # Son públicas: sólo URL y clave anon, nunca la service_role.
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          # Valores PÚBLICOS de Supabase (sólo Auth en el navegador). Nunca la clave secreta / service_role.
+          VITE_SUPABASE_URL: https://cqvoherekzntmhyzdidj.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_nbDKJwvOq26nCrwbV3DWFw_QGq7IXxm
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
