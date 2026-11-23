@@ -14,7 +14,7 @@ function adminClient() {
   if(!url||!key) throw new Error("BACKEND_NOT_CONFIGURED");
   return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
 }
-const errors:Record<string,string>={SESSION_INVALID:"La sesión expiró. Volvé a ingresar.",NOT_AUTHORIZED:"Tu usuario no tiene permisos para esta acción.",SHIFT_ALREADY_OPEN:"Ya hay una caja abierta.",SHIFT_NOT_OPEN:"La caja ya no está abierta.",AMOUNT_INVALID:"Revisá el importe.",METHOD_INVALID:"Medio de pago no permitido.",CATEGORY_INVALID:"Categoría no permitida.",REQUEST_ID_REUSED:"La solicitud ya fue usada con otros datos.",DIFFERENCE_REQUIRES_NOTE:"Explicá la diferencia del cierre.",NOTE_TOO_LONG:"La observación es demasiado larga.",PRODUCT_INVALID:"Revisá los datos del producto.",PRODUCT_NOT_FOUND:"El producto no existe.",CONFIG_INVALID:"Revisá los datos: nombre, importe o porcentaje.",CONFIG_NOT_FOUND:"El dato ya no existe. Actualizá la pantalla.",NAME_TAKEN:"Ya existe uno con ese nombre.",PRICE_DATE_PAST:"Los precios sólo se cambian desde hoy o una fecha futura."};
+const errors:Record<string,string>={SESSION_INVALID:"La sesión expiró. Volvé a ingresar.",NOT_AUTHORIZED:"Tu usuario no tiene permisos para esta acción.",SHIFT_ALREADY_OPEN:"Ya hay una caja abierta.",SHIFT_NOT_OPEN:"La caja ya no está abierta.",AMOUNT_INVALID:"Revisá el importe.",METHOD_INVALID:"Medio de pago no permitido.",CATEGORY_INVALID:"Categoría no permitida.",REQUEST_ID_REUSED:"La solicitud ya fue usada con otros datos.",DIFFERENCE_REQUIRES_NOTE:"Explicá la diferencia del cierre.",NOTE_TOO_LONG:"La observación es demasiado larga.",PRODUCT_INVALID:"Revisá los datos del producto.",PRODUCT_NOT_FOUND:"El producto no existe.",CONFIG_INVALID:"Revisá los datos: nombre, importe o porcentaje.",CONFIG_NOT_FOUND:"El dato ya no existe. Actualizá la pantalla.",NAME_TAKEN:"Ya existe uno con ese nombre.",PRICE_DATE_PAST:"Los precios sólo se cambian desde hoy o una fecha futura.",ORDER_INVALID:"Revisá los productos y la forma de cobro.",PRICE_NOT_SET:"Hay un producto sin precio de venta configurado.",CUSTOMER_INVALID:"Elegí una cuenta válida o creá una persona.",COURT_INVALID:"Revisá la cancha y el turno seleccionado.",DATE_INVALID:"Fecha fuera de rango.",PAYMENT_INVALID:"Revisá el importe o el medio de pago.",ORDER_NOT_PENDING:"Ese consumo ya no está pendiente.",PAYMENT_EXCEEDS_BALANCE:"El cobro supera el saldo pendiente.",REQUEST_ID_REUSED:"Esta solicitud ya se usó con otros datos."};
 Deno.serve(async req=>{
   const origin=req.headers.get("Origin")||"";
   if(origin&&!allowedOrigins.has(origin)) return reply({error:"Origen no autorizado"},403);
@@ -62,6 +62,21 @@ Deno.serve(async req=>{
       Object.assign(params,{p_code:data.code,p_duration:data.duration,p_cash:data.cash,p_transfer:data.transfer,p_valid_from:data.validFrom});
     } else if(action==="config.price.cancel"){
       name="win_config_price_cancel";Object.assign(params,{p_code:data.code,p_duration:data.duration,p_valid_from:data.validFrom});
+    }
+    else if(action==="bar.customers") name="win_bar_customers";
+    else if(action==="bar.customer.create"){name="win_bar_customer_create";params.p_name=data.name;}
+    else if(action==="bar.courts"){name="win_bar_court_choices";params.p_day=data.date;}
+    else if(action==="bar.pending") name="win_bar_pending";
+    else if(action==="bar.order.place"){
+      name="win_bar_order_place";
+      Object.assign(params,{p_request_id:data.requestId,p_items:data.items,p_destination:data.destination,
+        p_customer_id:data.customerId||null,p_booking_id:data.bookingId||null,p_court:data.court||null,
+        p_court_date:data.courtDate||null,p_court_start:data.courtStart||null,p_note:data.note||"",
+        p_method:data.method||null});
+    }
+    else if(action==="bar.order.pay"){
+      name="win_bar_order_pay";
+      Object.assign(params,{p_request_id:data.requestId,p_order_id:data.orderId,p_amount:data.amount,p_method:data.method});
     }
     else if(action==="bar.products") name="win_bar_products_list";
     else if(action==="bar.product.save"){
