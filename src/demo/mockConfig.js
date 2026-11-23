@@ -12,7 +12,7 @@ const productos = [
 ].map(x => ({ id: id(), activo: true, ...x }))
 const profesores = [['Leo', 60], ['Alejo', 60], ['Pablo', 60], ['Pablo Corsiglia', 60], ['Chino', 55], ['Fede', 60]]
   .map(([nombre, porcentajeWin]) => ({ id: id(), nombre, porcentajeWin, activo: true }))
-let precios = [['COURT_TURN', 90, 90000, 100000], ['CLASS_1', 60, 60000, 60000], ['CLASS_2', 60, 70000, 70000], ['CLASS_3', 60, 90000, 90000], ['CLASS_4', 60, 100000, 100000]]
+let precios = [['COURT_TURN', 60, 60000, 70000], ['COURT_TURN', 90, 90000, 100000], ['COURT_TURN', 120, 120000, 120000], ['CLASS_1', 60, 60000, 60000], ['CLASS_2', 60, 70000, 70000], ['CLASS_3', 60, 90000, 90000], ['CLASS_4', 60, 100000, 100000]]
   .map(([codigo, duracion, efectivo, transferencia]) => ({ codigo, duracion, efectivo, transferencia, desde: '2020-01-01' }))
 const mismo = (p, b) => p.codigo === b.code && p.duracion === Number(b.duration) && p.desde === b.validFrom
 const igual = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase()

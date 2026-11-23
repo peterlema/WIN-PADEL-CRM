@@ -9,8 +9,8 @@ const isodow = iso => { const d = new Date(iso + 'T12:00:00Z').getUTCDay(); retu
 const minutos = s => { const [h, m] = s.split(':').map(Number); return (h < 6 ? h + 24 : h) * 60 + m }
 const hora = m => `${pad(Math.floor((m % 1440) / 60))}:${pad(m % 60)}`
 const fail = (message, status = 409, code) => Object.assign(new Error(message), { status, code })
-// Hoy sólo está cargado el precio del turno de 90 min; los de 60 y 120 min se cargan aparte.
-const PRECIOS = { 90: { CASH: 90000, TRANSFER: 100000 } }
+// Precio por duración del turno (efectivo / transferencia).
+const PRECIOS = { 60: { CASH: 60000, TRANSFER: 70000 }, 90: { CASH: 90000, TRANSFER: 100000 }, 120: { CASH: 120000, TRANSFER: 120000 } }
 const precioDe = (dur, metodo) => PRECIOS[dur]?.[metodo] ?? null
 
 const hoy = hoyAR()

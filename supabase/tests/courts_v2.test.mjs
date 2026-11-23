@@ -109,8 +109,11 @@ ok(Number(dAyer.precio.efectivo) === 90000 && Number(dAyer.precio.transferencia)
 
 const pas60 = await book('tok-admin', U(60), 'C2', ayer, '14:00', 60, 'RESERVA', 'x', 'Tomás Gil', '1144440000', null)
 ok((await err(`select public.win_courts_pay('tok-recep',$1,$2,null,null,'CASH')`, [U(61), pas60.id])).includes('PRICE_MISSING'), 'turno de 60 min sin precio cargado: no se cobra (PRICE_MISSING)')
-await db.query(`insert into public.win_price_list(code, duration_min, amount_cash, amount_transfer, valid_from) values ('COURT_TURN', 60, 65000, 70000, date '2020-01-01')`)
-ok(Number((await pay('tok-recep', U(61), pas60.id, null, null, 'TRANSFER')).monto) === 70000, 'con el precio de 60 min cargado, la transferencia cobra $ 70.000')
+await db.exec(readFileSync(dir + '20261124_win_courts_v4_prices_60_120.sql', 'utf8'))
+await db.exec(readFileSync(dir + '20261124_win_courts_v4_prices_60_120.sql', 'utf8'))
+ok(Number((await pay('tok-recep', U(61), pas60.id, null, null, 'TRANSFER')).monto) === 70000, 'con los precios v4, el turno de 60 min cobra $ 70.000 por transferencia')
+const pas120 = await book('tok-admin', U(62), 'C2', ayer, '20:00', 120, 'RESERVA', 'x', 'Lía Mora', '1144441111', null)
+ok(Number((await pay('tok-recep', U(63), pas120.id, null, null, 'CASH')).monto) === 120000, 'el turno de 120 min cobra $ 120.000 en efectivo')
 ok(Number((await one(`select public.win_court_price_($1::date,'CASH') p`, [hoy])).p) === 90000, 'el precio base (90 min) no se mezcla con el de otras duraciones')
 // 5. Abonos fijos
 await book('tok-recep', U(30), 'C1', d14, '18:00', 90)

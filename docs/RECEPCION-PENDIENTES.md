@@ -4,7 +4,7 @@ Pantallas: Recepción (`#/demo` en modo demo), Caja, Calendario. Versión visibl
 
 ## Reglas confirmadas por el dueño del negocio
 1. **Duraciones:** reservas y abonos de 60, 90 o 120 min (90 por defecto); clase particular 60 min; clase partido 90 min.
-2. **Precio de la cancha:** $ 100.000 por transferencia o $ 90.000 en efectivo, por turno de 90 min (tabla `win_price_list`, con precio por duración y vigencia). Los precios de 60 y 120 min están por definir: hasta cargarlos, esos turnos no se pueden cobrar.
+2. **Precio de la cancha:** $ 100.000 por transferencia o $ 90.000 en efectivo, por turno de 90 min (tabla `win_price_list`, con precio por duración y vigencia). Precios por duración: 60 min $ 60.000 efectivo / $ 70.000 transferencia; 90 min $ 90.000 / $ 100.000; 120 min $ 120.000 / $ 120.000 (`20261124_win_courts_v4_prices_60_120.sql`).
 3. **Al cargar una reserva** el recepcionista informa: nombre completo, WhatsApp y método de pago previsto. **Después del turno** marca el método de pago real.
 4. **Abonos fijos:** turno semanal fijo (cancha, día, hora) que se repite indefinidamente hasta que se da de baja. Cada pago queda registrado.
 5. **Comprobantes:** poder subir la foto del comprobante de transferencia (almacenamiento privado, enlazado al cobro).
