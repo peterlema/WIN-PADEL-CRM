@@ -66,13 +66,15 @@ function Productos({ data, guardar, busy }) {
   const [buscar, setBuscar] = useState('')
   const [inactivos, setInactivos] = useState(false)
   const q = buscar.trim().toLowerCase()
-  const filas = data.productos.filter(x => x.unidad === unidad && (inactivos || x.activo) && (!q || (x.nombre + ' ' + x.categoria).toLowerCase().includes(q)))
+  const filas = data.productos.filter(x => x.unidad === unidad && (inactivos || x.activo) && (!q || (x.nombre + ' ' + (x.variante || '') + ' ' + x.categoria).toLowerCase().includes(q)))
+  const esBar = unidad === 'CAFE_BAR'
+  const sinPrecio = filas.filter(x => x.activo && (x.precio == null || Number(x.precio) <= 0)).length
   const categorias = [...new Set(data.productos.filter(x => x.unidad === unidad && x.categoria).map(x => x.categoria))]
   async function enviar(e) {
     e.preventDefault()
     const price = num(edit.precio)
     if (!edit.nombre.trim() || !Number.isFinite(price) || price < 0) return
-    const listo = await guardar('config.item.save', { id: edit.id, unit: unidad, name: edit.nombre, category: edit.categoria, price, active: edit.activo },
+    const listo = await guardar('config.item.save', { id: edit.id, unit: unidad, name: edit.nombre, variant: esBar ? edit.variante : '', category: edit.categoria, price, active: edit.activo },
       edit.id ? 'Producto actualizado.' : 'Producto agregado.')
     if (listo) setEdit(null)
   }
@@ -81,7 +83,7 @@ function Productos({ data, guardar, busy }) {
       {unidades.length > 1 ? <div className="cfg-seg" role="group" aria-label="Unidad">
         {unidades.map(u => <button key={u} type="button" aria-pressed={unidad === u} onClick={() => { setUnidad(u); setEdit(null) }}>{UNIDADES[u]}</button>)}
       </div> : <h3>{UNIDADES[unidad]}</h3>}
-      <button type="button" onClick={() => setEdit({ id: null, nombre: '', categoria: '', precio: '', activo: true })} disabled={busy}>+ Producto</button>
+      <button type="button" onClick={() => setEdit({ id: null, nombre: '', variante: '', categoria: '', precio: '', activo: true })} disabled={busy}>+ Producto</button>
     </div>
     <div className="cfg-tools">
       <input type="search" placeholder="Buscar producto o categoría" value={buscar} onChange={e => setBuscar(e.target.value)} />
@@ -89,18 +91,20 @@ function Productos({ data, guardar, busy }) {
     </div>
     {edit && <form className="cfg-form" onSubmit={enviar}>
       <label>Nombre<input value={edit.nombre} maxLength={80} required autoFocus onChange={e => setEdit({ ...edit, nombre: e.target.value })} /></label>
+      {esBar && <label>Sabor / variante<input value={edit.variante} maxLength={90} placeholder="Ej. Azul, Amber (opcional)" onChange={e => setEdit({ ...edit, variante: e.target.value })} /></label>}
       <label>Categoría<input value={edit.categoria} maxLength={60} list="cfg-categorias" placeholder="Ej. Bebidas" onChange={e => setEdit({ ...edit, categoria: e.target.value })} /></label>
       <datalist id="cfg-categorias">{categorias.map(c => <option key={c} value={c} />)}</datalist>
       <label>Precio ($)<input inputMode="decimal" className="cfg-num" value={edit.precio} required onChange={e => setEdit({ ...edit, precio: e.target.value })} /></label>
       <label className="cfg-check"><input type="checkbox" checked={edit.activo} onChange={e => setEdit({ ...edit, activo: e.target.checked })} />Activo</label>
       <div className="cfg-actions"><button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button><button type="button" className="secundario" onClick={() => setEdit(null)}>Cancelar</button></div>
     </form>}
+    {esBar && <p className="cfg-muted">Son los mismos productos que se venden en Bar / Buffet: el precio que guardes acá se usa en la próxima venta.{sinPrecio > 0 && ` ${sinPrecio} activo(s) sin precio no se pueden vender.`}</p>}
     {!filas.length ? <p className="cfg-muted">{data.productos.some(x => x.unidad === unidad) ? 'Ningún producto coincide.' : 'Todavía no hay productos cargados.'}</p> :
       <table className="cfg-table">
-        <thead><tr><th>Producto</th><th>Categoría</th><th className="n">Precio</th><th>Estado</th><th /></tr></thead>
-        <tbody>{filas.map(x => <tr key={x.id} className={x.activo ? '' : 'baja'}>
-          <td>{x.nombre}</td><td>{x.categoria || '—'}</td><td className="n">{money(x.precio)}</td><td>{x.activo ? 'Activo' : 'De baja'}</td>
-          <td><button type="button" className="enlace" onClick={() => setEdit({ id: x.id, nombre: x.nombre, categoria: x.categoria, precio: String(x.precio).replace('.', ','), activo: x.activo })}>Editar</button></td>
+        <thead><tr><th>Producto</th>{esBar && <th>Sabor</th>}<th>Categoría</th><th className="n">Precio</th><th>Estado</th><th /></tr></thead>
+        <tbody>{filas.map(x => <tr key={x.id} className={!x.activo ? 'baja' : (x.precio == null || Number(x.precio) <= 0) ? 'sin-precio' : ''}>
+          <td>{x.nombre}</td>{esBar && <td>{x.variante || '—'}</td>}<td>{x.categoria || '—'}</td><td className="n">{x.precio == null ? 'Sin precio' : money(x.precio)}</td><td>{x.activo ? 'Activo' : 'De baja'}</td>
+          <td><button type="button" className="enlace" onClick={() => { setEdit({ id: x.id, nombre: x.nombre, variante: x.variante || '', categoria: x.categoria, precio: x.precio == null ? '' : String(x.precio).replace('.', ','), activo: x.activo }); window.scrollTo({ top: 0, behavior: 'smooth' }) }}>Editar</button></td>
         </tr>)}</tbody>
       </table>}
   </section>

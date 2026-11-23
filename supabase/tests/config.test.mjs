@@ -32,6 +32,11 @@ await db.exec(readFileSync(dir + '20261124_win_courts_v3_payment_method_at_colle
 await db.exec(readFileSync(dir + '20261125_win_config_catalog_coaches_prices.sql', 'utf8'))
 await db.exec(readFileSync(dir + '20261125_win_config_catalog_coaches_prices.sql', 'utf8'))
 ok(true, 'migración de configuración aplicada y repetible')
+// Productos de Bar: Configuración usa el mismo catálogo que la venta (win_products).
+await db.exec(readFileSync(dir + '20261123_win_bar_product_catalog_and_seed.sql', 'utf8'))
+await db.exec(readFileSync(dir + '20261125_win_config_bar_uses_products.sql', 'utf8'))
+await db.exec(readFileSync(dir + '20261125_win_config_bar_uses_products.sql', 'utf8'))
+ok(true, 'migración Bar ↔ Configuración aplicada y repetible')
 
 const hoy = (await one(`select public.win_config_today_()::text d`)).d
 const f = async n => (await one(`select ($1::date + $2::int)::text d`, [hoy, n])).d
@@ -68,6 +73,14 @@ await item('tok-admin', agua.id, 'CAFE_BAR', 'Agua 500 ml', 'Bebidas', 1800, fal
 const a2 = (await list('tok-admin')).productos.find(p => p.id === agua.id)
 ok(a2.precio == 1800 && a2.activo === false && a2.nombre === 'Agua 500 ml', 'modificación de precio y baja lógica')
 ok((await err(`select public.win_config_item_save('tok-admin',$1,'SHOP','Agua 500 ml','',1,true)`, [agua.id])).includes('CONFIG_INVALID'), 'no se cambia la unidad de un producto existente')
+const semilla = (await q(`select count(*)::int n from public.win_products where business_unit='CAFE_BAR'`))[0].n
+ok((await list('tok-admin')).productos.filter(p => p.unidad === 'CAFE_BAR').length === semilla, 'Configuración lista todos los productos de la venta del Bar')
+ok((await q(`select sale_price from public.win_products where id=$1`, [agua.id]))[0].sale_price == 1800, 'el precio cambiado en Configuración llega a la venta del Bar')
+ok((await q(`select count(*)::int n from public.win_product_audit where product_id=$1`, [agua.id]))[0].n === 2, 'alta y cambio de Bar quedan en la auditoría de productos')
+const gat = (await q(`select id,name,variant,category from public.win_products where business_unit='CAFE_BAR' and variant<>'' limit 1`))[0]
+await one(`select public.win_config_item_save('tok-admin',$1,'CAFE_BAR',$2,$3,3500,true,$4) r`, [gat.id, gat.name, gat.category, gat.variant])
+ok((await q(`select sale_price,variant from public.win_products where id=$1`, [gat.id]))[0].sale_price == 3500, 'precio de un sabor (variante) se edita sin perder la variante')
+ok((await list('tok-admin')).productos.find(p => p.id === gat.id).variante === gat.variant, 'la variante se muestra en Configuración')
 
 // 4. Profesores
 const nuevo = await coach('tok-mgr', null, 'Martina', 62.5)
@@ -101,8 +114,8 @@ ok(Number((await one(`select public.win_court_price_($1::date,'CASH',90) p`, [ho
 ok((await err(`select public.win_config_price_set('tok-admin','CLASS_1',90,1,1,$1::date)`, [hoy])).includes('CONFIG_INVALID'), 'clase con duración distinta de 60 se rechaza')
 
 // 6. Auditoría y acceso directo
-const aud = Number((await one(`select count(*) n from public.win_config_audit`)).n)
-ok(aud >= 10, `cada cambio queda auditado (${aud} registros)`)
+const aud = Number((await one(`select (select count(*) from public.win_config_audit) + (select count(*) from public.win_product_audit) n`)).n)
+ok(aud >= 10, `cada cambio queda auditado (${aud} registros entre configuración y productos de Bar)`)
 const priv = (await one(`select has_table_privilege('anon','public.win_catalog_items','select') a, has_table_privilege('authenticated','public.win_coaches','select') b,
   has_function_privilege('anon','public.win_config_list(text)','execute') c`))
 ok(!priv.a && !priv.b && !priv.c, 'el navegador (anon/authenticated) no accede a tablas ni funciones')
