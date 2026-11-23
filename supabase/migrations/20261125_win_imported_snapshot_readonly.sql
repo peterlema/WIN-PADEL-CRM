@@ -22,3 +22,8 @@ begin
 end;$body$;
 revoke all on function public.win_imported_snapshot(text) from public,anon,authenticated;
 grant execute on function public.win_imported_snapshot(text) to service_role;
+
+-- El proyecto no concede permisos por defecto a service_role sobre tablas nuevas creadas desde el SQL Editor:
+-- sin este GRANT la función falla al leer las tablas staging. Sólo lectura; anon y authenticated siguen sin acceso.
+grant select on public.win_resumen_admin, public.win_clases_profesor_dia, public.win_turnos,
+  public.win_movimientos, public.win_cobros_distribuidos, public.win_incidencias to service_role;
