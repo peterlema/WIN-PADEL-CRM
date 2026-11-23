@@ -29,3 +29,30 @@
 .win-bar-feature{background:#f7f8fb;border-radius:12px;min-height:80px;padding:15px;font-size:13px;display:flex;gap:10px;align-items:center}
 .win-bar-feature span{color:#d44664;font-size:22px}
 @media(max-width:700px){.win-bar{padding:12px 12px 50px}.win-bar-card{padding:17px}.win-bar-feature-grid{grid-template-columns:1fr}.win-bar-header h2{font-size:22px}.win-bar-tabs button{padding:10px 12px}}
+
+
+/* Product catalog shared by Bar sales and future inventory; editing ADMIN only */
+.bar-catalog{display:grid;gap:16px}
+.bar-catalog-toolbar{display:flex;gap:8px;flex-wrap:wrap}
+.bar-catalog-toolbar button{font-size:13px}
+.bar-catalog-search{display:flex;align-items:end;justify-content:space-between;gap:15px;flex-wrap:wrap}
+.bar-catalog-search label{min-width:min(340px,100%);display:grid;gap:7px;font-size:13px}
+.bar-catalog-search input,.bar-product-editor input{width:100%;min-height:42px;padding:9px 11px;border-radius:9px;border:1px solid #d9dde3}
+.bar-catalog-search span{color:#667085;font-size:12px}
+.bar-product-editor{display:grid;gap:15px;border:1px solid #ecc1cc;background:#fff8fa;border-radius:13px;padding:18px}
+.bar-product-editor h3{font-size:17px}
+.bar-product-fields{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.bar-product-fields label{display:grid;gap:6px;font-size:12px;color:#515b6e;font-weight:650}
+.bar-catalog-active{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600}
+.bar-catalog-active input{width:16px;min-height:16px}
+.bar-product-editor>button[type=submit]{justify-self:start;padding:10px 20px;background:#232344}
+.bar-product-group{border:1px solid #e9ebf0;border-radius:12px;overflow:hidden}
+.bar-product-group h4{margin:0;padding:10px 15px;background:#f5f6f9;font-size:13px}
+.bar-product-item{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,auto) auto;align-items:center;gap:14px;padding:12px 15px;border-top:1px solid #ebeef2}
+.bar-product-item strong{display:block;font-size:14px}
+.bar-product-item small{display:block;color:#798292;margin-top:3px;font-size:12px}
+.bar-product-price{display:grid;gap:3px;font-size:12px;color:#626b7c}
+.bar-product-price b{color:#232344}
+.bar-product-item>button{font-size:12px;min-height:36px}
+@media(max-width:800px){.bar-product-fields{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:550px){.bar-product-fields{grid-template-columns:1fr}.bar-product-item{grid-template-columns:1fr auto}.bar-product-price{grid-column:1}.bar-product-item>button{grid-column:2;grid-row:1/3}}
