@@ -12,8 +12,8 @@ const SLOTS = Array.from({ length: (LAST - FIRST) / STEP }, (_, i) => FIRST + i 
 const CAPACITY = COURTS.length * (LAST - FIRST)
 const DURATIONS_FREE = Array.from({ length: 16 }, (_, i) => (i + 1) * STEP)
 const KINDS = { RESERVA: 'Reserva', CLASE: 'Clase', EVENTO: 'Evento', BLOQUEO: 'Bloqueo', ABONO: 'Abono' }
-const KINDS_NUEVOS = ['RESERVA', 'CLASE', 'EVENTO', 'BLOQUEO']
-const duracionesPara = kind => (kind === 'RESERVA' ? [90] : kind === 'CLASE' ? [60, 90, 120] : DURATIONS_FREE)
+const KINDS_NUEVOS = ['RESERVA', 'ABONO', 'CLASE', 'EVENTO', 'BLOQUEO']
+const duracionesPara = kind => (['RESERVA', 'ABONO'].includes(kind) ? [90] : kind === 'CLASE' ? [60, 90, 120] : DURATIONS_FREE)
 const METODOS = { CASH: 'Efectivo', TRANSFER: 'Transferencia' }
 const DIAS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']
 const DIAS_LARGOS = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -117,12 +117,12 @@ export default function Calendario() {
 
   function abrirForm(court, minutos) {
     cerrarTodo(); setAviso(''); setError('')
-    setForm({ court, start: minToLabel(minutos), duration: 90, kind: 'RESERVA', holder: '', note: '', nombre: '', whatsapp: '', method: 'CASH', abono: false, requestId: crypto.randomUUID() })
+    setForm({ court, start: minToLabel(minutos), duration: 90, kind: 'RESERVA', holder: '', note: '', nombre: '', whatsapp: '', method: 'CASH', requestId: crypto.randomUUID() })
   }
   function cambiarTipo(kind) {
     setForm(f => {
       const permitidas = duracionesPara(kind)
-      return { ...f, kind, abono: kind === 'RESERVA' ? f.abono : false, duration: permitidas.includes(Number(f.duration)) ? f.duration : permitidas[0] }
+      return { ...f, kind, duration: permitidas.includes(Number(f.duration)) ? f.duration : permitidas[0] }
     })
   }
 
@@ -132,7 +132,7 @@ export default function Calendario() {
     setOcupado(true); setError(''); setAviso('')
     try {
       // El mismo requestId se reutiliza si hay que reintentar: el servidor no duplica la reserva.
-      if (form.kind === 'RESERVA' && form.abono) {
+      if (form.kind === 'ABONO') {
         await callCourts('courts.abono.create', { requestId: form.requestId, court: form.court, date: fecha, start: form.start,
           customerName: form.nombre, whatsapp: form.whatsapp, method: form.method, note: form.note })
         setAviso(`Abono fijo creado: ${form.court} los ${DIAS_LARGOS[diaSemana(fecha)].toLowerCase()} a las ${form.start}, desde hoy hasta que se dé de baja.`)
@@ -352,7 +352,7 @@ export default function Calendario() {
                 {duracionesPara(form.kind).map(d => <option key={d} value={d}>{d} min</option>)}
               </select>
             </label>
-            {form.kind === 'RESERVA' ? (
+            {['RESERVA', 'ABONO'].includes(form.kind) ? (
               <>
                 <label className="cal-ancho">Nombre completo
                   <input value={form.nombre} maxLength={120} required autoFocus autoComplete="off" placeholder="Nombre y apellido" onChange={e => setForm({ ...form, nombre: e.target.value })} />
@@ -370,10 +370,7 @@ export default function Calendario() {
                     ))}
                   </div>
                 </div>
-                <label className="cal-check cal-ancho">
-                  <input type="checkbox" checked={form.abono} onChange={e => setForm({ ...form, abono: e.target.checked })} />
-                  Abono fijo: se repite todos los {DIAS_LARGOS[diaSemana(fecha)].toLowerCase()} a esta hora, hasta que se dé de baja
-                </label>
+                {form.kind === 'ABONO' && <p className="cal-ancho cal-resumen">Abono fijo: se repite todos los {DIAS_LARGOS[diaSemana(fecha)].toLowerCase()} a esta hora, desde hoy hasta que se dé de baja. Cada juego se cobra aparte.</p>}
               </>
             ) : (
               <label className="cal-ancho">Titular / detalle
@@ -384,7 +381,7 @@ export default function Calendario() {
               <input value={form.note} maxLength={400} onChange={e => setForm({ ...form, note: e.target.value })} />
             </label>
             <div className="cal-acciones">
-              <button disabled={ocupado}>{ocupado ? 'Guardando…' : form.abono ? 'Crear abono fijo' : 'Confirmar reserva'}</button>
+              <button disabled={ocupado}>{ocupado ? 'Guardando…' : form.kind === 'ABONO' ? 'Crear abono fijo' : 'Confirmar reserva'}</button>
               <button type="button" className="secundario" onClick={() => setForm(null)}>Cerrar</button>
             </div>
           </form>
