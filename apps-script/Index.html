@@ -1,0 +1,1392 @@
+<!DOCTYPE html><html lang="es"><head><base target="_top"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+:root{--pink:#f16d83;--black:#181818;--line:#e7e7e7}*{box-sizing:border-box}body{margin:0;background:#f6f6f6;color:var(--black);font:15px system-ui,-apple-system,sans-serif}.wrap{max-width:760px;margin:auto;padding:16px}.card{background:white;border:1px solid var(--line);border-radius:14px;padding:18px;margin:12px 0}h1{margin:0;font-size:25px;letter-spacing:-1px}h2{margin:0 0 12px;font-size:18px}small,.muted{color:#666}label{font-size:12px;font-weight:700;display:block;margin:12px 0 5px}input,select,textarea{width:100%;padding:11px;border:1px solid #ccc;border-radius:9px;font:inherit;background:white}button{border:0;border-radius:9px;padding:12px 14px;background:var(--black);color:white;font-weight:700;cursor:pointer;font:inherit}button.secondary{background:white;border:1px solid #ccc;color:var(--black)}button.danger{color:#a32;background:#fff3f3;border:1px solid #edcccc}button:disabled{opacity:.45;cursor:wait}.row{display:flex;align-items:center;justify-content:space-between;gap:10px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.chips button{background:#f5f5f5;color:#222;border:1px solid #ddd;text-align:left}.chips button.selected{background:#ffe8ed;border:2px solid var(--pink)}.hide{display:none!important}.stat{padding:13px;background:#f7f7f7;border-radius:10px}.stat b{font-size:21px;display:block}.item{padding:11px 0;border-bottom:1px solid #eee}.item:last-child{border:0}.pill{border-radius:30px;background:#ffe9ed;padding:4px 9px;font-size:12px}#msg{margin:12px 0;white-space:pre-wrap;color:#a22}#msg.good{color:#16703c}.total{font-size:22px;font-weight:800}.actions{display:flex;gap:8px;flex-wrap:wrap}.actions button{flex:1}.count{display:flex;align-items:center;gap:15px}.count button{min-width:45px}.count strong{font-size:26px}.small{font-size:12px}hr{border:0;border-top:1px solid #eee;margin:15px 0}@media(max-width:480px){.wrap{padding:10px}.card{padding:14px}.grid{gap:8px}}
+ .daybar{display:grid;grid-template-columns:44px 1fr 110px;align-items:center;gap:8px;margin:9px 0}.daybar strong{text-align:right}.bartrack{height:13px;background:#f1f1f1;border-radius:20px;overflow:hidden}.barfill{height:100%;background:var(--pink);border-radius:20px}body.admin-mode #workspace,body.admin-mode #daySection{display:none!important}body.admin-mode #adminPanel{display:block!important}body.admin-mode #noTurn{display:none!important}
+/* WIN V4 — capa visual, sin cambios en lógica de caja */
+:root{--pink:#ed718b;--black:#171923;--line:#e8e9ed;--surface:#fff;--muted:#667085}
+body{background:#f3f4f7;color:#1b1d26;font-family:Inter,system-ui,-apple-system,sans-serif;line-height:1.45}
+.wrap{max-width:1120px;padding:26px 22px 65px}
+header.row{padding:18px 2px 22px;align-items:center}header h1{font-size:28px;letter-spacing:-1.2px}
+.card{border:1px solid #e7e9ef;box-shadow:0 3px 18px rgba(21,26,44,.045);border-radius:18px;padding:24px;margin:15px 0}
+h2{font-size:18px;letter-spacing:-.35px}label{color:#505767;letter-spacing:.01em}
+input,select,textarea{border:1px solid #d7dbe4;border-radius:11px;min-height:43px;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--pink);box-shadow:0 0 0 3px rgba(237,113,139,.13)}
+button{border-radius:11px;min-height:42px;font-weight:650;transition:transform .12s,background .12s,box-shadow .12s}
+button:not(:disabled):active{transform:scale(.98)}button:focus-visible{outline:3px solid #f8a6b6;outline-offset:2px}
+button.secondary:hover,.chips button:hover{border-color:var(--pink);background:#fff5f7}
+.stat{background:#f7f8fb;border:1px solid #edf0f5;border-radius:14px;min-width:0}
+.stat b{font-size:clamp(19px,2.3vw,28px);letter-spacing:-.7px;overflow-wrap:anywhere;margin:4px 0}
+.grid{gap:13px}.pill{background:#fff0f3;color:#a83857;font-weight:700}
+.actions{align-items:center}.actions button{white-space:normal}
+#adminResult>h2{margin-top:22px}#adminResult>h2:first-child{margin-top:0}
+#adminResult .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.daybar{grid-template-columns:52px minmax(0,1fr) 120px;gap:12px}.bartrack{height:14px;background:#f1f2f5}
+.barfill{background:linear-gradient(90deg,#f5a2b3,#e75d7a)}
+.period-buttons{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.period-buttons button{flex:0 1 auto;min-width:95px}
+.period-buttons button.active{background:#171923;color:#fff;border-color:#171923;box-shadow:0 2px 8px #17192320}
+.period-status{display:flex;align-items:center;gap:8px;margin-top:12px;color:#596273;font-size:12px}
+.period-dot{width:7px;height:7px;border-radius:50%;background:#31a47c;flex:none}
+.period-dot.loading{background:#e5a14c}
+.section-intro{font-size:13px;color:#667085;margin:5px 0 15px}
+#msg:not(:empty){background:#fff1f2;border:1px solid #ffd7df;border-radius:10px;padding:12px 14px}
+#msg.good:not(:empty){background:#eefaf3;border-color:#d0efdf}
+@media(max-width:700px){.wrap{padding:12px 10px 50px}header h1{font-size:22px}.card{padding:16px}#adminResult .grid{grid-template-columns:repeat(2,minmax(0,1fr))}.daybar{grid-template-columns:42px minmax(0,1fr) 98px;gap:6px}.daybar strong{font-size:10px}.period-buttons button{flex:1;min-width:0}.actions{gap:6px}}
+@media(max-width:370px){#adminResult .grid{grid-template-columns:1fr}.stat b{font-size:22px}}
+.dashboard-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.dashboard-kpis{margin:15px 0}.dashboard-kpis .stat{background:#fafafa;border:1px solid #eee}.report-tabs{display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid #eee;padding-bottom:12px;margin:20px 0}.report-tab{background:#f5f5f5;color:#222;border:1px solid #ddd}.report-tab.active{background:#181818;color:#fff}.comparison-row{display:grid;grid-template-columns:54px minmax(0,1fr) 145px;align-items:center;gap:10px;margin:14px 0}.comparison-day{display:flex;flex-direction:column}.comparison-day span,.comparison-values span{font-size:11px;color:#777}.comparison-bars{display:flex;flex-direction:column;gap:5px}.comparison-track{height:12px;background:#f2f2f2;border-radius:9px;overflow:hidden}.comparison-fill{height:100%;border-radius:9px}.comparison-fill.current,.legend-dot.current{background:#f16d83}.comparison-fill.previous,.legend-dot.previous{background:#aab0bb}.comparison-values{display:flex;flex-direction:column;text-align:right;font-size:12px;gap:3px}.comparison-legend{display:flex;gap:15px;flex-wrap:wrap;font-size:12px;color:#666}.legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}@media(max-width:480px){.comparison-row{grid-template-columns:42px minmax(0,1fr) 102px;gap:6px}.comparison-values{font-size:10px}.dashboard-kpis .stat b{font-size:18px}}.booking-toggle{color:inherit;text-align:left;min-height:0;display:block;width:100%;font-weight:normal;cursor:pointer}.booking-toggle:hover{border-color:var(--pink);background:#fff5f7}.booking-toggle small{display:block}.booking-detail{margin-top:14px;padding:16px;border:1px solid #edf0f5;border-radius:13px;background:#fff}.booking-detail .row{padding:7px 0;border-bottom:1px solid #f1f1f1}.booking-detail .row:last-child{border-bottom:0}.booking-detail h3{font-size:14px;margin:12px 0 5px}.admin-tools{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-start}.admin-tools>details>summary{cursor:pointer;background:#171717;color:white;border-radius:10px;padding:10px 14px;font-weight:650}.admin-tools>details[open]{flex-basis:100%}.admin-tools>details[open]>summary{background:#fa738b;color:#171717}.class-card{border:1px solid #e5e2e2;border-radius:12px;padding:12px;margin:8px 0}.class-card summary{cursor:pointer}.class-kpis{display:flex;flex-wrap:wrap;gap:8px}.class-kpis[hidden]{display:none}[data-report="detalle"] .item{border-radius:10px;background:#faf8f9;margin:6px 0;padding:10px 12px}.class-kpis span{background:#fff0f3;padding:6px 10px;border-radius:8px}#winDemo{display:none;border-color:#d44664;color:#232344}
+.win-preview #winDemo{display:block}
+#jornadaCaja{border-top:3px solid #d44664}
+#jornadaCaja h2{color:#232344}
+#jornadaCaja button:not(.secondary){background:#232344}
+body.admin-mode #jornadaCaja{display:none}
+ 
+:root{--black:#232344;--pink:#D44664;--surface:#FFFFFF}
+body{color:#232344;font-size:16px}button{background:#232344}
+button.secondary{color:#232344}.chips button{color:#232344;min-height:54px;font-weight:650}
+#types button{font-size:16px}.pill{color:#892740}.booking-toggle:hover{background:#fff4f7}
+#resumenCaja .stat{color:#232344}#resumenCaja .stat b{font-size:clamp(22px,4.8vw,32px)}
+#cierreCajaTurno summary,#historialRecepcion summary,#avisosRecepcion summary{cursor:pointer;font-weight:750}
+.selectorActividad button[aria-pressed="true"]{background:#232344;color:#fff;border-color:#232344}
+.selectorActividad button{flex:1;min-width:54px}.selectorActividad{display:flex;gap:8px;flex-wrap:wrap}
+#formActividad,#classException,#historialDetalle{margin:16px 0}#avisoForm,#historialDetalle{padding-top:14px}
+#msg{scroll-margin-top:12px}#entryForm,#resumenCaja,#historialRecepcion{scroll-margin-top:12px}
+body.admin-mode #avisosRecepcion,body.admin-mode #historialRecepcion,body.admin-mode #cierreCajaTurno{display:none!important}
+</style></head><body><main class="wrap"><header class="row"><div><h1>WIN <span style="color:var(--pink)">PADEL CLUB</span></h1><small>GESTIÓN · CAJA Y TURNOS</small></div><span class="pill">Módulo 01</span></header><div id="msg" role="status"></div>
+<section class="card" id="winDemo"><h2>Pruebas de Caja y Turnos</h2><p>Los movimientos son ficticios. Usá el PIN de prueba <strong>123456</strong> con cualquier usuario de la lista.</p>
+<button type="button" class="secondary" onclick="reiniciarPruebaCaja()">Reiniciar datos de prueba</button>
+<button type="button" class="secondary" onclick="simularMadrugada()">Simular turno después de medianoche</button></section>
+<div id="retryWrite" class="card hide"><p>Hay una operación sin confirmación. Conservá esta pantalla.</p><div class="actions"><button onclick="retryPending()">Comprobar estado y reintentar</button></div></div><section class="card" id="login"><h2>Ingresar</h2><div class="grid"><div><label>Empleado</label><select id="user"></select></div><div><label>PIN personal</label><input type="password" id="pin" inputmode="numeric" autocomplete="off" placeholder="PIN"></div></div><button style="margin-top:14px;width:100%" onclick="entrar()">Ingresar</button></section>
+<div id="app" class="hide"><section class="card"><div class="row"><div><h2 style="margin:0">Turno de <span id="operator"></span></h2><small id="turnInfo"></small><p id="turnoJornadaNocturna" class="muted small hide"></p></div><div class="actions"><button id="adminButton" class="secondary hide" onclick="mostrarAdmin(true)">Administración</button><button class="secondary" onclick="refresh()">Actualizar</button><button class="secondary" onclick="salir()">Salir</button></div></div><div id="noTurn" class="hide"><p class="muted">No hay turno abierto.</p><div id="firstOpen"><label for="initial">Efectivo contado al recibir la caja ($)</label><input id="initial" class="money-input" type="text" inputmode="decimal" placeholder="0" oninput="compararApertura()"></div><p id="inheritInfo" class="muted" aria-live="polite"></p><div id="traspasoCaja" class="hide"><label for="motivoTraspaso">Motivo de la diferencia de traspaso</label><textarea id="motivoTraspaso" rows="2" maxlength="400"></textarea></div><button onclick="abrir()">Abrir turno</button></div><div id="otherTurn" class="hide"><p class="muted">Estás colaborando en esta caja. Podés registrar movimientos y corregir tus propias cargas. El titular o Administración hacen el cierre.</p></div></section>
+<section id="jornadaCaja" class="card hide" aria-labelledby="jornadaTitulo">
+<h2 id="jornadaTitulo">Conciliación general de transferencias</h2>
+<p id="jornadaPregunta" class="hide">¿Fue el último turno del día? Si terminaste la jornada, revisá los comprobantes de todos sus turnos.</p>
+<div id="jornadaOpciones" class="actions"></div>
+<div id="jornadaDetalle" class="hide">
+<hr><h3 id="jornadaFecha"></h3>
+<div id="jornadaTurnos"></div>
+<div class="row"><strong>Total registrado en WIN</strong><strong id="jornadaEsperado"></strong></div>
+<p id="jornadaActa" class="muted" aria-live="polite"></p>
+<div id="jornadaCaptura">
+<div class="grid"><div><label for="jornadaImporte">Total de comprobantes ($)</label><input id="jornadaImporte" class="money-input" inputmode="decimal" oninput="diferenciaJornada()"></div>
+<div><label for="jornadaCantidad">Cantidad de comprobantes</label><input id="jornadaCantidad" type="number" min="0" step="1" inputmode="numeric"></div></div>
+<p id="jornadaDiferencia" class="muted" aria-live="polite"></p>
+<div id="jornadaExcepcion" class="hide">
+<label for="jornadaMotivo">Motivo de la diferencia</label><textarea id="jornadaMotivo" rows="2" maxlength="400"></textarea>
+<label for="jornadaVerificaciones">Qué verificaste</label><textarea id="jornadaVerificaciones" rows="2" maxlength="400"></textarea>
+<label><input id="jornadaAvisado" type="checkbox" style="width:auto;min-height:0"> Avisé a Administración</label></div>
+<button type="button" onclick="guardarJornadaCaja()">Confirmar conciliación general</button></div>
+<div id="jornadaMensaje" class="hide"><label for="jornadaTexto">Mensaje para el grupo Comprobantes</label>
+<input id="jornadaTexto" readonly onclick="this.select()"><button class="secondary" type="button" onclick="copiarJornadaCaja()">Copiar mensaje</button></div>
+</div></section>
+<div id="resumenCaja" class="hide"><section class="card"><h2>Caja del turno</h2>
+<div class="grid">
+<button type="button" class="stat booking-toggle" onclick="verIndicadorCaja('Efectivo')"><small>Efectivo esperado</small><b id="expected">$0</b></button>
+<button type="button" class="stat booking-toggle" onclick="verIndicadorCaja('Transferencia')"><small>Transferencias recibidas</small><b id="transfers">$0</b></button>
+<button type="button" class="stat booking-toggle" id="bookingToggle" onclick="toggleReservas()" aria-expanded="false" aria-controls="bookingDetail"><small>Reservas jugadas</small><b id="bookings">0</b><small>Ver detalle</small></button>
+<button type="button" class="stat booking-toggle" onclick="verClasesCaja()" aria-controls="clasesCajaDetalle"><small>Clases dictadas</small><b id="classes">0</b></button>
+</div><div id="bookingDetail" class="booking-detail hide"></div><div id="efectivoDesglose" class="booking-detail hide"></div>
+<div id="clasesCajaDetalle" class="booking-detail hide"></div></section></div>
+<section id="avisosRecepcion" class="card"><div class="row"><h2>Avisos y pendientes <span id="avisosCantidad" class="pill">0</span></h2>
+<button type="button" class="secondary" onclick="nuevoAviso()">+ Nuevo aviso</button></div>
+<div class="actions"><button type="button" class="secondary" onclick="mostrarAvisos(false)">Pendientes</button><button type="button" class="secondary" onclick="mostrarAvisos(true)">Resueltos</button></div>
+<form id="avisoForm" class="hide" onsubmit="event.preventDefault();enviarAviso()"><label for="avisoTexto">Aviso para el siguiente turno</label>
+<textarea id="avisoTexto" rows="2" maxlength="400"></textarea><div class="actions"><button type="button" class="secondary" onclick="cerrarAviso()">Cancelar</button><button type="submit">Guardar aviso</button></div></form>
+<div id="avisosLista" aria-live="polite"></div></section>
+<div id="workspace" class="hide">
+<section class="card"><h2>Agregar anotación</h2><div class="chips" id="types"><button data-type="Reserva" data-cat="Abonos" onclick="elegir('Reserva','Abonos')">+ Abono</button><button data-type="Reserva" data-cat="Regulares" onclick="elegir('Reserva','Regulares')">+ Reserva regular</button><button data-type="Clase" onclick="elegir('Clase')">+ Clase</button><button data-type="Rendicion" onclick="abrirRendicion()">+ Rendición</button><button data-type="Evento" onclick="elegir('Evento')">+ Evento</button><button data-type="Gasto" onclick="elegir('Gasto')">+ Gasto</button><button data-type="Retiro" onclick="elegir('Retiro')">+ Retiro</button><button data-type="Tienda" onclick="elegir('Tienda')">+ Tienda</button><button data-type="Otro ingreso" onclick="elegir('Otro ingreso')">+ Otros ingresos</button></div><div id="entryForm" class="hide"><hr><h2 id="formTitle"></h2><label id="abonoJuego" class="hide"><input type="checkbox" id="seJugo" checked style="width:auto;min-height:0" onchange="ajustarActividad()"> ¿Se jugó?</label>
+<div id="formActividad" class="hide">
+ <div id="selectorCanchas"><label>Canchas</label><div class="selectorActividad" id="canchaBotones">
+ <button type="button" class="secondary" data-cancha="C1" onclick="seleccionarCancha('C1')">C1</button>
+ <button type="button" class="secondary" data-cancha="C2" onclick="seleccionarCancha('C2')">C2</button>
+ <button type="button" class="secondary" data-cancha="C3" onclick="seleccionarCancha('C3')">C3</button>
+ <button type="button" class="secondary" data-cancha="C4" onclick="seleccionarCancha('C4')">C4</button></div></div>
+ <div class="grid"><div><label>Hora de inicio · 24 horas</label><div class="grid"><select id="classHour" aria-label="Hora de inicio" onchange="syncClassTime()"><option value="">Hora</option></select><select id="classMinute" aria-label="Minutos de inicio" onchange="syncClassTime()"></select></div><input id="classTime" type="hidden"></div>
+ <div id="actividadFinEvento" class="hide"><label>Hora de finalización · 24 horas</label><div class="grid"><select id="finHora" aria-label="Hora de finalización"><option value="">Hora</option></select><select id="finMinuto" aria-label="Minutos de finalización"></select></div></div></div>
+ <div id="selectorDuracion"><label>Duración</label><div class="selectorActividad" id="duracionBotones">
+ <button type="button" class="secondary" data-duracion="60" onclick="seleccionarDuracion(60)">60 min</button>
+ <button type="button" class="secondary" data-duracion="90" onclick="seleccionarDuracion(90)">90 min</button>
+ <button type="button" class="secondary" data-duracion="120" onclick="seleccionarDuracion(120)">120 min</button></div>
+ <label id="duracionPersonal" class="hide">Minutos <input id="duracionActividad" type="number" inputmode="numeric" min="1" max="720" step="1" oninput="seleccionarDuracion(Number(this.value),false)"></label>
+ <p class="muted small" id="actividadFin"></p></div>
+ <label><input id="diaSiguiente" type="checkbox" style="width:auto;min-height:0"> La actividad empieza después de medianoche, en la misma jornada</label>
+</div>
+<div id="qtyBlock"><label id="qtyLabel">Cantidad</label><div class="count"><button class="secondary" onclick="cantidad(-1)">−</button><strong id="qtyText">1</strong><button class="secondary" onclick="cantidad(1)">+</button></div></div><div id="studentsBlock" class="hide"><label>Alumnos por clase</label><select id="students" onchange="suggestClassPrice()"><option id="alumnosNoInformados" value="0" hidden disabled>Sin informar</option><option value="1">1 alumno</option><option value="2" selected>2 alumnos</option><option value="3">3 alumnos</option><option value="4">4 alumnos</option></select></div><div id="teacherBlock" class="hide"><label>Profesor</label><select id="teacher" onchange="syncClassPercent()"></select></div><div id="classEconomics" class="hide">
+ <label for="classKind">Tipo de clase</label><select id="classKind" onchange="classKindChanged()"><option>Tradicional</option><option>Clase-partido</option></select>
+ <div id="classPercentBlock"><div class="grid"><div><label for="classPrice">Tarifa habitual</label><input id="classPrice" readonly></div><div><label for="classPercent">Porcentaje de WIN</label><input id="classPercent" readonly></div></div>
+ <p class="muted small" id="classEstimado"></p>
+ <details id="classException"><summary>Excepción / Descuento</summary><div class="grid"><div><label for="classCobrado">Importe real cobrado ($)</label><input id="classCobrado" class="money-input" inputmode="decimal" oninput="actualizarEconomiaClase()"></div>
+ <div><label for="classRemuneracion">Remuneración acordada (opcional)</label><input id="classRemuneracion" class="money-input" inputmode="decimal" oninput="actualizarEconomiaClase()"></div></div>
+ <label for="classMotivo">Motivo</label><input id="classMotivo" maxlength="300"></details></div>
+ <div id="manualWinBlock" class="hide"><label for="manualWin">Importe para WIN ($)</label><input id="manualWin" class="money-input" inputmode="decimal"></div>
+ <label for="classIncidencia">Pendiente de revisión (opcional)</label><input id="classIncidencia" maxlength="300" placeholder="Qué falta verificar">
+</div><div id="eventBlock" class="hide"><label>Tipo de evento</label><select id="eventType"><option>Cancha abierta</option><option>Torneo</option></select><label>Responsable del evento</label><input id="eventResponsible" maxlength="120"><p class="muted small">Indicá lo efectivamente cobrado en los campos Efectivo y Transferencia. Pueden quedar en cero si todavía no hubo cobro.</p><p class="muted small">Registrá solo dinero recibido, una vez. No multiplica el importe por inscriptos ni genera otra rendición.</p></div><div id="expenseCategoryBlock" class="hide"><label>Categoría de gasto del Excel</label><select id="expenseCategory" onchange="expenseSuggestions()"><option value="">Sin categoría (criterio histórico)</option></select><label>Subcategoría (opcional)</label><input id="expenseSubcategory" list="expenseSuggestions" maxlength="100" placeholder="Ej. Internet"><datalist id="expenseSuggestions"></datalist><p id="expenseCategoryInfo" class="muted small"></p></div><div id="moneyBlock" class="hide"><div class="grid"><div><label>Efectivo ($)</label><input id="cash" class="money-input" type="text" inputmode="decimal" placeholder="0"></div><div><label>Transferencia ($)</label><input id="transfer" class="money-input" type="text" inputmode="decimal" placeholder="0"></div></div></div><div id="expenseBlock" class="hide"><label>Importe ($)</label><input id="expense" class="money-input" type="text" inputmode="decimal" placeholder="0"><div id="mediumBlock"><label>Medio</label><select id="medium"><option>Efectivo</option><option>Transferencia</option></select></div></div><div id="conceptBlock" class="hide"><label for="concept" id="conceptLabel">Concepto</label><input id="concept" placeholder="Ej. Productos de limpieza"></div><div id="retiroFields" class="hide"><label for="retiroDestinatario">Destinatario del efectivo</label><input id="retiroDestinatario" maxlength="120"><p id="retiroAyuda" class="small muted">Si el efectivo se usó para pagar directamente un bien o servicio, registrá un gasto.</p></div><label for="date">Fecha de actividad</label><input id="date" type="date" onchange="syncClassPercent()"><small id="jornadaFechaAyuda" class="hide">La fecha sugerida corresponde a la jornada de la caja. El registro guarda la hora real.</small><label>Observación (opcional)</label><input id="note" placeholder="Detalle adicional"><div class="actions" style="margin-top:15px"><button class="secondary" onclick="cancelar()">Cancelar</button><button id="saveEntry" onclick="guardar()">Guardar anotación</button></div></div></section>
+<section class="card hide" id="distributedSection"><h2>Registrar rendición</h2><div class="grid"><div><label>Profesor</label><select id="splitTeacher" onchange="splitLoadBalances()"></select></div><div><label>Fecha real de cobro</label><input type="date" id="splitPayDate" readonly><small id="splitJornadaAyuda" class="hide"></small></div><div><label for="splitCash">Efectivo recibido ($)</label><input class="money-input" id="splitCash" inputmode="decimal" placeholder="0" oninput="splitCalc()"></div>
+<div><label for="splitTransfer">Transferencias recibidas ($)</label><input class="money-input" id="splitTransfer" inputmode="decimal" placeholder="0" oninput="splitCalc()"></div><input id="splitTotal" type="hidden"></div><div id="splitTeacherBalances" aria-live="polite"></div><div class="row" style="margin-top:12px"><label><input type="checkbox" id="splitHistory" onchange="renderSplitBalances()" style="width:auto;min-height:0"> Ver historial</label><button type="button" class="secondary" onclick="splitAssignPending()">Asignar pendientes</button></div><p class="muted small">Seleccioná las fechas que querés pagar. Podés escribir importes o usar Asignar en cada fecha.</p><div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Fecha de clase</th><th>Pendiente</th><th>Asignar</th></tr></thead><tbody id="splitRows"></tbody></table></div><p id="splitEmpty" class="muted small"></p><div id="splitBalance" class="stat" aria-live="polite" style="margin-top:12px"></div><details id="duplicateOverride" class="hide"><summary>Autorización administrativa de coincidencia exacta</summary><label><input id="allowDuplicate" type="checkbox" style="width:auto"> Autorizar otro cobro legítimo coincidente</label><label>Motivo obligatorio</label><input id="duplicateReason" maxlength="200"></details><label><input id="splitSurplus" type="checkbox" style="width:auto;min-height:0" onchange="splitCalc()"> Guardar el excedente como saldo a favor</label>
+<label><input id="splitReview" type="checkbox" style="width:auto;min-height:0" onchange="splitCalc()"> Dejar una diferencia pendiente de revisión</label>
+<label for="splitNote">Observaciones</label><input id="splitNote" maxlength="350" oninput="splitCalc()">
+<details id="splitSaldo" class="hide"><summary>Usar o devolver saldo a favor</summary><label for="saldoAccion">Acción</label><select id="saldoAccion"><option value="APLICAR">Aplicar a una jornada</option><option value="DEVOLVER">Devolver efectivo</option></select>
+<div class="grid"><div><label for="saldoFecha">Fecha de actividad si se aplica</label><input id="saldoFecha" type="date"></div>
+<div><label for="saldoImporte">Importe ($)</label><input id="saldoImporte" class="money-input" inputmode="decimal"></div></div>
+<label for="saldoMotivo">Motivo</label><input id="saldoMotivo" maxlength="250"><button type="button" class="secondary" onclick="guardarAccionSaldo()">Registrar acción</button></details><div class="actions" style="margin-top:12px"><button class="secondary" onclick="cancelar()">Cancelar</button><button id="splitSaveButton" onclick="splitSave()" disabled>Guardar rendición</button></div></section></div>
+<section class="card" id="historialRecepcion"><div class="row"><h2>Movimientos e historial</h2><span id="entryCount" class="muted small"></span></div>
+ <div class="grid"><div><label for="historialPeriodo">Período</label><select id="historialPeriodo" onchange="cambiarPeriodoHistoria()"><option value="caja">Caja actual</option><option value="hoy">Hoy</option><option value="ayer">Ayer</option><option value="semana">Últimos 7 días</option><option value="fecha">Fecha</option><option value="mes">Mes</option></select></div>
+ <div><label for="historialTipo">Tipo</label><select id="historialTipo" onchange="consultarHistorial()"><option value="">Todos</option><option value="Regulares">Reserva regular</option><option value="Abonos">Abono</option><option>Clase</option><option value="Rendicion">Rendición</option><option>Evento</option><option>Tienda</option><option>Gasto</option><option>Retiro</option><option>Otro ingreso</option></select></div></div>
+ <div id="historialFechaWrapper" class="hide"><label for="historialFecha">Fecha</label><input type="date" id="historialFecha" onchange="consultarHistorial()"></div>
+ <div id="historialMesWrapper" class="hide"><label for="historialMes">Mes</label><input type="month" id="historialMes" onchange="consultarHistorial()"></div>
+ <label for="historialBuscar">Buscar</label><input id="historialBuscar" type="search" onsearch="consultarHistorial()" onkeydown="if(event.key==='Enter')consultarHistorial()" placeholder="Ej. profesor, cancha o concepto">
+ <div class="actions" style="margin:10px 0" id="movementFilters"><button class="secondary" onclick="filterMovements('Todos')">Todos</button><button class="secondary" onclick="filterMovements('Efectivo')">Efectivo</button><button class="secondary" onclick="filterMovements('Transferencia')">Transferencia</button><button class="secondary" onclick="consultarHistorial()">Buscar</button></div>
+ <section class="card" id="classRequestPanel" hidden><details><summary>Correcciones de clases anteriores</summary>
+<label>Fecha de la clase <input id="classRequestDate" type="date"></label>
+<button type="button" onclick="loadClassRequests()">Consultar clases y solicitudes</button>
+<div id="classRequestResults"></div></details></section><div class="actions"><button class="secondary" type="button" onclick="abrirCobroOmitido()">Informar cobro omitido</button></div><div id="entries"></div><div id="historialArchivado" class="hide"></div><div id="historialDetalle" class="hide"></div>
+ <div id="paginasHistoria" class="actions hide"><button type="button" class="secondary" id="paginaHistoriaAnterior" onclick="consultarHistorial(paginaHistoria-1)">Anterior</button><button type="button" class="secondary" id="paginaHistoriaSiguiente" onclick="consultarHistorial(paginaHistoria+1)">Siguiente</button></div>
+</section><section class="card" id="cierreCajaTurno"><details id="cierreDetalle"><summary>Cerrar turno</summary>
+<div class="grid"><div><div class="row"><span>Efectivo esperado</span><strong id="closeExpected"></strong></div><label for="counted">Efectivo contado ($)</label><input type="text" inputmode="decimal" class="money-input" id="counted" oninput="diff()" placeholder="Contar billetes y monedas"></div>
+<div><div class="row"><span>Transferencias esperadas</span><strong id="closeTransfers"></strong></div><label for="closeReceiptTotal">Monto de comprobantes ($)</label><input type="text" inputmode="decimal" class="money-input" id="closeReceiptTotal" oninput="diff()" placeholder="0"></div></div>
+<label for="closeReceiptCount">Cantidad de comprobantes</label><input type="number" min="0" step="1" id="closeReceiptCount" inputmode="numeric" placeholder="0">
+<p class="muted small">Un mismo comprobante puede cubrir varios movimientos. Contalo una sola vez.</p>
+<div id="difference" class="muted" style="margin:12px 0" aria-live="polite"></div>
+<label for="closeNote">Observaciones de cierre</label><textarea id="closeNote" rows="2" maxlength="400" placeholder="Motivo de la diferencia o aclaración"></textarea>
+<div id="cierreExcepcional" class="hide"><label for="closeChecks">Qué verificaste antes de cerrar</label><textarea id="closeChecks" rows="2" maxlength="400"></textarea><label><input id="closeNotifiedAdmin" type="checkbox" style="width:auto;min-height:0"> Avisé a Administración antes de cerrar.</label><p class="muted small">La diferencia queda abierta para revisión.</p></div>
+<button style="width:100%;margin-top:14px" onclick="cerrar()">Confirmar cierre de turno</button></details></section>
+<section class="card" id="consultaActividadDocente" hidden><details id="teacherHistory" ontoggle="if(this.open)loadTeacherHistory()"><summary>Consulta por fecha de actividad · clases y rendiciones</summary><label>Mes y año</label><input id="teacherHistoryMonth" type="month" onchange="loadTeacherHistory()"><label>Profesor</label><select id="teacherHistoryProfessor" onchange="loadTeacherHistory()"></select><div id="teacherHistoryRows"></div></details></section>
+<section class="card hide" id="daySection"><div class="row"><h2>Resumen diario</h2><button class="secondary" onclick="verDia()">Actualizar</button></div><label>Fecha</label><input type="date" id="dayDate"><div id="daySummary" class="muted">Consultá los totales del día.</div></section>
+<section class="card hide" id="adminPanel"><div class="row"><h2 style="margin:0">Administración</h2><button class="secondary" onclick="mostrarAdmin(false)">Volver a recepción</button></div>
+<p class="muted small">Actividad: valor generado por fecha de clase. Caja: rendiciones por fecha real de cobro. Reservas y abonos conservan el criterio actual.</p>
+<div class="grid"><div><label>Desde</label><input type="date" id="adminFrom"></div><div><label>Hasta</label><input type="date" id="adminTo"></div></div>
+<div class="period-buttons" id="periodButtons"><button class="secondary" data-period="hoy" onclick="seleccionarPeriodoAdmin('hoy')">Hoy</button><button class="secondary" data-period="semana" onclick="seleccionarPeriodoAdmin('semana')">Esta semana</button><button class="secondary" data-period="mes" onclick="seleccionarPeriodoAdmin('mes')">Este mes</button><button class="secondary" data-period="custom" onclick="seleccionarPeriodoAdmin('custom')">Personalizado</button><button onclick="cargarAdmin()">↻ Actualizar</button></div><div class="period-status" id="periodStatus"><span class="period-dot"></span><span id="periodStatusText">Elegí un período para consultar.</span></div>
+<h2>Herramientas</h2><div class="admin-tools"><button type="button" onclick="abrirRevisionCerrada()">+ Movimiento de día cerrado</button><details><summary>Ajustar saldo de profesor · Solo Administración</summary><p class="muted small">Aplicá descuentos o corregí el pendiente de rendición por fecha de actividad, hasta hoy. Cada ajuste queda en el historial.</p><label>Profesor</label><select id="regularTeacher" onchange="regularReport=null"></select><button onclick="loadRegularBalance()">Consultar saldos y ajustes</button><div id="regularBalances"></div><label>Fecha de actividad a ajustar</label><input id="regularDate" type="date"><label>Nuevo saldo pendiente para esa fecha ($)</label><input id="regularAmount" class="money-input" inputmode="decimal"><label>Motivo del ajuste</label><input id="regularReason" maxlength="300"><button onclick="saveRegularBalance()">Guardar ajuste de saldo</button></details><details ontoggle="if(this.open)cargarInicioControl()"><summary>Inicio del control de rendiciones</summary><p class="muted small">Oculta pendientes anteriores en recepción. No cambia reportes financieros ni elimina registros. Vacío significa sin corte.</p><label>Fecha de inicio</label><input id="controlStartDate" type="date" disabled><button id="controlStartSave" onclick="guardarInicioControl()" disabled>Guardar inicio del control</button></details><details><summary>Revisar rendiciones y posibles duplicados</summary><label>Fecha real de cobro</label><input id="adminReceiptDate" type="date"><button onclick="loadAdminReceipts()">Consultar rendiciones</button><div id="adminReceipts"></div></details></div><div id="adminResult" style="margin-top:15px" class="muted">Seleccioná un período.</div>
+<section class="card"><details id="correccionesCajaAdmin" ontoggle="if(this.open)cargarCorreccionesCaja()"><summary><strong>Correcciones provisionales de caja</strong></summary>
+<label><input id="correccionesTodas" type="checkbox" onchange="cargarCorreccionesCaja()" style="width:auto;min-height:0"> Ver decisiones anteriores</label>
+<div id="correccionesCajaListado"></div></details></section>
+<section class="card"><details><summary><strong>Comisión de clases por fecha</strong></summary><form onsubmit="event.preventDefault();guardarComisionClase()">
+<div class="grid"><div><label for="comisionProfesor">Profesor</label><select id="comisionProfesor"></select></div><div><label for="comisionDesde">Vigente desde</label><input id="comisionDesde" type="date"></div></div>
+<label for="comisionValor">Porcentaje de WIN</label><input id="comisionValor" class="money-input" inputmode="decimal">
+<label for="comisionMotivo">Motivo</label><input id="comisionMotivo" maxlength="300"><button type="submit">Guardar comisión</button>
+</form></details></section>
+<section class="card" id="incidenciasCajaPanel"><details id="incidenciasCaja" ontoggle="if(this.open)cargarIncidenciasCaja()">
+<summary><strong>Incidencias de caja</strong></summary>
+<div class="grid"><div><label for="incidenciasFiltro">Estado</label><select id="incidenciasFiltro" onchange="cargarIncidenciasCaja()"><option value="PENDIENTES">Pendientes</option><option value="RESUELTAS">Resueltas</option><option value="TODAS">Todas</option></select></div>
+<div><label for="incidenciasFecha">Jornada (opcional)</label><input id="incidenciasFecha" type="date" onchange="cargarIncidenciasCaja()"></div></div>
+<div class="actions" style="margin-top:12px"><button type="button" class="secondary" onclick="cargarIncidenciasCaja()">Actualizar incidencias</button></div>
+<div id="incidenciasResultado" aria-live="polite"></div>
+<div class="actions hide" id="incidenciasPaginacion" style="margin-top:12px"><button type="button" class="secondary" id="incidenciasAnterior" onclick="cargarIncidenciasCaja(paginaIncidencias-1)">Anterior</button><button type="button" class="secondary" id="incidenciasSiguiente" onclick="cargarIncidenciasCaja(paginaIncidencias+1)">Siguiente</button></div>
+<div id="incidenciaEditor" class="booking-detail hide">
+<h3 id="incidenciaEditorTitulo"></h3>
+<label for="incidenciaNota">Qué verificaste o cómo se resolvió</label><textarea id="incidenciaNota" rows="2" maxlength="400"></textarea>
+<div class="actions" style="margin-top:12px"><button type="button" class="secondary" onclick="cerrarRevisionIncidencia()">Cancelar</button><button type="button" onclick="guardarRevisionIncidencia()">Guardar revisión</button></div></div>
+</details></section>
+<hr><hr><h2>Control de movimientos y cierres</h2><p class="muted small">Solo administración. La revisión no modifica movimientos ni bloquea la operatoria.</p>
+<label>Fecha de actividad</label><input type="date" id="reviewDate" onchange="$('reviewMovementEditor').innerHTML='';cargarControl()"><div class="actions" style="margin-top:10px"><button class="secondary" onclick="cargarControl()">Ver detalle del día</button></div>
+<div class="actions"><button type="button" id="reviewAddMovement" onclick="editReviewMovement(-1)">+ Agregar movimiento</button></div><div id="reviewMovementEditor"></div><div id="reviewResult" style="margin-top:14px" class="muted">Seleccioná una fecha para consultar los movimientos.</div>
+<label>Observaciones de revisión</label><textarea id="reviewNote" rows="2" placeholder="Opcional para revisado; obligatorio si queda observado"></textarea>
+<div class="actions" style="margin-top:10px"><button class="secondary" onclick="guardarRevision('OBSERVADO')">Dejar observado</button><button onclick="guardarRevision('REVISADO')">Marcar revisado</button></div><hr><section class="card" id="asientosSection"><h2>Cierre diario · Asientos para Excel</h2><p class="muted small">Primero cerrá los turnos y marcá el día como REVISADO. Generar no modifica caja ni ingresos.</p><label>Fecha</label><input id="exportDate" type="date" onchange="exportQuery++;exportPack=null;$('copyAsientos').disabled=true;$('exportResult').textContent='Consultá la nueva fecha para actualizar la jornada.'"><div class="actions" style="margin-top:10px"><button class="secondary" onclick="consultarAsientos()">Consultar jornada</button><button onclick="generarAsientos()">Generar asientos</button><button class="secondary" id="copyAsientos" onclick="copiarAsientos()" disabled>Copiar para Excel</button></div><div id="exportResult" style="margin-top:15px">Consultá una jornada.</div></section></section></div></main>
+<dialog id="receiptEditDialog" style="max-width:650px;width:95%;border:1px solid #ddd;border-radius:12px"><h2>Editar rendición</h2><p id="receiptEditWarning" class="muted small"></p><label>Profesor</label><select id="receiptProfessor"></select><label for="receiptCash">Efectivo</label><input id="receiptCash" inputmode="decimal" onblur="formatInput(this)">
+<label for="receiptTransfer">Transferencias</label><input id="receiptTransfer" inputmode="decimal" onblur="formatInput(this)">
+<label><input id="receiptSurplus" type="checkbox" style="width:auto;min-height:0"> Conservar excedente como saldo a favor</label><div id="receiptEditRows"></div><button class="secondary" onclick="addReceiptEditRow()">Agregar fecha</button><label>Observaciones</label><input id="receiptObservation"><label>Motivo obligatorio de la corrección</label><input id="receiptReason" maxlength="250"><div class="actions"><button class="secondary" onclick="$('receiptEditDialog').close()">Cancelar</button><button id="receiptEditSave" onclick="saveReceiptEdit()">Guardar corrección</button></div></dialog><script>
+let cfg={responsables:[],profesores:[]},session=null,state=null,chosen=null,qty=1,waiting=false,editingId=null;
+const $=id=>document.getElementById(id),money=v=>new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS',minimumFractionDigits:0,maximumFractionDigits:2}).format(Number(v)||0);
+// Los puntos son miles y la coma es decimal. Nunca enviar texto formateado al backend.
+function num(v){
+ if(typeof v==='number')return Number.isFinite(v)?v:NaN;
+ const s=String(v??'').trim();if(!s)return 0;
+ if(!/^-?(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d{1,2})?$/.test(s))return NaN;
+ const n=Number(s.replace(/\./g,'').replace(',','.'));return Number.isFinite(n)?n:NaN;
+}
+function formatInput(el){const n=num(el.value);el.value=el.value.trim()===''?'':Number.isFinite(n)?new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(n):el.value;}
+function attachMoney(){document.querySelectorAll('.money-input').forEach(el=>{el.addEventListener('focus',()=>{const n=num(el.value);el.value=el.value.trim()===''?'':Number.isFinite(n)?new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(n):el.value;el.select();});el.addEventListener('blur',()=>formatInput(el));});}
+
+function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function today(){return new Intl.DateTimeFormat('sv-SE',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
+function fechaActividadCaja(fecha=state?.turno?.fecha,actual=today()){
+ const anterior=new Date(actual+'T12:00:00Z');
+ anterior.setUTCDate(anterior.getUTCDate()-1);
+ return fecha===anterior.toISOString().slice(0,10)?fecha:actual;
+}
+function msg(s,good=false){
+ $('msg').textContent=s;$('msg').className=good?'good':'';
+ if(s&&!good&&$('msg').scrollIntoView)$('msg').scrollIntoView({block:'nearest'});
+}
+const mutations=new Set(['abrirCaja','guardarAnotacion','editarAnotacion','anularAnotacion','cerrarCaja','conciliarJornadaCaja','solicitarCorreccionCaja','adminResolverCorreccionCaja','adminConfigurarComisionClase','guardarAvisoRecepcion','resolverAvisoRecepcion','revisarOrigenAviso','moverSaldoProfesor','adminRevisarIncidenciaCaja','adminRevisarDia','adminGenerarAsientos','adminMovimientoCerrado','adminRegistrarCobroDistribuido','adminConfigurarControlRendiciones','corregirCobroDistribuido','adminRegularizarSaldo','adminCorregirClaseCerrada','solicitarCorreccionClase','resolverSolicitudClase','adminGestionarMovimientoCerrado']);
+let requestQueue=[],pendingWrite=null,sessionEpoch=0;
+function requestId(){return crypto.randomUUID();}
+function api(fn,p,cb){
+ const write=mutations.has(fn);let payload=p;
+ if(pendingWrite){msg('Hay una operación pendiente. Comprobá su estado antes de repetir.');return;}
+ if(write)payload={...p,requestId:requestId()};
+ requestQueue.push({fn,p:payload,cb,write,key:JSON.stringify(p),epoch:sessionEpoch});pump();
+}
+function retryPending(){
+ if(!pendingWrite||waiting)return;
+ const task=pendingWrite;waiting=true;$('retryWrite').querySelector('button').disabled=true;
+ google.script.run.withSuccessHandler(status=>{
+  waiting=false;$('retryWrite').querySelector('button').disabled=false;
+  if(status.estado==='CONFIRMADA'){
+   pendingWrite=null;$('retryWrite').classList.add('hide');document.querySelectorAll('button,input,select,textarea').forEach(el=>el.disabled=false);
+   try{task.cb(status.resultado);}catch(e){msg('La operación está guardada. Actualizá el listado antes de repetir.',true);}splitCalc();
+  }else if(status.estado==='NO_REGISTRADA'){requestQueue.push(task);pump();}
+  else msg('La solicitud ya fue procesada. Administración debe comprobar el resultado; no la cargues nuevamente.');
+ }).withFailureHandler(e=>{waiting=false;$('retryWrite').querySelector('button').disabled=false;msg('No se pudo confirmar el estado. Conservá esta pantalla y volvé a comprobar. '+(e.message||e));}).consultarEstadoSolicitud({...session,accion:task.fn,solicitud:task.p});
+}
+function pump(){
+ if(waiting||!requestQueue.length)return;
+ const task=requestQueue.shift();if(task.epoch!==sessionEpoch){pump();return;}
+ waiting=true;document.querySelectorAll('button,input,select,textarea').forEach(x=>x.disabled=true);
+ google.script.run.withSuccessHandler(r=>{
+   waiting=false;document.querySelectorAll('button,input,select,textarea').forEach(x=>x.disabled=false);
+   if(task.write){pendingWrite=null;$('retryWrite').classList.add('hide');}
+   if(task.epoch===sessionEpoch){try{task.cb(r);}catch(e){msg('Operación completada; error al mostrar el resultado. Actualizá la vista antes de repetir: '+e.message);}}
+   splitCalc();pump();
+ }).withFailureHandler(e=>{
+   waiting=false;document.querySelectorAll('button,input,select,textarea').forEach(x=>x.disabled=false);
+   if(task.write&&String(e.message||e).includes('RECHAZADA:')){pendingWrite=null;$('retryWrite').classList.add('hide');}else if(task.write){pendingWrite=task;requestQueue=[];document.querySelectorAll('input,select,textarea').forEach(x=>x.disabled=true);$('retryWrite').classList.remove('hide');}
+   msg((e.message||String(e))+(task.write?' Si no se confirmó, usá Reintentar operación. No vuelvas a cargar el movimiento desde otra pestaña.':''));splitCalc();pump();
+ })[task.fn](task.p);
+}
+// Reintenta exactamente la misma solicitud. No guarda PIN en almacenamiento local.
+window.addEventListener('beforeunload',e=>{if(pendingWrite||chosen||(!$('distributedSection').classList.contains('hide')&&$('splitTotal').value)||waiting&&session){e.preventDefault();e.returnValue='';}});
+
+function init(){api('opciones',undefined,c=>{cfg=c;$('user').innerHTML=c.responsables.map(x=>`<option>${esc(x)}</option>`).join('');$('teacher').innerHTML=c.profesores.map(x=>`<option>${esc(x)}</option>`).join('');$('comisionProfesor').innerHTML=$('teacher').innerHTML;$('comisionDesde').value=today();$('date').value=today();$('dayDate').value=today();$('adminReceiptDate').value=today();$('teacherHistoryMonth').value=today().slice(0,7);$('teacherHistoryProfessor').innerHTML='<option value="">Todos</option>'+c.profesores.map(x=>'<option>'+esc(x)+'</option>').join('');$('regularTeacher').innerHTML=c.profesores.map(x=>'<option>'+esc(x)+'</option>').join('');initClassTimes();initExpenseCategories();attachMoney();});}
+function entrar(){session={responsable:$('user').value,pin:$('pin').value};api('cajaAbierta',session,r=>{$('login').classList.add('hide');$('app').classList.remove('hide');$('operator').textContent=session.responsable;state=r;render();$('adminButton').classList.toggle('hide',session.responsable!=='Admin');msg('Acceso correcto.',true);verDia();listarJornadasCaja();mostrarAvisos(false);if(!state.turno){$('historialPeriodo').value='hoy';cambiarPeriodoHistoria();}});}
+function salir(){historyQuery++;regularReport=null;$('teacherHistoryRows').textContent='';$('teacherHistory').open=false;if(pendingWrite){msg('Resolvé la operación pendiente antes de salir.');return;}sessionEpoch++;controlStartLoaded=false;requestQueue=[];cancelar();['entries','adminResult','reviewResult','daySummary','exportResult'].forEach(id=>$(id).textContent='');limpiarFormularioCierre();$('initial').value='';$('motivoTraspaso').value='';$('reviewNote').value='';$('splitTotal').value='';$('splitNote').value='';$('splitRows').innerHTML='';$('splitTeacherBalances').textContent='';mostrarAdmin(false);$('adminButton').classList.add('hide');session=null;state=null;limpiarJornadaCaja();limpiarHistorial();$('pin').value='';$('app').classList.add('hide');$('login').classList.remove('hide');$('workspace').classList.add('hide');msg('Sesión finalizada.',true);}
+function refresh(){listarJornadasCaja();mostrarAvisos(avisosResueltos);api('cajaAbierta',session,r=>{
+ const cambioTurno=state?.turno?.id!==r?.turno?.id;
+ if(cambioTurno){closeSplitForm();limpiarFormularioCierre();$('cierreDetalle').open=false;}
+ state=r;render();
+ if(cambioTurno&&chosen)msg('La caja cambió. Conservamos el formulario para que lo revises; esa carga no se puede enviar a la caja nueva.');
+});}
+function render(){
+ $('classRequestPanel').hidden=!session;
+ if(session&&!$('classRequestDate').value)$('classRequestDate').value=today();
+ const t=state?.turno;
+ const hora=t&&String(t.apertura||'').match(/[ T](\d{2}:\d{2})/);
+ $('turnInfo').textContent=t?['Caja abierta',t.responsable,hora?'Apertura '+hora[1]:''].filter(Boolean).join(' · '):'Sin turno abierto';
+ const madrugada=!!t&&t.fecha!==today();
+ $('turnoJornadaNocturna').classList.toggle('hide',!madrugada);
+ $('turnoJornadaNocturna').textContent=madrugada?'Jornada comercial del '+fechaJornadaCaja(t.fecha):'';
+ $('noTurn').classList.toggle('hide',!!t);
+ $('workspace').classList.toggle('hide',!t||!state.puedeCargar);$('resumenCaja').classList.toggle('hide',!t);
+ $('otherTurn').classList.toggle('hide',!t||state.puedeCerrar);
+ $('cierreCajaTurno').classList.toggle('hide',!t||!state.puedeCerrar);
+ if(!t||!state.puedeCargar)$('distributedSection').classList.add('hide');
+ if(!t){compararApertura();if($('historialPeriodo').value==='caja')renderMovementList();return;}
+ if(!state.puedeCargar)return;
+ const z=state.totales;
+ $('expected').textContent=money(z.esperado);$('transfers').textContent=money(z.transferencia);
+ $('bookings').textContent=String(z.abonos+z.regulares)+' ('+z.abonos+' abonos · '+z.regulares+' regulares)';
+ $('classes').textContent=z.clases;renderReservas();
+ $('closeExpected').textContent=money(z.esperado);$('closeTransfers').textContent=money(z.transferencia);
+ $('entryCount').textContent=state.entradas.length+' registros';
+ renderMovementList();diff();
+}
+let movementFilter='Todos',receiptEditor=null,adminReceiptList=[];
+function filterMovements(medio){movementFilter=medio;consultarHistorial();}
+function movementHasMedium(e,medio){return medio==='Todos'||(e.tipo==='Gasto'||e.tipo==='Retiro'?e.medio===medio:medio==='Efectivo'?e.efectivo>0:e.transferencia>0);}
+function renderMovementList(){
+ if($('historialPeriodo').value&&$('historialPeriodo').value!=='caja')return;
+ const entries=(state?.entradas||[]).filter(e=>filtraHistorial(e));
+ $('entries').classList.remove('hide');$('historialArchivado').classList.add('hide');$('paginasHistoria').classList.add('hide');
+ $('entryCount').textContent=entries.length+' registros';
+ $('entries').innerHTML=entries.length?entries.slice().reverse().map((e,i)=>renderMovimientoActual(e,i,entries)).join(''):'<p class="muted">No hay movimientos para este filtro.</p>';
+ for(const button of $('movementFilters').querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.textContent===movementFilter));
+}
+function movementPayments(e){
+ if(e.tipo==='Clase')return 'Actividad sin cobro';
+ if(e.tipo==='Gasto'||e.tipo==='Retiro')return esc(e.medio)+' −'+money(e.importe);
+ return [e.efectivo>0?'Efectivo +'+money(e.efectivo):'',e.transferencia>0?'Transferencia +'+money(e.transferencia):''].filter(Boolean).join(' · ')||'Sin cobro';
+}
+function renderReceipt(e){
+ const total=e.efectivo+e.transferencia;
+ return `<div class="item"><details><summary><strong>Rendición — ${esc(e.profesor)} — ${money(total)} — ${esc(e.medio)} · ${esc(shortDate(e.fecha))}</strong><span class="small"> · ${movementPayments(e)} · ${registrationLabel(e)}</span></summary><div class="small">Profesor: ${esc(e.profesor)}<br>Fecha de cobro: ${esc(shortDate(e.fecha))}<br>Medio: ${esc(e.medio)}<br>Total: ${money(total)}<br>Registrada: ${esc(e.registrado)} · ${esc(e.responsable)}</div>${session?.responsable==='Admin'?`<small style="overflow-wrap:anywhere">Referencia de cobro: ${esc(e.id)}</small>`:''}${e.distribucion.map(d=>`<div class="small">Fecha de actividad: ${esc(shortDate(d.fecha))} · Importe atribuido: ${money(d.importe)}</div>`).join('')}<div class="small">${esc(e.nota)}</div>${e.puedeCorregir===false?'':`<div class="actions">${e.sinTurno?'<small>Sin turno identificable: revisar origen.</small>':`<button class="secondary small" onclick="openReceiptEditor('${esc(e.id)}')">Editar rendición</button>`}<button class="danger small" onclick="voidReceipt('${esc(e.id)}')">Anular rendición</button></div>`}</details></div>`;
+}
+function renderMovement(e){
+ if(e.origen==='DISTRIBUIDO')return renderReceipt(e);
+ const historical=e.tipo==='Rendicion';
+ return `<div class="item row"><div><strong>${esc(title(e))}</strong><div class="muted small">Actividad: ${esc(shortDate(e.fecha))} · ${registrationLabel(e)}</div><div class="small">${esc(e.tipo==='Clase'&&e.detalleClase?.horario?'Inicio '+e.detalleClase.horario+' · ':'')}${esc(e.nota||e.concepto)}</div>${e.destinatario?`<div class="small">Entregado a ${esc(e.destinatario)}</div>`:''}</div><div style="text-align:right"><strong>${movementPayments(e)}</strong>${historical?'<small>Registro histórico</small>':e.puedeCorregir===false?'':`<div class="actions"><button class="secondary small" onclick="editar('${esc(e.id)}')">Editar</button><button class="danger small" onclick="anular('${esc(e.id)}')">Anular</button></div>`}</div></div>`;
+}
+function toggleReservas(){const detail=$('bookingDetail'),open=detail.classList.toggle('hide')===false;$('bookingToggle').setAttribute('aria-expanded',String(open));if(open)renderReservas();}
+function renderReservas(){const box=$('bookingDetail');if(box.classList.contains('hide')||!state)return;const reservas=(state.entradas||[]).filter(e=>e.tipo==='Reserva'&&e.cantidad>0);const sum=(cat,field)=>reservas.filter(e=>e.categoria===cat).reduce((a,e)=>a+(Number(e[field])||0),0);const abCash=sum('Abonos','efectivo'),abTrans=sum('Abonos','transferencia'),reCash=sum('Regulares','efectivo'),reTrans=sum('Regulares','transferencia');const line=(name,v)=>`<div class="row"><span>${name}</span><strong>${money(v)}</strong></div>`;box.innerHTML=`<h3>Reservas regulares · ${state.totales.regulares}</h3>${line('Efectivo',reCash)}${line('Transferencia',reTrans)}${line('Total cobrado',reCash+reTrans)}<h3>Abonos jugados · ${state.totales.abonos}</h3>${line('Cobros de abonos registrados en este turno',abCash+abTrans)}${line('Efectivo',abCash)}${line('Transferencia',abTrans)}<hr>${line('Total cobrado por reservas jugadas',abCash+abTrans+reCash+reTrans)}<h3>Horas-cancha registradas · ${esc(new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(reservas.reduce((t,e)=>t+(e.actividad?.duracion||0),0)/60))}</h3><p class="muted small">Corresponde a las anotaciones del turno abierto. Los abonos jugados sin cobro nuevo no suman ingresos. No incluye clases, rendiciones ni otros ingresos.</p>`;}
+function title(e){if(e.soloCobro)return 'Abono · Pago anticipado';if(e.tipo==='Evento')return e.categoria+' · '+e.cantidad+' inscriptos · '+e.concepto;return e.tipo==='Reserva'?e.cantidad+' × '+e.categoria:e.tipo==='Clase'?e.cantidad+' × Clase de '+e.alumnos+' · '+e.profesor:e.tipo==='Rendicion'?'Rendición · '+e.profesor:e.tipo==='Tienda'?'Tienda · Ventas':e.tipo==='Otro ingreso'?'Otro ingreso · '+e.concepto:e.tipo+' · '+e.concepto;}
+function centavosCaja(n){return Math.round(n*100);}
+function compararApertura(){
+ const anterior=state?.cierreAnterior?.contado, raw=$('initial').value.trim(), importe=num(raw);
+ const dif=raw&&Number.isFinite(importe)&&anterior!=null?centavosCaja(importe)-centavosCaja(anterior):0;
+ $('traspasoCaja').classList.toggle('hide',!dif);
+ $('inheritInfo').textContent=anterior==null?'Sin efectivo anterior registrado para comparar.':
+  'Efectivo declarado en el cierre anterior: '+money(anterior)+(dif?' · Diferencia: '+money(dif/100):'');
+ return dif;
+}
+function abrir(){
+ const raw=$('initial').value.trim(), saldoInicial=num(raw), motivoTraspaso=$('motivoTraspaso').value.trim();
+ if(!raw||!Number.isFinite(saldoInicial)||saldoInicial<0){msg('Ingresá el efectivo que contaste, incluso si es $0.');return;}
+ if(compararApertura()&&!motivoTraspaso){msg('Explicá la diferencia de traspaso.');return;}
+ if(!confirm('¿Abrir turno con '+money(saldoInicial)+' de efectivo contado?'))return;
+ api('abrirCaja',{...session,saldoInicial,motivoTraspaso,cierreAnteriorId:state?.cierreAnterior?.id||''},r=>{
+  $('initial').value='';$('motivoTraspaso').value='';state=r;render();msg('Turno abierto.',true);
+ });
+}
+function suggestClassPrice(){
+ if(chosen?.tipo==='Clase'&&$('classKind').value==='Tradicional'){
+  $('classPrice').value=Number(cfg.preciosClases[$('students').value]||0).toLocaleString('es-AR');
+  actualizarEconomiaClase();
+ }
+}
+function classKindChanged(suggest=true){
+ const manual=$('classKind').value==='Clase-partido';
+ $('alumnosNoInformados').hidden=!manual;$('alumnosNoInformados').disabled=!manual;
+ if(!manual&&$('students').value==='0')$('students').value='2';
+ $('classPercentBlock').classList.toggle('hide',manual);$('manualWinBlock').classList.toggle('hide',!manual);
+ if(suggest){seleccionarDuracion(manual?90:60);suggestClassPrice();}
+}
+function registrationLabel(e){const value=String(e.registrado||''),m=value.match(/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})(?::\d{2})?$/);return (m?'Registro: '+esc(shortDate(m[1]))+' '+esc(m[2]):'Hora de registro no disponible')+' · Responsable: '+esc(e.responsable);}
+let regularReport=null,historyQuery=0;
+function loadTeacherHistory(){if(!$('teacherHistory').open)return;const query=++historyQuery;api('historialProfesor',{...session,mes:$('teacherHistoryMonth').value,profesor:$('teacherHistoryProfessor').value},r=>{if(query!==historyQuery)return;$('teacherHistoryRows').innerHTML=[...r.clases,...r.rendiciones].sort((a,b)=>b.fecha.localeCompare(a.fecha)).map(e=>'<div class="item"><strong>'+esc(e.fecha)+' · '+esc(e.profesor)+' · '+esc(e.tipo)+' · '+esc(e.estado)+'</strong><p class="small">'+registrationLabel(e)+'</p><p>'+ (e.tipo==='Clase'?'WIN '+money(e.importeWIN):movementPayments(e))+'</p>'+(e.distribucion||[]).map(d=>'<small>Actividad '+esc(d.fecha)+': '+money(d.importe)+'</small>').join('<br>')+'</div>').join('')||'<p>Sin registros en el período.</p>';});}
+function loadRegularBalance(){regularReport=null;api('adminConsultarSaldoProfesor',{...session,profesor:$('regularTeacher').value},r=>{regularReport=r;$('regularBalances').innerHTML=r.filas.map(d=>'<p>'+esc(d.fecha)+' · Pendiente registrado '+money(d.pendiente)+(d.sinPrecio?' · Precio sin confirmar':'')+'</p>').join('')+'<h3>Historial de ajustes</h3>'+r.regularizaciones.map(a=>'<p>'+esc(a.fecha)+': '+money(a.anterior)+' → '+money(a.nuevo)+' · '+esc(a.motivo)+' · '+esc(a.responsable)+' · '+esc(a.registrado)+'</p>').join('');});}
+function saveRegularBalance(){if(!regularReport||regularReport.profesor!==$('regularTeacher').value){msg('Consultá primero los saldos del profesor.');return;}const fecha=$('regularDate').value,nuevoSaldo=num($('regularAmount').value),motivo=$('regularReason').value;if(!$('regularAmount').value.trim()||!Number.isFinite(nuevoSaldo)){msg('Ingresá el pendiente real confirmado.');return;}if(!fecha||fecha>today()){msg('Elegí una fecha de actividad hasta hoy.');return;}if(!motivo.trim()){msg('Indicá el motivo del ajuste.');return;}const anterior=regularReport.filas.find(d=>d.fecha===fecha)?.pendiente||0;if(!confirm('Ajustar saldo de '+regularReport.profesor+' · '+fecha+': '+money(anterior)+' → '+money(nuevoSaldo)+'. ¿Confirmás el nuevo pendiente?'))return;api('adminRegularizarSaldo',{...session,profesor:regularReport.profesor,fecha,nuevoSaldo,motivo,version:regularReport.version,confirmar:true},r=>{msg('Ajuste guardado. Nuevo pendiente: '+money(r.nuevo)+'.',true);$('regularAmount').value='';$('regularReason').value='';loadRegularBalance();});}
+function syncClassPercent(){
+ if(chosen?.tipo!=='Clase')return;
+ const teacher=$('teacher').value,prior=state?.entradas?.find(e=>e.id===editingId);
+ $('classPercent').value=prior&&prior.profesor===teacher&&prior.detalleClase?prior.detalleClase.porcentaje:teacher.trim().toLowerCase()==='chino'?55:60;
+ actualizarEconomiaClase();
+ const fecha=$('date').value;
+ if(!teacher||!fecha||!session)return;
+ const form=chosen;
+ api('precioClaseRecepcion',{...session,profesor:teacher,fecha,id:editingId},r=>{
+  if(chosen===form&&$('teacher').value===teacher&&$('date').value===fecha){$('classPercent').value=r.porcentaje;actualizarEconomiaClase();}
+ });
+}
+function initClassTimes(){
+ for(const [id,limit] of [['classHour',24],['classMinute',60],['finHora',24],['finMinuto',60]]){for(let n=0;n<limit;n++){const value=String(n).padStart(2,'0'),option=document.createElement('option');option.value=value;option.textContent=value;$(id).appendChild(option);}}
+ setClassTime('');$('finMinuto').value='00';
+}
+function syncClassTime(){const hour=$('classHour').value,minute=$('classMinute').value;$('classTime').value=hour!==''&&minute!==''?hour+':'+minute:'';actualizarFinActividad();}
+function setClassTime(value){
+ const valid=/^([01]\d|2[0-3]):[0-5]\d$/.test(value);
+ $('classHour').value=valid?value.slice(0,2):'';$('classMinute').value=valid?value.slice(3):'00';syncClassTime();
+}
+function ensureExpenseCategory(value){
+ const select=$('expenseCategory');
+ if(value&&!Array.from(select.options).some(o=>o.value===value)){const option=document.createElement('option');option.value=value;option.textContent=value+' (histórico)';select.appendChild(option);}
+}
+function expenseSuggestions(){
+ const list=$('expenseSuggestions');list.innerHTML='';
+ for(const value of cfg.gastosRecepcion?.[$('expenseCategory').value]||[]){const option=document.createElement('option');option.value=value;list.appendChild(option);}
+ $('expenseCategoryInfo').textContent=$('expenseCategory').value==='Socios'?'Si es entrega de efectivo al socio, usá Retiro; no es automáticamente un gasto.':'Elegí categoría y, si corresponde, subcategoría. El concepto sigue siendo libre.';
+}
+function initExpenseCategories(){
+ const categorias=Object.keys(cfg.gastosRecepcion||{});
+ for(const value of categorias)ensureExpenseCategory(value);
+ for(const option of $('expenseCategory').options)if(categorias.includes(option.value))option.textContent=option.value;
+ for(const item of cfg.excepcionesGasto||[]){const option=document.createElement('option');option.textContent=item.nombre+' ('+item.tipo+'; no es Egreso)';option.value=item.nombre;option.disabled=true;$('expenseCategory').appendChild(option);}
+ expenseSuggestions();
+}
+let splitReport=null,splitQueryVersion=0,controlStartLoaded=false;
+const splitAssignments=new Map(),splitSelection=new Set();
+function closeSplitForm(){splitQueryVersion++;$('distributedSection').classList.add('hide');splitReport=null;splitAssignments.clear();splitSelection.clear();}
+function abrirRendicion(){
+ cerrarAviso();
+ if(pendingWrite){msg('Resolvé la operación pendiente antes de cambiar de formulario.');return;}
+ if(!state?.turno||!state.puedeCargar){msg('Necesitás un turno abierto para registrar rendiciones.');return;}
+ if(chosen&&!confirm('¿Descartar el formulario actual?'))return;
+ cancelar();
+ if(!$('splitTeacher').options.length)$('splitTeacher').innerHTML=cfg.profesores.map(x=>'<option>'+esc(x)+'</option>').join('');
+ $('allowDuplicate').checked=false;$('duplicateReason').value='';$('duplicateOverride').classList.add('hide');$('splitTotal').value='';$('splitNote').value='';$('splitHistory').checked=false;$('splitCash').value='';$('splitTransfer').value='';$('splitSurplus').checked=false;$('splitReview').checked=false;$('splitPayDate').value=today();
+ $('splitJornadaAyuda').classList.toggle('hide',state.turno.fecha===$('splitPayDate').value);
+ $('splitJornadaAyuda').textContent='Este cobro suma a la caja de la jornada del '+fechaJornadaCaja(state.turno.fecha)+'.';
+ $('distributedSection').classList.remove('hide');splitLoadBalances();$('distributedSection').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function splitLoadBalances(){
+ if(!session||!state?.turno||$('distributedSection').classList.contains('hide'))return;
+ const profesor=$('splitTeacher').value,epoch=sessionEpoch,version=++splitQueryVersion;
+ splitReport=null;splitAssignments.clear();splitSelection.clear();$('splitRows').innerHTML='';$('splitTeacherBalances').textContent='Actualizando saldos…';splitCalc();
+ api('rendicionControlProfesor',{...session,turnoId:state.turno.id,profesor},report=>{
+  if(epoch!==sessionEpoch||version!==splitQueryVersion||$('distributedSection').classList.contains('hide')||$('splitTeacher').value!==profesor)return;
+  splitReport=report;renderSplitBalances();
+ });
+}
+function shortDate(date){const p=String(date).split('-');return p.length===3?p[2]+'/'+p[1]+'/'+p[0]:String(date);}
+function renderSplitBalances(){
+ if(!splitReport)return;
+ const t=splitReport.totales;$('splitSaldo').classList.toggle('hide',!splitReport.saldoFavor);
+ $('splitTeacherBalances').innerHTML='<h3>'+esc(splitReport.profesor)+'</h3><div class="stat">Pendiente de rendición <strong>'+
+  money(t.pendiente)+'</strong></div>'+(splitReport.saldoFavor?'<p>Saldo a favor disponible '+money(splitReport.saldoFavor)+'</p>':'');
+ const history=$('splitHistory').checked;
+ const rows=splitReport.filas.filter(d=>history||((!splitReport.fechaInicio||d.fecha>=splitReport.fechaInicio)&&d.pendiente>0)).sort((a,b)=>(b.pendiente>0)-(a.pendiente>0)||b.fecha.localeCompare(a.fecha));
+ $('splitRows').innerHTML=rows.map(d=>`<tr class="split-row" data-date="${esc(d.fecha)}"><td style="padding:8px"><label><input class="split-select" type="checkbox" style="width:auto;min-height:0" ${splitSelection.has(d.fecha)?'checked':''} ${d.pendiente<=0?'disabled':''} onchange="splitSelect(this.closest('tr').dataset.date,this.checked)"> ${esc(shortDate(d.fecha))}</label>${d.sinPrecio?'<small>Precio pendiente</small>':''}</td><td>${money(d.pendiente)}</td><td><input class="split-amount" aria-label="Asignar a ${esc(shortDate(d.fecha))}" inputmode="decimal" style="min-width:105px" value="${esc(splitAssignments.get(d.fecha)||'')}" ${d.pendiente<=0?'readonly':''} oninput="splitSetAmount(this.closest('tr').dataset.date,this.value)" onblur="formatInput(this)"><button type="button" class="secondary small split-assign" ${d.pendiente<=0?'disabled':''} onclick="splitPickDate(this.closest('tr').dataset.date)">Asignar</button></td></tr>`).join('');
+ $('splitEmpty').textContent=rows.length?'':history?'No hay actividad registrada para este profesor.':'No hay fechas pendientes. Podés consultar Ver historial.';
+ splitCalc();
+}
+function splitSelect(date,selected){if(selected)splitSelection.add(date);else splitSelection.delete(date);}
+function splitSetAmount(date,value){splitAssignments.set(date,value);splitCalc();}
+function splitPickDate(date){
+ const row=splitReport?.filas.find(d=>d.fecha===date);if(!row)return;
+ const received=Math.round(num($('splitTotal').value)*100);
+ const other=[...splitAssignments].filter(([d])=>d!==date).reduce((sum,[d,value])=>sum+(Number.isFinite(num(value))?Math.round(num(value)*100):0),0);
+ const amount=Math.min(Math.max(0,received-other),Math.max(0,Math.round(row.pendiente*100)));
+ if(!Number.isFinite(received)||received<=0){msg('Ingresá primero el total recibido.');return;}
+ splitAssignments.set(date,new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(amount/100));splitSelection.add(date);renderSplitBalances();
+}
+function splitAssignPending(){
+ if(!splitReport)return;
+ const dates=splitReport.filas.filter(d=>splitSelection.has(d.fecha)&&d.pendiente>0).sort((a,b)=>b.fecha.localeCompare(a.fecha));
+ if(!dates.length){msg('Seleccioná las fechas que querés pagar.');return;}
+ const total=Math.round(num($('splitTotal').value)*100);
+ if(!Number.isFinite(total)||total<=0){msg('Ingresá primero el total recibido.');return;}
+ if(!confirm('¿Asignar el cobro a estas fechas seleccionadas? '+dates.map(d=>shortDate(d.fecha)).join(', ')))return;
+ let remaining=Math.max(0,total-[...splitAssignments].filter(([date])=>!splitSelection.has(date)).reduce((sum,[date,value])=>sum+(Math.round(num(value)*100)||0),0));
+ for(const d of dates){const amount=Math.min(remaining,Math.max(0,Math.round(d.pendiente*100)));splitAssignments.set(d.fecha,new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(amount/100));remaining-=amount;}
+ renderSplitBalances();
+}
+function elegir(tipo,cat=''){if(pendingWrite){msg('Resolvé la operación pendiente antes de cambiar de formulario.');return;}if(tipo==='Rendicion')return;cerrarAviso();if(chosen&&!confirm('¿Descartar el formulario actual?'))return;editingId=null;closeSplitForm();$('saveEntry').textContent='Guardar anotación';chosen={tipo,categoria:cat,turnoId:state?.turno?.id};$('eventBlock').classList.toggle('hide',tipo!=='Evento');$('expenseCategoryBlock').classList.toggle('hide',tipo!=='Gasto');$('qtyLabel').textContent=tipo==='Evento'?'Cantidad de inscriptos':'Cantidad';if(tipo==='Evento'){$('eventType').value=cat||'Cancha abierta';$('eventResponsible').value=session.responsable;}if(tipo==='Gasto'){$('expenseCategory').value='';$('expenseSubcategory').value='';expenseSuggestions();}qty=1;$('qtyText').textContent=qty;$('entryForm').classList.remove('hide');$('formTitle').textContent=tipo==='Reserva'?cat:tipo;$('qtyBlock').classList.toggle('hide',!['Reserva','Evento'].includes(tipo));$('studentsBlock').classList.toggle('hide',tipo!=='Clase');$('teacherBlock').classList.toggle('hide',tipo!=='Clase');$('classEconomics').classList.toggle('hide',tipo!=='Clase');if(tipo==='Clase'){$('classKind').value='Tradicional';$('manualWin').value='';syncClassPercent();classKindChanged();setClassTime('');}$('moneyBlock').classList.toggle('hide',!['Reserva','Otro ingreso','Tienda','Evento'].includes(tipo));$('expenseBlock').classList.toggle('hide',!['Gasto','Retiro'].includes(tipo));$('mediumBlock').classList.toggle('hide',tipo==='Retiro');$('conceptBlock').classList.toggle('hide',!['Gasto','Retiro','Otro ingreso'].includes(tipo));
+$('conceptLabel').textContent=tipo==='Retiro'?'Motivo del retiro':'Concepto';
+$('concept').placeholder=tipo==='Retiro'?'Ej. Traslado a Administración':'Ej. Productos de limpieza';
+$('retiroFields').classList.toggle('hide',tipo!=='Retiro');
+$('retiroDestinatario').value='';
+$('retiroAyuda').textContent='Si el efectivo se usó para pagar directamente un bien o servicio, registrá un gasto.';
+$('date').value=fechaActividadCaja();prepararFormularioActividad(tipo,cat);
+$('jornadaFechaAyuda').classList.toggle('hide',$('date').value===today());$('cash').value='';$('transfer').value='';$('expense').value='';$('concept').value='';$('note').value='';document.querySelectorAll('#types button').forEach(b=>b.classList.toggle('selected',b.dataset.type===tipo&&(tipo!=='Reserva'||b.dataset.cat===cat)));$('entryForm').scrollIntoView({behavior:'smooth',block:'start'});}
+function cantidad(d){qty=Math.max(1,Math.min(1000,qty+d));$('qtyText').textContent=qty;}
+function cancelar(){if(pendingWrite){msg('Resolvé la operación pendiente antes de cancelar.');return;}editingId=null;closeSplitForm();$('saveEntry').textContent='Guardar anotación';chosen=null;$('entryForm').classList.add('hide');document.querySelectorAll('#types button').forEach(b=>b.classList.remove('selected'));}
+function guardar(){if(!chosen||!state?.turno)return;if(chosen.turnoId!==state.turno.id){msg('La caja original de este formulario ya no está abierta.');return;}const x={tipo:chosen.tipo,categoria:chosen.categoria,cantidad:qty,alumnos:num($('students').value),profesor:$('teacher').value,efectivo:num($('cash').value),transferencia:num($('transfer').value),importe:num($('expense').value),medio:$('medium').value,concepto:$('concept').value,nota:$('note').value,fecha:$('date').value,precioClase:num($('classPrice').value),importeWIN:$('classKind').value==='Clase-partido'?num($('manualWin').value):undefined,porcentajeWIN:$('classPercent').value,tipoClase:$('classKind').value,horarioClase:$('classTime').value};x.jugado=$('seJugo').checked;
+if(['Reserva','Clase','Evento'].includes(chosen.tipo)&&!$('formActividad').classList.contains('hide')){
+ x.actividad={hora:$('classTime').value,canchas:[...canchasActividad],duracion:duracionSeleccionada,fin:horaFinalEvento(),diaSiguiente:$('diaSiguiente').checked};
+}
+if(chosen.tipo==='Retiro'){
+ x.destinatario=$('retiroDestinatario').value.trim();
+ const anterior=state.entradas?.find(e=>e.id===editingId);
+ if(!x.concepto.trim()||(!x.destinatario&&(!anterior||anterior.destinatario))){msg('Completá el motivo y el destinatario del efectivo.');return;}
+}
+if(chosen.tipo==='Evento'){x.categoria=$('eventType').value;x.responsableEvento=$('eventResponsible').value;}if(chosen.tipo==='Gasto'){x.categoria=$('expenseCategory').value;x.subcategoria=$('expenseSubcategory').value;const anterior=state.entradas?.find(e=>e.id===editingId);x.medio=anterior?.medio||'Efectivo';}if([x.efectivo,x.transferencia,x.importe].some(v=>!Number.isFinite(v))){msg('Revisá los importes: usá punto para miles y coma para decimales.');return;}
+if(chosen.tipo==='Evento'&&!x.responsableEvento.trim()){msg('Completá el responsable del evento.');return;}if(chosen.tipo==='Clase'){
+ x.cantidad=1;
+ x.excepcion=$('classException').open;
+ x.cobradoClase=$('classCobrado').value.trim()?num($('classCobrado').value):'';
+ x.remuneracionClase=$('classRemuneracion').value.trim()?num($('classRemuneracion').value):'';
+ x.motivoExcepcion=$('classMotivo').value.trim();x.incidenciaClase=$('classIncidencia').value.trim();
+ if(x.tipoClase==='Clase-partido'&&!$('manualWin').value.trim()){msg('Ingresá el importe correspondiente a WIN.');return;}
+}
+const editing=!!editingId,fn=editing?'editarAnotacion':'guardarAnotacion';api(fn,{...session,turnoId:state.turno.id,id:editingId,anotacion:x},r=>{state=r;cancelar();render();msg(editing?'Anotación modificada y registrada en auditoría.':'Anotación guardada.',true);volverResumen();mostrarAvisos(avisosResueltos);verDia();});}
+function editar(id){const e=state?.entradas?.find(x=>x.id===id);if(!e||e.puedeCorregir===false||e.tipo==='Rendicion'||e.origen==='DISTRIBUIDO')return;cancelar();elegir(e.tipo,e.categoria);editingId=id;cargarActividadPrevia(e);if(e.tipo==='Clase'){const d=e.detalleClase;$('classPrice').value=d&&d.precio!==null?new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(d.precio):'';$('classPercent').value=e.profesor==='Chino'?55:60;$('classKind').value=d?.tipo||'Tradicional';$('manualWin').value=d?new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(d.importeWIN):'';classKindChanged(false);setClassTime(d?.horario||'');}if(e.tipo==='Evento'){$('eventType').value=e.categoria;$('eventResponsible').value=e.concepto;}if(e.tipo==='Gasto'){ensureExpenseCategory(e.categoria);$('expenseCategory').value=e.categoria||'';$('expenseSubcategory').value=e.subcategoria||'';expenseSuggestions();}qty=e.cantidad||1;$('qtyText').textContent=qty;$('students').value=String(e.alumnos??2);if(e.profesor&&!Array.from($('teacher').options).some(o=>o.value===e.profesor)){const option=document.createElement('option');option.value=e.profesor;option.textContent=e.profesor.trim()+' (histórico)';$('teacher').appendChild(option);}$('teacher').value=e.profesor||$('teacher').value;syncClassPercent();$('cash').value=e.efectivo?new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(e.efectivo):'';$('transfer').value=e.transferencia?new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(e.transferencia):'';$('expense').value=e.importe?new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(e.importe):'';$('medium').value=e.medio||'Efectivo';$('concept').value=e.concepto||'';$('note').value=e.nota||'';$('date').value=e.fecha;
+$('jornadaFechaAyuda').classList.add('hide');
+if(e.tipo==='Retiro'){
+ $('retiroDestinatario').value=e.destinatario||'';
+ if(!e.destinatario)$('retiroAyuda').textContent='Este retiro histórico se guardó sin destinatario. Si conocés quién recibió el efectivo, podés completarlo.';
+}$('formTitle').textContent='Editar · '+title(e);$('saveEntry').textContent='Guardar cambios';document.querySelectorAll('.money-input').forEach(el=>formatInput(el));$('entryForm').scrollIntoView({behavior:'smooth',block:'start'});}
+
+function anular(id){if(state?.entradas?.find(e=>e.id===id)?.puedeCorregir!==true)return;if(!confirm('¿Anular esta anotación? Quedará registrada en el historial.'))return;api('anularAnotacion',{...session,turnoId:state.turno.id,id},r=>{state=r;render();msg('Anotación anulada.',true);verDia();});}
+function diff(){
+ if(!state?.turno||!state.puedeCerrar)return false;
+ const data=[['counted','Efectivo',state.totales.esperado],['closeReceiptTotal','Transferencias',state.totales.transferencia]];
+ let excepcional=false;
+ $('difference').textContent=data.map(([id,label,expected])=>{
+  const raw=$(id).value.trim(), actual=num(raw);
+  if(!raw)return label+': ingresá el importe.';
+  if(!Number.isFinite(actual))return label+': importe inválido.';
+  const dif=centavosCaja(actual)-centavosCaja(expected);
+  if(dif)excepcional=true;
+  return label+': diferencia '+money(dif/100);
+ }).join(' · ');
+ $('cierreExcepcional').classList.toggle('hide',!excepcional);
+ if(!excepcional)$('closeNotifiedAdmin').checked=false;
+ return excepcional;
+}
+function limpiarFormularioCierre(){
+ ['counted','closeReceiptTotal','closeReceiptCount','closeNote','closeChecks'].forEach(id=>$(id).value='');
+ $('closeNotifiedAdmin').checked=false;
+}
+function cerrar(){
+ if(!state?.turno||!state.puedeCerrar)return;
+ const contado=num($('counted').value), transferenciaComprobada=num($('closeReceiptTotal').value);
+ const cantidadComprobantes=Number($('closeReceiptCount').value);
+ if(!['counted','closeReceiptTotal','closeReceiptCount'].every(id=>$(id).value.trim())||
+    !Number.isFinite(contado)||contado<0||!Number.isFinite(transferenciaComprobada)||transferenciaComprobada<0||
+    !Number.isSafeInteger(cantidadComprobantes)||cantidadComprobantes<0){
+  msg('Completá el efectivo, el monto de transferencias y la cantidad de comprobantes. Ingresá 0 donde corresponda.');return;
+ }
+ if((cantidadComprobantes===0)!==(transferenciaComprobada===0)){msg('Revisá el monto y la cantidad real de comprobantes.');return;}
+ const excepcional=diff(), observaciones=$('closeNote').value.trim(), verificaciones=$('closeChecks').value.trim(), avisadoAdmin=$('closeNotifiedAdmin').checked;
+ if(excepcional&&(!observaciones||!verificaciones||!avisadoAdmin)){
+  msg('Registrá el motivo, qué verificaste y si avisaste a Administración antes de cerrar.');return;
+ }
+ if(!confirm(excepcional?'¿Confirmás el cierre excepcional con incidencia abierta?':'¿Confirmás el cierre conciliado del turno?'))return;
+ api('cerrarCaja',{...session,turnoId:state.turno.id,contado,transferenciaComprobada,cantidadComprobantes,observaciones,
+  verificaciones,avisadoAdmin,efectivoVisto:centavosCaja(state.totales.esperado)/100,transferenciaVista:centavosCaja(state.totales.transferencia)/100},r=>{
+  limpiarFormularioCierre();cancelar();ultimaCajaCerrada=r.fecha;refresh();
+  msg(r.excepcional?'Turno cerrado con incidencia abierta.':'Turno cerrado y conciliado.',true);verDia();
+ });
+}
+let jornadaActual=null,ultimaCajaCerrada=null;
+function fechaJornadaCaja(fecha){return fecha.split('-').reverse().join('/');}
+function limpiarJornadaCaja(){
+ jornadaActual=null;ultimaCajaCerrada=null;
+ $('jornadaCaja').classList.add('hide');$('jornadaDetalle').classList.add('hide');
+}
+function listarJornadasCaja(){
+ if(!session)return;
+ api('jornadasCaja',session,dias=>{
+  const habilitados=dias.filter(d=>d.habilitada);
+  $('jornadaCaja').classList.toggle('hide',!habilitados.length&&!jornadaActual);
+  const previa=habilitados.find(d=>d.fecha===ultimaCajaCerrada);
+  $('jornadaPregunta').classList.toggle('hide',!previa||previa.estado!=='PENDIENTE');
+  const botones=habilitados.map(d=>{
+   const texto=d.estado==='CONCILIADO_PROVISIONALMENTE'?'Conciliado provisionalmente':d.estado!=='PENDIENTE'?'Ver control':d.fecha===ultimaCajaCerrada||!d.anterior?'Conciliar jornada':'Regularizar jornada pendiente';
+   const boton=document.createElement('button');
+   boton.type='button';boton.className='secondary';boton.textContent=texto+' · '+fechaJornadaCaja(d.fecha);
+   boton.onclick=()=>consultarJornadaCaja(d.fecha);
+   return boton;
+  });
+  $('jornadaOpciones').replaceChildren(...botones);
+ });
+}
+function consultarJornadaCaja(fecha){
+ api('detalleJornadaCaja',{...session,fecha},r=>{
+  jornadaActual=r;
+  $('jornadaDetalle').classList.remove('hide');
+  $('jornadaFecha').textContent='Jornada del '+fechaJornadaCaja(fecha);
+  $('jornadaEsperado').textContent=money(r.esperado);
+  $('jornadaTurnos').innerHTML=r.desglose.map(t=>{
+   const hora=String(t.apertura||'').match(/[ T](\d{2}:\d{2})/);
+   return `<div class="row item"><span>${esc(t.responsable)}${hora?' · '+hora[1]:''}
+     ${t.ajusteEfectivo?'<small> · Ajuste provisional de efectivo '+money(t.ajusteEfectivo)+'</small>':''}</span><strong>${money(t.transferencia)}</strong></div>`;
+  }).join('');
+  ['jornadaImporte','jornadaCantidad','jornadaMotivo','jornadaVerificaciones'].forEach(id=>$(id).value='');
+  $('jornadaAvisado').checked=false;
+  if(r.actualizado){mostrarActaJornada(r.control);return;}
+  $('jornadaActa').textContent=r.control?'Los turnos o sus importes cambiaron. Revisá y registrá un nuevo control.':'Sumá y contá todos los comprobantes de esta jornada.';
+  $('jornadaCaptura').classList.remove('hide');$('jornadaMensaje').classList.add('hide');
+  diferenciaJornada();
+ });
+}
+function diferenciaJornada(){
+ if(!jornadaActual)return false;
+ const raw=$('jornadaImporte').value.trim(),comprobado=num(raw);
+ const valido=raw&&Number.isFinite(comprobado)&&comprobado>=0;
+ const diferencia=valido?(centavosCaja(comprobado)-centavosCaja(jornadaActual.esperado))/100:0;
+ $('jornadaDiferencia').textContent=valido?'Diferencia '+money(diferencia):'Ingresá un importe válido.';
+ $('jornadaExcepcion').classList.toggle('hide',diferencia===0);
+ if(!diferencia)$('jornadaAvisado').checked=false;
+ return diferencia!==0;
+}
+function guardarJornadaCaja(){
+ if(!jornadaActual||jornadaActual.actualizado)return;
+ const raw=$('jornadaImporte').value.trim(),comprobado=num(raw),cantidad=Number($('jornadaCantidad').value);
+ if(!raw||!$('jornadaCantidad').value||!Number.isFinite(comprobado)||comprobado<0||!Number.isSafeInteger(cantidad)||cantidad<0||
+    (cantidad===0)!==(comprobado===0)){msg('Ingresá el importe y la cantidad real de comprobantes. Usá 0 donde corresponda.');return;}
+ const excepcional=diferenciaJornada(),motivo=$('jornadaMotivo').value.trim(),verificaciones=$('jornadaVerificaciones').value.trim(),
+   avisadoAdmin=$('jornadaAvisado').checked;
+ if(excepcional&&(!motivo||!verificaciones||!avisadoAdmin)){msg('Completá el motivo, las verificaciones y el aviso a Administración.');return;}
+ if(!confirm(excepcional?'¿Registrás el control general con una incidencia abierta?':'¿Confirmás la conciliación general de la jornada?'))return;
+ api('conciliarJornadaCaja',{...session,fecha:jornadaActual.fecha,version:jornadaActual.version,comprobado,cantidad,motivo,verificaciones,avisadoAdmin},r=>{
+  jornadaActual.actualizado=true;mostrarActaJornada(r);listarJornadasCaja();
+  msg(r.estado==='INCIDENCIA_ABIERTA'?'Control general registrado con incidencia abierta.':'Conciliación general registrada.',true);
+ });
+}
+function mostrarActaJornada(r){
+ $('jornadaActa').textContent=(r.estado==='INCIDENCIA_ABIERTA'?'Incidencia abierta · diferencia '+money(r.diferencia):r.estado==='CONCILIADO_PROVISIONALMENTE'?'Conciliado provisionalmente':'Conciliado')+' · '+r.autor+' · '+r.registrado;
+ $('jornadaCaptura').classList.add('hide');$('jornadaMensaje').classList.remove('hide');
+ $('jornadaTexto').value=fechaJornadaCaja(r.fecha)+' — Total transferencias: '+money(r.comprobado);
+}
+function copiarJornadaCaja(){
+ $('jornadaTexto').select();
+ if(navigator.clipboard?.writeText)navigator.clipboard.writeText($('jornadaTexto').value)
+   .then(()=>msg('Mensaje copiado para el grupo Comprobantes.',true)).catch(()=>msg('El mensaje está seleccionado. Podés copiarlo desde el campo.'));
+}
+function simularMadrugada(){
+ if(!document.body.classList.contains('win-preview'))return;
+ api('winSimularMadrugada',undefined,()=>{
+  if(session)refresh();
+  msg('Turno de anoche preparado. Ingresá como Titular Demo para probar la jornada.',true);
+ });
+}
+function reiniciarPruebaCaja(){
+ if(!document.body.classList.contains('win-preview')||!confirm('¿Volver al ejemplo inicial de pruebas?'))return;
+ api('winReiniciarPrueba',undefined,()=>window.location.reload());
+}
+function verDia(){if(session?.responsable!=='Admin')return;api('resumenDiario',{...session,fecha:$('dayDate').value},r=>{const t=r.totales;$('daySummary').innerHTML=`<hr><div class="row"><span>Abonos</span><strong>${t.abonos}</strong></div><div class="row"><span>Regulares</span><strong>${t.regulares}</strong></div><div class="row"><span>Clases</span><strong>${t.clases}</strong></div><div class="muted small">Clases de 1 / 2 / 3 / 4: ${t.clasesPorAlumnos.join(' / ')}</div><hr><div class="row"><span>Ingresos efectivo</span><strong>${money(t.efectivo)}</strong></div><div class="row"><span>Ingresos transferencia</span><strong>${money(t.transferencia)}</strong></div><div class="row"><span>Gastos efectivo</span><strong>${money(t.gastosEfectivo)}</strong></div><div class="row"><span>Gastos transferencia</span><strong>${money(t.gastosTransferencia)}</strong></div><div class="row"><span>Retiros</span><strong>${money(t.retiros)}</strong></div><small>${r.movimientos} anotaciones activas en la fecha seleccionada.</small><h3>Ingresos por categoría y medio</h3>${renderBreakdown(r.desglose?.ingresos)}<h3>Gastos por categoría y medio</h3>${renderBreakdown(r.desglose?.gastos)}`;});}
+
+function mostrarAdmin(show){
+  if(show&&session?.responsable!=='Admin'){msg('Acceso no autorizado.');return;}
+  document.body.classList.toggle('admin-mode',!!show);
+  $('adminPanel').classList.toggle('hide',!show);$('consultaActividadDocente').hidden=!show;
+  $('adminButton').classList.toggle('hide',!!show||session?.responsable!=='Admin');
+  if(show){closeSplitForm();$('reviewDate').value=today();$('exportDate').value=today();seleccionarPeriodoAdmin('mes');cargarControl();}
+  else{
+    consultaIncidencias++;incidenciasListado=[];
+    $('incidenciasCaja').open=false;$('incidenciasResultado').textContent='';
+    $('incidenciasPaginacion').classList.add('hide');cerrarRevisionIncidencia();
+  }
+}
+
+const estadoIncidencia={INCIDENCIA_ABIERTA:'Abierta',EN_REVISION:'En revisión',RESUELTA:'Resuelta'};
+const origenIncidencia={TRASPASO:'Traspaso de efectivo',CIERRE:'Cierre individual',JORNADA:'Conciliación general'};
+let paginaIncidencias=1,consultaIncidencias=0,incidenciasListado=[],revisionIncidencia=null;
+function cargarIncidenciasCaja(pagina=1){
+ if(session?.responsable!=='Admin'||!$('incidenciasCaja').open)return;
+ const turnoConsulta=++consultaIncidencias;
+ api('adminIncidenciasCaja',{...session,pagina,filtro:$('incidenciasFiltro').value,fecha:$('incidenciasFecha').value},r=>{
+  if(turnoConsulta!==consultaIncidencias||!$('incidenciasCaja').open)return;
+  cerrarRevisionIncidencia();
+  paginaIncidencias=r.pagina;incidenciasListado=r.incidencias;
+  const cantidad=r.total===1?'1 incidencia':r.total+' incidencias';
+  $('incidenciasResultado').innerHTML=r.total?
+    '<p class="muted small">'+cantidad+' · Página '+r.pagina+' de '+r.paginas+'</p>'+r.incidencias.map(vistaIncidenciaCaja).join(''):
+    '<p class="muted">Sin incidencias para esta búsqueda.</p>';
+  $('incidenciasPaginacion').classList.toggle('hide',r.paginas<2);
+  $('incidenciasAnterior').classList.toggle('hide',r.pagina<=1);
+  $('incidenciasSiguiente').classList.toggle('hide',r.pagina>=r.paginas);
+ });
+}
+function vistaIncidenciaCaja(i,indice){
+ const importe=v=>Number.isFinite(v)?money(v):'Sin dato';
+ const diferencias=i.diferencias.map(d=>`<div class="small"><strong>${esc(d.medio)} · Diferencia ${money(d.diferencia)}</strong> · Esperado ${importe(d.esperado)} · Verificado ${importe(d.verificado)}</div>`).join('');
+ const revisiones=i.revisiones.length?`<details><summary>Historial de revisión</summary>${i.revisiones.map(r=>`<div class="item small"><strong>${esc(estadoIncidencia[r.estado])} · ${esc(r.usuario)} · ${esc(r.fechaHora)}</strong><div>${esc(r.nota)}</div></div>`).join('')}</details>`:'';
+ const boton=(estado,etiqueta)=>`<button class="secondary" type="button" onclick="abrirRevisionIncidencia(${indice},'${estado}')">${etiqueta}</button>`;
+ const acciones=i.estado==='RESUELTA'?boton('INCIDENCIA_ABIERTA','Reabrir'):
+   (i.estado==='INCIDENCIA_ABIERTA'?boton('EN_REVISION','Dejar en revisión'):'')+boton('RESUELTA','Marcar resuelta');
+ return `<div class="item"><div class="row"><strong>${esc(origenIncidencia[i.origen])} · ${fechaJornadaCaja(i.fecha)}</strong><span class="pill">${esc(estadoIncidencia[i.estado])}</span></div>
+  <div class="muted small">${esc(i.usuario)} · ${esc(i.fechaHora)}${i.avisadoAdmin?' · Aviso registrado':''}</div>${diferencias}
+  ${i.motivo?`<div class="small">${esc(i.motivo)}</div>`:''}${i.verificaciones?`<div class="small">Verificaciones · ${esc(i.verificaciones)}</div>`:''}
+  ${revisiones}<div class="actions" style="margin-top:9px">${acciones}</div></div>`;
+}
+function abrirRevisionIncidencia(indice,estado){
+ const i=incidenciasListado[indice];
+ if(!i||session?.responsable!=='Admin')return;
+ revisionIncidencia={id:i.id,version:i.version,estado};
+ $('incidenciaEditorTitulo').textContent=origenIncidencia[i.origen]+' · '+(estado==='INCIDENCIA_ABIERTA'?'Reabrir':estadoIncidencia[estado]);
+ $('incidenciaNota').value='';$('incidenciaEditor').classList.remove('hide');$('incidenciaNota').focus();
+}
+function cerrarRevisionIncidencia(){
+ revisionIncidencia=null;$('incidenciaNota').value='';$('incidenciaEditor').classList.add('hide');
+}
+function guardarRevisionIncidencia(){
+ if(!revisionIncidencia||session?.responsable!=='Admin')return;
+ const nota=$('incidenciaNota').value.trim();
+ if(!nota){msg('Completá la observación de la revisión.');return;}
+ api('adminRevisarIncidenciaCaja',{...session,...revisionIncidencia,nota},r=>{
+  msg('Revisión guardada · '+estadoIncidencia[r.estado]+'.',true);
+  cerrarRevisionIncidencia();cargarIncidenciasCaja(paginaIncidencias);
+ });
+}
+
+let adminQueryVersion=0;
+function marcarPeriodo(tipo){
+  document.querySelectorAll('#periodButtons [data-period]').forEach(b=>{
+    const selected=b.dataset.period===tipo;
+    b.classList.toggle('active',selected);
+    b.setAttribute('aria-pressed',String(selected));
+  });
+}
+function estadoPeriodo(s,loading=false){
+  const el=$('periodStatusText'),dot=document.querySelector('#periodStatus .period-dot');
+  if(el)el.textContent=s;
+  if(dot)dot.classList.toggle('loading',loading);
+}
+function seleccionarPeriodoAdmin(tipo){
+  if(tipo==='custom'){marcarPeriodo('custom');estadoPeriodo('Elegí las fechas y presioná Actualizar.');return;}
+  periodoAdmin(tipo);marcarPeriodo(tipo);cargarAdmin();
+}
+function periodoAdmin(tipo){
+  const d=new Date(today()+'T12:00:00Z'),a=new Date(d);
+  if(tipo==='semana'){a.setUTCDate(a.getUTCDate()-(a.getUTCDay()+6)%7);d.setTime(a.getTime());d.setUTCDate(d.getUTCDate()+6);}
+  else if(tipo==='mes')a.setUTCDate(1);
+  $('adminFrom').value=a.toISOString().slice(0,10);$('adminTo').value=d.toISOString().slice(0,10);
+}
+function cargarAdmin(){
+  if(session?.responsable!=='Admin')return;
+  const desde=$('adminFrom').value,hasta=$('adminTo').value;
+  const days=Math.round((new Date(hasta+'T12:00:00Z')-new Date(desde+'T12:00:00Z'))/86400000)+1;
+  if(!desde||!hasta||days<1||days>367){msg('Seleccioná un período válido de hasta 367 días.');return;}
+  adminQueryVersion += 1;
+  const currentQuery = adminQueryVersion;
+  estadoPeriodo('Actualizando información…',true);  $('adminResult').innerHTML='<p class="muted">Calculando indicadores…</p>';
+  api('adminResumenActividad',{...session,desde,hasta},r=>{
+     if(currentQuery!==adminQueryVersion)return;
+    const prevEnd=new Date(desde+'T12:00:00Z');prevEnd.setUTCDate(prevEnd.getUTCDate()-1);
+    const prevStart=new Date(prevEnd);prevStart.setUTCDate(prevStart.getUTCDate()-days+1);
+    const fmt=d=>d.toISOString().slice(0,10);
+    api('adminResumenActividad',{...session,desde:fmt(prevStart),hasta:fmt(prevEnd)},previous=>{
+       if(currentQuery!==adminQueryVersion)return;
+       const finish=weekdayData=>{if(currentQuery!==adminQueryVersion)return;renderAdminDashboard(r,previous,weekdayData);estadoPeriodo('Datos del '+desde+' al '+hasta+' · comparación disponible.');};
+       if(days<=7 && days!==7){
+         const start=new Date(desde+'T12:00:00Z'),end=new Date(hasta+'T12:00:00Z');
+         start.setUTCDate(start.getUTCDate()-7);end.setUTCDate(end.getUTCDate()-7);
+         api('adminResumenActividad',{...session,desde:fmt(start),hasta:fmt(end)},finish);
+       }else finish(previous);
+     });
+  });
+}
+function renderBreakdown(rows){return (rows||[]).map(r=>`<div class="item"><strong>${esc(r.categoria)} · ${money(r.total)}</strong><div class="small">Efectivo ${money(r.efectivo)} · Transferencia ${money(r.transferencia)}</div></div>`).join('')||'<p class="muted">Sin movimientos.</p>';}
+function winClassActivityTotals(rows){
+ const sizes={};
+ rows.forEach(r=>Object.entries(r.grupos).forEach(([n,count])=>sizes[n]=(sizes[n]||0)+count));
+ return `<span>${rows.reduce((s,r)=>s+r.clases,0)} clases</span><span>${rows.reduce((s,r)=>s+r.alumnos,0)} asistencias</span>${Object.entries(sizes).map(([n,c])=>`<span>${c} de ${Number(n)?n+' alumnos':'tamaño sin registrar'}</span>`).join('')}`;
+}
+function winRenderClassActivity(rows){
+ const summaries=Object.fromEntries([...new Set(rows.map(r=>r.profesor))].map(name=>[name,winClassActivityTotals(rows.filter(r=>r.profesor===name))]));
+ const names=[...new Set(rows.map(r=>r.profesor))].sort();
+ const cards=rows.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.profesor.localeCompare(b.profesor)).map(r=>{
+  const paid=r.pagos.reduce((sum,p)=>sum+Math.round(p.importe*100),0)/100;
+  const diff=Math.round((r.generado-paid)*100)/100;
+  const state=r.sinPrecio?'Importe a revisar':diff===0?'Al día':diff<0?'Excedente':paid?'Parcial':'Sin rendición vinculada';
+  const sizesText=Object.entries(r.grupos).map(([n,c])=>c+' de '+(Number(n)?n+' alumnos':'tamaño sin registrar')).join(' · ');
+  const payments=r.pagos.slice().sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(p=>`<li>${esc(p.fecha)} · ${money(p.importe)} · ${esc(p.medio)} ${p.fecha===r.fecha?'· mismo día':'· fecha de cobro'}</li>`).join('');
+  return `<details class="class-card" data-prof="${esc(r.profesor)}"><summary><strong>${esc(r.profesor)} · ${esc(r.fecha)}</strong> · ${r.clases} clases · ${r.alumnos} asistencias<br>Esperado ${money(r.generado)} · Rendido ${money(paid)} · ${state}</summary><p>${esc(sizesText)}${r.sinPrecio?' · '+r.sinPrecio+' sin precio confirmado':''}</p>${r.sinPrecio?'':`<p>${diff<0?'Excedente':'Pendiente según pagos vinculados'} ${money(Math.abs(diff))}</p>`}<p>Fechas reales de cobro</p>${payments?`<ul>${payments}</ul>`:'<p>Sin pagos vinculados a esta fecha.</p>'}</details>`;
+ }).join('');
+ return `<div class="class-kpis">${winClassActivityTotals(rows)}</div>${Object.entries(summaries).map(([name,summary])=>`<div class="class-kpis" data-prof-total="${esc(name)}" hidden>${summary}</div>`).join('')}<label>Filtrar por profesor<select onchange="this.closest('section').querySelectorAll('.class-card').forEach(e=>e.hidden=!!this.value&&e.dataset.prof!==this.value);this.closest('section').querySelectorAll('[data-prof-total]').forEach(e=>e.hidden=e.dataset.profTotal!==this.value)"><option value="">Todos</option>${names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select></label><p class="muted small">Cada fila corresponde a la fecha de clase. Se muestran los pagos que tienen una asignación registrada.</p>${cards||'<p>Sin clases registradas.</p>'}`;
+}
+function renderAdminDashboard(r,previous,weekdayData){
+  const t=r.totales,pt=previous.totales;
+  const income=x=>x.efectivo+x.transferencia;
+  const expense=x=>x.gastosEfectivo+x.gastosTransferencia;
+  const pct=(a,b)=>b===0?'Sin base':`${a>=b?'+':''}${((a-b)/Math.abs(b)*100).toLocaleString('es-AR',{maximumFractionDigits:1})}%`;
+  const stat=(label,value,sub,comparison)=>`<div class="stat"><small>${label}</small><b>${value}</b><div class="small muted">${sub}</div>${comparison===undefined?'':`<div class="small">vs período anterior: <strong>${comparison}</strong></div>`}</div>`;
+  const totalBookings=t.abonos+t.regulares,previousBookings=pt.abonos+pt.regulares;
+  const totalIncome=income(t),totalExpense=expense(t);const prevIncome=income(pt);
+  const generated=r.generado,previousGenerated=previous.generado;
+  const activityPct=(a,b)=>a.incompleto||b.incompleto?'Comparación incompleta':pct(a.total,b.total);
+  const warnings=[['Seleccionado',generated],['Período anterior',previousGenerated],['Comparación semanal',(weekdayData||previous).generado]].filter(x=>x[1].incompleto).map(x=>esc(x[0])+': '+x[1].sinPrecio+' clases sin precio confirmado').join(' · ');
+  const generatedBreakdown=generated.categorias.map(c=>'<div class="item">'+esc(c.categoria)+' · <strong>'+money(c.total)+'</strong></div>').join('')||'<p>Sin actividad valorada.</p>';
+  const dateStart=r.periodo.desde,dateEnd=r.periodo.hasta;
+  const parseDate=x=>new Date(x+'T12:00:00Z');
+  const fmtDate=d=>d.toISOString().slice(0,10);
+  const weekDays=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const daysBetween=Math.round((parseDate(dateEnd)-parseDate(dateStart))/86400000)+1;
+  const currByDate=Object.fromEntries(r.dias.map(d=>[d.fecha,d]));
+  const prevByDate=Object.fromEntries((weekdayData||previous).dias.map(d=>[d.fecha,d]));
+  const dayRows=[];
+  for(let i=0;i<daysBetween;i++){
+    const d=parseDate(dateStart);d.setUTCDate(d.getUTCDate()+i);
+    const iso=fmtDate(d),day=weekDays[d.getUTCDay()];
+    const old=new Date(d);old.setUTCDate(old.getUTCDate()-7);
+    const prev=prevByDate[fmtDate(old)];
+    const current=currByDate[iso];
+    dayRows.push({iso,day,current:generated.dias.find(d=>d.fecha===iso)?.total||0,previous:(weekdayData||previous).generado.dias.find(d=>d.fecha===fmtDate(old))?.total||0,bookings:current?current.abonos+current.regulares:0,classes:current?current.clases:0,hasPrev:!!prev});
+  }
+  const showDaily=daysBetween<=7;
+  const maxVal=Math.max(1,...dayRows.flatMap(d=>[d.current,d.previous]));
+  const comparison=showDaily?dayRows.map(d=>`<div class="comparison-row"><div class="comparison-day"><strong>${d.day}</strong><span>${esc(d.iso.slice(5))}</span></div><div class="comparison-bars"><div class="comparison-track"><div class="comparison-fill current" style="width:${Math.max(0,d.current/maxVal*100)}%"></div></div><div class="comparison-track"><div class="comparison-fill previous" style="width:${Math.max(0,d.previous/maxVal*100)}%"></div></div></div><div class="comparison-values"><strong>${money(d.current)}</strong><span>${d.hasPrev?money(d.previous):'Sin registro previo'}</span></div></div>`).join(''):'<p class="muted">Para comparar cada día con el mismo día de la semana anterior, seleccioná Hoy o Esta semana.</p>';
+  const teacherRows=winRenderClassActivity(generated.clasesPorProfesorDia||[]);
+  const closeRows=r.cierres.length?r.cierres.map(d=>`<div class="item"><strong>${esc(d.responsable)}</strong> · ${esc(d.cierre)}<div class="small">Esperado ${money(d.esperado)} · Contado ${money(d.contado)} · Diferencia ${money(d.diferencia)}</div></div>`).join(''):'<p class="muted">Sin cierres en el período.</p>';
+  const discrepancy=r.cierres.reduce((sum,c)=>sum+c.diferencia,0);
+  const byDay=r.dias.length?[...r.dias].sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(d=>`<div class="item"><strong>${esc(d.fecha)}</strong><div class="small">${d.abonos} abonos · ${d.regulares} regulares · ${d.clases} clases</div><div class="small">Generado ${money(generated.dias.find(g=>g.fecha===d.fecha)?.total||0)} · Cobrado registrado ${money(d.ingresos)} · Cobranza atribuida ${money(d.atribuido||0)} · Gastos ${money(d.gastos)} · Retiros ${money(d.retiros)}</div></div>`).join(''):'<p class="muted">Sin actividad registrada.</p>';
+  $('adminResult').innerHTML=`<div class="dashboard-head"><div><h2>Resumen ejecutivo</h2><p class="muted small">${esc(dateStart)} al ${esc(dateEnd)} · ${daysBetween} día(s)</p></div><span class="pill">Datos de recepción</span></div>
+  <div class="grid dashboard-kpis">${stat('Generado por actividad',money(generated.total),generated.incompleto?'PARCIAL · faltan precios de clases':'Clases: parte de WIN · otras actividades: importes registrados',activityPct(generated,previousGenerated))}${stat('Cobrado registrado',money(totalIncome),'Efectivo + transferencias · incluye rendiciones',pct(totalIncome,prevIncome))}${stat('Rendido por las clases del período',money(r.atribuidoPeriodo||0),'Pagos asignados a esas clases, aunque hayan ingresado después')}${stat('Egresos registrados',money(totalExpense),'Gastos de recepción',pct(totalExpense,expense(pt)))}${stat('Flujo neto registrado',money(totalIncome-totalExpense),'No es utilidad total',pct(totalIncome-totalExpense,prevIncome-expense(pt)))}${stat('Reservas registradas',totalBookings,`${t.abonos} abonos · ${t.regulares} regulares`,pct(totalBookings,previousBookings))}${stat('Clases registradas',t.clases,'Registradas por recepción',pct(t.clases,pt.clases))}</div>
+  <div class="report-tabs" role="tablist"><button class="report-tab active" type="button" onclick="verReporte('actividad',this)">Actividad</button><button class="report-tab" type="button" onclick="verReporte('caja',this)">Caja y control</button><button class="report-tab" type="button" onclick="verReporte('detalle',this)">Detalle</button></div>
+  <section class="report-panel" data-report="actividad"><h2>Generado · comparación por día de la semana</h2>${warnings?`<p role="status"><strong>Información incompleta:</strong> ${warnings}. Los importes mostrados excluyen clases sin precio confirmado.</p>`:""}<p class="muted small">Valor generado, aunque todavía no se haya cobrado. Período seleccionado frente al mismo día de la semana anterior. Gris: semana anterior · Rosa: actual.</p><div class="comparison-legend"><span><i class="legend-dot previous"></i>Semana anterior</span><span><i class="legend-dot current"></i>Seleccionada</span></div>${comparison}<hr><h2>Profesores y clases</h2>${teacherRows}</section>
+  <section class="report-panel hide" data-report="caja"><h2>Composición de caja</h2><div class="grid">${stat('Efectivo ingresado',money(t.efectivo),'Ingresos registrados')}${stat('Transferencias',money(t.transferencia),'No incrementan efectivo')}${stat('Gastos efectivo',money(t.gastosEfectivo),'Egresos de caja')}${stat('Gastos transferencia',money(t.gastosTransferencia),'Egresos bancarios registrados')}${stat('Retiros',money(t.retiros),'No son gastos')}${stat('Diferencias de cierres',money(discrepancy),`${r.cierres.length} cierres`)}</div><hr><h2>Cierres</h2>${closeRows}</section>
+  <section class="report-panel hide" data-report="detalle"><h2>Generado por categoría</h2>${generatedBreakdown}<h2>Actividad diaria · generado y cobrado</h2>${byDay}<h2>Cobros registrados por categoría y medio</h2>${renderBreakdown(r.desglose?.ingresos)}<h2>Gastos por categoría y medio</h2>${renderBreakdown(r.desglose?.gastos)}</section>
+  <p class="muted small">${esc(generated.criterio)} Los ajustes históricos de saldo no modifican el valor generado. Caja y exportación mantienen su criterio actual; las anotaciones antiguas requieren conciliación para identificar la fecha bancaria real.</p><p class="muted small" style="margin-top:20px">Los cobros distribuidos se suman por fecha real de cobro. Las anotaciones anteriores conservan su fecha de actividad: hasta conciliarlas, los ingresos históricos no equivalen necesariamente a la cobranza bancaria real. La atribución a jornadas no suma ingresos por segunda vez. No representa la facturación total ni la ocupación real de Playmix.</p>`;
+}
+function verReporte(name,button){
+  document.querySelectorAll('.report-panel').forEach(el=>el.classList.toggle('hide',el.dataset.report!==name));
+  document.querySelectorAll('.report-tab').forEach(el=>el.classList.toggle('active',el===button));
+}
+
+function cargarControl(onReady){
+ if(session?.responsable!=='Admin')return;
+ const fecha=$('reviewDate').value;
+ api('adminControlDiarioActualizado',{...session,fecha},r=>{
+  if($('reviewDate').value!==fecha)return;
+  $('reviewAddMovement').disabled=!r.diaCerrado;
+  const shifts=r.turnos.map(s=>`<div class="item"><strong>${esc(s.responsable)} · ${esc(s.estado)}</strong><div class="small">${esc(s.id)} · ${esc(s.apertura)} / ${esc(s.cierre||'sin cierre')}</div><div class="small">Esperado ${money(s.esperado)} · Contado ${s.contado===null?'pendiente':money(s.contado)} · Diferencia ${s.diferencia===null?'pendiente':money(s.diferencia)}</div><div class="small">${esc(s.observaciones)}</div></div>`).join('')||'<p>Sin turnos.</p>';
+  reviewMovements=r.movimientos;
+  const rows=r.movimientos.map((e,i)=>`<div class="item"><strong>${esc(e.tipo)} ${esc(e.categoria)} · ${esc(e.estado)}</strong><div class="small">${esc(e.registrado)} · ${esc(e.responsable)} · ${esc(e.turno)}</div>${e.destinatario?`<div class="small">Entregado a ${esc(e.destinatario)}</div>`:''}<div class="small">${esc(e.profesor||e.concepto)} · ${e.cantidad?e.cantidad+' unidades':''} ${e.alumnos?' · '+e.alumnos+' alumnos':''}</div><div class="small">Efectivo ${money(e.efectivo)} · Transferencia ${money(e.transferencia)} · Egreso ${money(e.importe)}</div><div class="small">${esc(e.nota)}</div>${e.version?`<button onclick="editReviewMovement(${i})">Editar</button> <button class="secondary" onclick="voidReviewMovement(${i})">Anular</button>`:''}</div>`).join('')||'<p>Sin movimientos.</p>';
+  reviewPayments=r.cobrosDistribuidos||[];
+  const distributed=reviewPayments.map((c,i)=>`<div class="item"><strong>${esc(c.profesor)} · ${money(c.importe)} · ${esc(c.medio)}</strong><div class="small">Cobro: ${esc(c.fechaCobro)} · Actividad: ${esc(c.fechaActividad)}</div><div class="small">${esc(c.id)} · Turno: ${esc(c.turno)} · ${esc(c.usuario)}</div><div class="small">${esc(c.observaciones)}</div><button onclick="reviewOpenReceipt(${i})">Editar rendición distribuida</button> <button class="secondary" onclick="reviewOpenReceipt(${i},true)">Anular</button></div>`).join('')||'<p>Sin cobros distribuidos relacionados.</p>';
+  const rev=r.revision?`${esc(r.revision.estado)} · ${esc(r.revision.usuario)} · ${esc(r.revision.fechaHora)} · ${esc(r.revision.observaciones)}`:'Sin revisión administrativa';
+  $('reviewResult').innerHTML=`<p><strong>Estado:</strong> ${rev}</p><p class="small">Ajustes al efectivo registrado de la fecha ${money(r.ajusteEfectivo||0)}. Los turnos muestran el cierre original.</p><h2>Turnos (${r.turnos.length})</h2>${shifts}<hr><h2>Movimientos (${r.movimientos.length})</h2>${rows}<hr><h2>Cobros distribuidos</h2><p class="muted small">Cada fila es una imputación. Un mismo cobro puede aparecer en varias filas. Los ingresos se cuentan por fecha de cobro; la fecha de actividad no genera otro ingreso.</p>${distributed}`;
+  if(r.diaCerrado&&typeof onReady==='function')onReady();
+ });
+}
+function guardarRevision(estado){
+ if(session?.responsable!=='Admin')return;
+ const fecha=$('reviewDate').value,observaciones=$('reviewNote').value;
+ if(!confirm(`¿Confirmás marcar ${fecha} como ${estado.toLowerCase()}?`))return;
+ api('adminRevisarDia',{...session,fecha,estado,observaciones},()=>{msg('Revisión registrada.',true);cargarControl();});
+}
+
+function splitCalc(){
+ const efectivo=num($('splitCash').value),transferencia=num($('splitTransfer').value),total=efectivo+transferencia,received=Math.round(total*100);
+ $('splitTotal').value=Number.isFinite(total)?importeCampo(total):'';
+
+ let assigned=0,valid=!!splitReport&&Number.isFinite(total)&&total>0&&efectivo>=0&&transferencia>=0,error='';
+ for(const [date,value] of splitAssignments){
+  const amount=num(value),row=splitReport?.filas.find(d=>d.fecha===date);
+  if(!Number.isFinite(amount)||amount<0){valid=false;error='Revisá los importes asignados.';continue;}
+  const cents=Math.round(amount*100);assigned+=cents;
+  if(cents>0&&(!row||cents>Math.max(0,Math.round(row.pendiente*100)))){valid=false;error='Una asignación supera el pendiente de esa fecha.';}
+ }
+ const diff=received-assigned;
+ if(!Number.isFinite(received)||received<=0)error='Ingresá el total recibido.';
+ else if(!error&&diff>0&&!$('splitSurplus').checked)error='Falta asignar '+money(diff/100)+' o confirmar que queda a favor.';
+ else if(!error&&(diff>0||$('splitReview').checked)&&!$('splitNote').value.trim())error='Agregá una observación sobre la diferencia.';
+ else if(!error&&diff<0)error='Asignaste '+money(-diff/100)+' de más.';
+ if([...splitAssignments.values()].filter(value=>num(value)>0).length>31){valid=false;error='Asigná como máximo 31 fechas por rendición.';}
+ const exact=valid&&!error&&(diff===0||diff>0&&$('splitSurplus').checked);
+ for(const element of document.querySelectorAll('#splitRows tr')){const row=splitReport?.filas.find(d=>d.fecha===element.dataset.date);for(const button of element.querySelectorAll('.split-select,.split-assign'))button.disabled=waiting||!!pendingWrite||!row||row.pendiente<=0;}
+ $('splitBalance').innerHTML=`<div>Total recibido: <strong>${money(Number.isFinite(total)?total:0)}</strong></div><div>Total asignado: <strong>${money(assigned/100)}</strong></div><div>Diferencia: <strong>${money(Number.isFinite(diff)?diff/100:0)}</strong></div><p>${esc(exact?'El importe está completamente asignado.':error||'Actualizando saldos…')}</p>`;
+ $('splitSaveButton').disabled=!exact||waiting||!!pendingWrite;
+ $('controlStartSave').disabled=waiting||!!pendingWrite||!controlStartLoaded;$('controlStartDate').disabled=waiting||!!pendingWrite||!controlStartLoaded;
+ return exact;
+}
+function splitSave(){
+ if(!splitCalc()||!state?.puedeCargar)return;
+ const fechaCobro=today(),profesor=$('splitTeacher').value,total=num($('splitTotal').value);
+ const efectivo=num($('splitCash').value),transferencia=num($('splitTransfer').value),medio=efectivo&&transferencia?'Mixto':efectivo?'Efectivo':'Transferencia';
+ $('splitPayDate').value=fechaCobro;
+ $('splitJornadaAyuda').classList.toggle('hide',state.turno.fecha===fechaCobro);
+ const distribucion=[...splitAssignments].map(([fecha,value])=>({fecha,importe:num(value)})).filter(d=>d.importe>0);
+ const anterior=!!splitReport.fechaInicio&&distribucion.some(d=>d.fecha<splitReport.fechaInicio);
+ const payload={...session,turnoId:state.turno.id,profesor,fechaCobro,medio,total,efectivo,transferencia,distribucion,
+  observacion:$('splitNote').value,confirmarAnterior:anterior,confirmarSaldoFavor:$('splitSurplus').checked,requiereRevision:$('splitReview').checked};
+ api('comprobarCobroDistribuido',payload,matches=>{
+  if(matches.exactos.length){
+   $('duplicateOverride').classList.toggle('hide',session.responsable!=='Admin');
+   if(session.responsable!=='Admin'||!$('allowDuplicate').checked||!$('duplicateReason').value.trim()){msg('Ya existe una rendición exacta de '+money(total)+' para '+profesor+'. Revisá el listado: no se guardó otro cobro. Solo Admin puede autorizar una excepción con motivo.');return;}
+   payload.autorizarDuplicado=true;payload.motivoDuplicado=$('duplicateReason').value;
+  }else if(matches.posibles.length){if(!confirm('Hay rendiciones parecidas de este profesor hoy. Revisá el listado. ¿Confirmás que este es OTRO cobro legítimo?'))return;payload.confirmarCoincidencias=true;}
+  if(!confirm('¿Registrar '+money(total)+' en '+medio+' recibido hoy y atribuirlo a '+distribucion.map(d=>shortDate(d.fecha)).join(', ')+(anterior?'? Incluye fechas anteriores al inicio del control.':'?')))return;
+  api('adminRegistrarCobroDistribuido',payload,r=>{
+   closeSplitForm();$('splitTotal').value='';$('splitNote').value='';exportPack=null;$('copyAsientos').disabled=true;
+   if(r.estadoTurno){state=r.estadoTurno;movementFilter='Todos';render();}else refresh();
+   msg('Rendición guardada · '+money(r.total)+(r.saldoFavor?' · Saldo a favor '+money(r.saldoFavor):''),true);volverResumen();mostrarAvisos(avisosResueltos);
+  });
+ });
+}
+function findReceipt(id){return (state?.entradas||[]).find(e=>e.origen==='DISTRIBUIDO'&&e.id===id)||adminReceiptList.find(e=>e.id===id);}
+function openReceiptEditor(id){
+ const e=findReceipt(id);if(!e||e.puedeCorregir===false||pendingWrite)return;receiptEditor=e;
+ $('receiptProfessor').innerHTML=cfg.profesores.map(name=>'<option>'+esc(name)+'</option>').join('');$('receiptProfessor').value=e.profesor;$('receiptCash').value=importeCampo(e.efectivo);$('receiptTransfer').value=importeCampo(e.transferencia);$('receiptSurplus').checked=!!e.saldoFavor;$('receiptObservation').value=e.nota||'';$('receiptReason').value='';$('receiptEditRows').innerHTML='';
+ for(const d of e.distribucion)addReceiptEditRow(d.fecha,d.importe);
+ $('receiptEditWarning').textContent=e.turnoCerrado?'Corrección administrativa: cambia reportes y saldos, pero conserva el cierre anterior. La diferencia quedará auditada.':'La corrección recalcula el turno y conserva las filas originales en el historial.';
+ $('receiptEditDialog').showModal();
+}
+function addReceiptEditRow(date='',amount=''){
+ const row=document.createElement('div');row.className='grid receipt-edit-row';
+ row.innerHTML='<input type="date" class="receipt-date"><input class="receipt-amount" inputmode="decimal"><button class="secondary" onclick="this.parentElement.remove()">Quitar fecha</button>';
+ $('receiptEditRows').appendChild(row);row.querySelector('.receipt-date').value=date;row.querySelector('.receipt-amount').value=amount===''?'':new Intl.NumberFormat('es-AR',{maximumFractionDigits:2}).format(amount);
+}
+function receiptCorrectionDone(r){
+ $('receiptEditDialog').close();if(r.estadoTurno){movementFilter='Todos';state=r.estadoTurno;render();}exportPack=null;
+ if(session.responsable==='Admin'){loadAdminReceipts();if($('reviewDate').value)cargarControl();}
+ msg(r.turnoCerrado?'Corrección administrativa guardada. El cierre anterior se conserva; revisá la diferencia auditada.':'Rendición corregida. Movimientos y caja actualizados.',true);
+}
+function saveReceiptEdit(){
+ if(!receiptEditor||pendingWrite||waiting)return;
+ const efectivo=num($('receiptCash').value),transferencia=num($('receiptTransfer').value),total=efectivo+transferencia;
+ const medio=efectivo&&transferencia?'Mixto':efectivo?'Efectivo':'Transferencia';
+ const e=receiptEditor,distribucion=[...document.querySelectorAll('.receipt-edit-row')].map(row=>({fecha:row.querySelector('.receipt-date').value,importe:num(row.querySelector('.receipt-amount').value)})),motivo=$('receiptReason').value.trim();
+ const saldoFavor=centavosCaja(total-distribucion.reduce((sum,d)=>sum+d.importe,0));
+ if(!motivo||!Number.isFinite(total)||total<=0||efectivo<0||transferencia<0||distribucion.some(d=>!d.fecha||!Number.isFinite(d.importe)||d.importe<=0)||
+  saldoFavor<0||(saldoFavor>0&&!$('receiptSurplus').checked)){msg('Revisá motivo, total y asignaciones de la corrección.');return;}
+ if(!confirm('¿Guardar la corrección auditada? Se recalcularán también las asignaciones de pagos a clases asociadas.'+(e.turnoCerrado?' No se reescribirá el cierre anterior.':'')))return;
+ const payload={...session,cobroId:e.id,version:e.version,accion:'EDITAR',profesor:$('receiptProfessor').value,medio,total,efectivo,transferencia,confirmarSaldoFavor:$('receiptSurplus').checked,distribucion,observacion:$('receiptObservation').value,motivo,confirmarCierre:!!e.turnoCerrado,confirmarVinculos:session.responsable==='Admin'};
+ api('comprobarCobroDistribuido',{...payload,fechaCobro:e.fecha,excluirId:e.id},matches=>{
+  if(matches.exactos.length){if(session.responsable!=='Admin'){msg('La corrección coincide exactamente con otra rendición; requiere autorización de Admin.');return;}const reason=prompt('Existe otra rendición idéntica. Para autorizar expresamente la excepción, indicá el motivo; cancelar no guarda.');if(!reason?.trim())return;payload.autorizarDuplicado=true;payload.motivoDuplicado=reason;}
+  else if(matches.posibles.length){if(!confirm('Hay otras rendiciones parecidas. ¿Confirmás esta corrección de un cobro diferente?'))return;payload.confirmarCoincidencias=true;}
+  api('corregirCobroDistribuido',payload,receiptCorrectionDone);
+ });
+}
+function voidReceipt(id){
+ const e=findReceipt(id);if(!e||e.puedeCorregir===false||pendingWrite||waiting)return;
+ const motivo=prompt('Motivo de anulación de la rendición de '+money(e.efectivo+e.transferencia)+' de '+e.profesor+(e.sinTurno?'. Sin turno identificable: la anulación se registrará sin atribuirla a una caja.':e.turnoCerrado?'. Se conservará el cierre anterior.':''));
+ if(!motivo?.trim())return;
+ if(!confirm('¿Anular esta rendición? Se revertirán su ingreso y las asignaciones de pago si las hubiera, conservando el historial.'))return;
+ api('corregirCobroDistribuido',{...session,cobroId:id,version:e.version,accion:'ANULAR',motivo,confirmarSinTurno:!!e.sinTurno,confirmarCierre:!!e.turnoCerrado,confirmarVinculos:session.responsable==='Admin'},receiptCorrectionDone);
+}
+function loadAdminReceipts(){
+ if(session?.responsable!=='Admin')return;
+ api('adminCobrosDia',{...session,fecha:$('adminReceiptDate').value},r=>{
+  adminReceiptList=r.cobros;$('adminReceipts').innerHTML=r.cobros.map(e=>'<p class="small">'+(e.coincidencias.exactos.length?'⚠ Coincidencia exacta: revisar; no se anula automáticamente.':e.coincidencias.posibles.length?'Hay cobros parecidos; verificar comprobantes.':'Sin coincidencia detectada.')+'</p>'+renderReceipt(e)).join('')||'<p>Sin rendiciones vigentes.</p>';
+  $('adminReceipts').innerHTML+=r.correcciones.map(c=>'<div class="item small">Corrección '+esc(c.accion)+' · '+esc(c.fechaHora)+' · '+esc(c.motivo)+' · Diferencia efectivo '+money(c.deltaEfectivo)+' · transferencia '+money(c.deltaTransferencia)+(c.turnoCerrado?' · Cierre anterior conservado':'')+'</div>').join('');
+ });
+}
+function cargarInicioControl(){if(session?.responsable!=='Admin')return;controlStartLoaded=false;api('adminEstadoControlRendiciones',{...session},r=>{$('controlStartDate').value=r.fechaInicio;controlStartLoaded=true;});}
+function guardarInicioControl(){
+ if(session?.responsable!=='Admin'||!controlStartLoaded)return;
+ const fechaInicio=$('controlStartDate').value;
+ if(!confirm(fechaInicio?'¿Iniciar el control operativo desde '+shortDate(fechaInicio)+'? Los registros anteriores se conservan.':'¿Quitar la fecha de corte del control operativo?'))return;
+ api('adminConfigurarControlRendiciones',{...session,fechaInicio},r=>{msg('Inicio del control actualizado. No se modificaron movimientos históricos.',true);});
+}
+let exportPack=null,exportQuery=0;
+function renderExportPack(p){
+ exportPack=p;
+ const a=p.actividad,f=p.finanzas,c=p.control;
+ const t=(name,v)=>`<div class="row item"><span>${esc(name)}</span><strong>${esc(String(v))}</strong></div>`;
+ const prof=p.profesores.map(x=>t(x.profesor,x.clases+' clases · '+x.alumnos+' alumnos · rendido '+money(x.rendido))).join('')||'<p>Sin clases.</p>';
+ const rows=p.asientos.map(x=>`<tr><td>${esc(x.tipo)}</td><td>${esc(x.categoria)}</td><td>${esc(x.subcategoria)}</td><td>${esc(x.medio)}</td><td style="text-align:right">${money(x.importe)}</td></tr>`).join('');
+ $('exportResult').innerHTML=`<h2>Ocupación / actividad · ${esc(p.fecha)}</h2>${t('Abonos',a.abonos)}${t('Regulares',a.regulares)}${t('Clases registradas',a.clases)}${t('Alumnos',a.alumnos)}${t('Eventos registrados',a.eventos||0)}${t('Inscriptos en eventos',a.inscriptos||0)}<p class="small">Consulta actualizada: ${esc(p.consultado||'')} · Incluye cargas posteriores con esta fecha de actividad, aunque su turno siga abierto.</p><details><summary>Ver clases incluidas (${a.clases})</summary>${(p.clasesDetalle||[]).map(e=>`<div class="item"><strong>${esc(e.profesor)} · ${esc(e.detalle?.horario||'Sin horario')} · ${e.alumnos} alumnos</strong><div class="small">Actividad ${esc(e.fecha)} · Registro ${esc(e.registrado)} · ${esc(e.responsable)}</div><small>${esc(e.id)} · ${e.detalle?.estado==='CONFIRMADO'?money(e.detalle.importeWIN)+' para WIN':'Precio sin confirmar'}</small></div>`).join('')}</details>${t('Generado por actividad',money(p.generado?.total||0))}${p.generado?.incompleto?'<p>Generado parcial: hay clases sin precio confirmado.</p>':''}<h2>Profesores</h2>${prof}<hr><h2>Finanzas</h2>${t('Ingresos',money(f.ingresos))}${t('Rendiciones cobradas en esa fecha',money(p.distribucion?.cobradoHoy||0))}${t('Rendido por las clases de esa fecha',money(p.distribucion?.atribuidoAlDia||0))}${f.saldoFavor?t('Saldo a favor recibido',money(f.saldoFavor)):''}${t('Egresos',money(f.egresos))}${t('Flujo neto',money(f.neto))}${t('Retiros de caja (no exportados)',money(f.retiros))}<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse"><thead><tr><th>Tipo</th><th>Categoría</th><th>Subcategoría</th><th>Medio</th><th>Importe</th></tr></thead><tbody>${rows}</tbody></table></div><hr>${t('Turnos sin cerrar',c.abiertos)}${t('Diferencias de caja',money(c.cierre))}${t('Revisión',c.revisado?'REVISADO':'PENDIENTE')}${t('Exportación',p.exportacion?(p.exportacion.vigente?'Vigente':'DESACTUALIZADA')+' · '+p.exportacion.fechaHora:'No generada')}<p class="muted small">Los cobros distribuidos se exportan solo por fecha real de cobro; su imputación de actividad se muestra aparte. Los movimientos anteriores conservan su criterio histórico por fecha de actividad hasta conciliarlos. No incluye retiros ni diferencias de caja como gastos.</p>`;
+ $('copyAsientos').disabled=!(p.exportacion&&p.exportacion.vigente&&p.asientos.length);
+}
+function consultarAsientos(){
+ if(session?.responsable!=='Admin')return;
+ const fecha=$('exportDate').value,query=++exportQuery;exportPack=null;$('copyAsientos').disabled=true;
+ $('exportResult').innerHTML='<p>Consultando jornada actualizada…</p>';
+ api('adminAsientosDiaActualizada',{...session,fecha},p=>{if(query!==exportQuery||$('exportDate').value!==fecha)return;renderExportPack(p);});
+}
+function generarAsientos(){if(session?.responsable!=='Admin')return;if(!confirm('¿Generar los asientos del día? Debe estar revisado y cerrado.'))return;const confirmarReexportacion=!!(exportPack?.exportacion&&!exportPack.exportacion.vigente);if(confirmarReexportacion&&!confirm('ATENCIÓN: ya hay una exportación anterior. Si la pegaste en Excel, NO pegues otra vez todas las filas: conciliá solamente las diferencias. ¿Registrar nueva versión igualmente?'))return;api('adminGenerarAsientos',{...session,fecha:$('exportDate').value,confirmarReexportacion},p=>{consultarAsientos();msg(p.yaGenerado?'La jornada ya estaba generada.':'Asientos generados y registrados.',true);});}
+const EXCEL_COLUMNS=['Año','Mes','Día','Dia2','Semana','Tipo de movimiento','Categoría','Subcategoría','Detalle','Forma de pago','Importe'];
+function excelCell(value){
+ if(typeof value==='number'){if(!Number.isFinite(value))throw Error('Importe inválido para Excel.');return value.toFixed(2).replace('.',',');}
+ const text=String(value??'').replace(/[\t\r\n]+/g,' ');
+ return /^\s*[=+@-]/.test(text)?"'"+text:text;
+}
+function excelRows(pack){
+ const d=new Date(pack.fecha+'T12:00:00Z'),week=new Date(d);week.setUTCDate(week.getUTCDate()-(week.getUTCDay()+6)%7);
+ const names=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+ const date=pack.fecha.split('-').map(Number),wk=String(week.getUTCDate()).padStart(2,'0')+'/'+String(week.getUTCMonth()+1).padStart(2,'0')+'/'+week.getUTCFullYear();
+ return pack.asientos.map(x=>[String(date[0]),String(date[1]),String(date[2]),names[d.getUTCDay()],wk,x.tipo,x.categoria,x.subcategoria,x.detalle,x.medio,x.importe].map(excelCell).join('\t')).join('\n');
+}
+function copiarAsientos(){
+ if(exportPack?.exportacion?.versiones>1&&!confirm('Hay varias versiones exportadas para esta fecha. Reemplazá la exportación anterior; agregar todas las filas duplicaría ingresos. ¿Continuar?'))return;
+ if(!exportPack?.exportacion?.vigente||exportPack.fecha!==$('exportDate').value){msg('Consultá y generá asientos vigentes para la fecha seleccionada.');return;}
+ const value=excelRows(exportPack);
+ if(navigator.clipboard?.writeText){navigator.clipboard.writeText(value).then(()=>msg('Filas copiadas para columnas A–K, incluida Semana. No agregues nuevamente filas ya importadas.',true)).catch(()=>msg('No se pudo copiar automáticamente.'));}
+ else {const ta=document.createElement('textarea');ta.value=value;document.body.appendChild(ta);ta.select();const copied=document.execCommand('copy');ta.remove();msg(copied?'Filas copiadas para Excel.':'No se pudo copiar automáticamente.',copied);}
+}
+document.addEventListener('change' ,e=>{if(e.target?.id==='adminFrom'||e.target?.id==='adminTo'){marcarPeriodo('custom');estadoPeriodo('Período personalizado. Presioná Actualizar.');}});
+
+
+// Administración: correcciones limitadas a actividad de clases cerradas.
+let requestClasses=[],classRequests=[];
+function loadClassRequests(){
+ const fecha=$('classRequestDate').value;
+ if(!fecha){msg('Elegí una fecha.');return;}
+ api('consultarSolicitudesClase',{...session,fecha},r=>{
+  requestClasses=r.clases;classRequests=r.solicitudes;
+  $('classRequestResults').innerHTML=r.clases.map((c,i)=>`<div class="item">${esc(c.profesor)} · ${esc(c.detalle.horario)} · ${c.alumnos} alumnos
+   <button type="button" onclick="editClassRequest(${i})">Pedir corrección</button></div>`).join('')+
+   '<div id="classRequestForm"></div><h3>Solicitudes</h3>'+
+   (r.solicitudes.map((c,i)=>`<div class="item"><strong>${esc(c.profesor)} · ${esc(c.fecha)} · ${esc(c.estado)}</strong>
+    <p>${esc(c.solicitante)} · Alumnos ${c.antesAlumnos} → ${c.alumnos} · WIN ${money(c.antesImporte)} → ${money(c.nuevoImporte)}</p>
+    <p>${esc(c.motivo)} ${esc(c.respuesta||'')}</p>
+    ${session.responsable==='Admin'&&c.estado==='Pendiente'?`<button onclick="resolveClassRequest(${i},'Aprobada')">Aprobar</button> <button onclick="resolveClassRequest(${i},'Rechazada')">Rechazar</button>`:''}</div>`).join('')||'<p>Sin solicitudes.</p>');
+ });
+}
+function editClassRequest(i){
+ const c=requestClasses[i],manual=c.detalle.tipo==='Clase-partido';
+ $('classRequestForm').innerHTML=`<h3>${esc(c.profesor)} · ${esc(c.fecha)}</h3><label>Alumnos correctos<input id="reqStudents" type="number" min="1" max="4" value="${c.alumnos}"></label>
+ <label>${manual?'Importe para WIN':'Precio total de la clase'}<input id="reqPrice" inputmode="decimal" value="${manual?c.detalle.importeWIN:c.detalle.precio}"></label>
+ <label>Motivo<input id="reqReason" maxlength="300"></label><button onclick="submitClassRequest(${i})">Enviar para revisión</button>`;
+}
+function submitClassRequest(i){
+ const c=requestClasses[i],raw=$('reqPrice').value.trim(),importe=num(raw);
+ if(!raw||!Number.isFinite(importe)||!$('reqReason').value.trim()){msg('Completá el importe y el motivo.');return;}
+ api('solicitarCorreccionClase',{...session,id:c.id,version:c.version,alumnos:Number($('reqStudents').value),importe,motivo:$('reqReason').value},()=>{
+  loadClassRequests();msg('Solicitud pendiente de aprobación.',true);
+ });
+}
+function resolveClassRequest(i,estado){
+ const c=classRequests[i];
+ const motivo=estado==='Rechazada'?prompt('Motivo del rechazo'):'';
+ if(estado==='Rechazada'&&!motivo)return;
+ if(estado==='Aprobada'&&!confirm('¿Aplicar la corrección de '+c.profesor+' del '+c.fecha+'?'))return;
+ api('resolverSolicitudClase',{...session,solicitud:c.solicitud,estado,motivo},()=>{loadClassRequests();msg('Solicitud '+estado.toLowerCase()+'. Actualizá la jornada para ver los cambios.',true);});
+}
+let reviewMovements=[],reviewPayments=[],reviewSelection=null;
+function abrirRevisionCerrada(){
+ $('reviewDate').scrollIntoView({block:'center'});
+ if(!$('reviewDate').value)$('reviewDate').value=today();
+ cargarControl(()=>editReviewMovement(-1));
+}
+function reviewOpenReceipt(i,anular=false){
+ const c=reviewPayments[i];
+ api('adminCobrosDia',{...session,fecha:c.fechaCobro},r=>{
+  adminReceiptList=r.cobros;
+  if(adminReceiptList.some(e=>e.id===c.id)){
+   if(anular)voidReceipt(c.id);else openReceiptEditor(c.id);
+  }
+  else msg('La rendición cambió. Volvé a consultar.');
+ });
+}
+function editReviewMovement(i){
+ const e=reviewMovements[i]||{},d=e.detalle||{};
+ reviewSelection=i>=0?e:null;
+ const options=(values,selected)=>values.map(v=>`<option ${v===selected?'selected':''}>${esc(v)}</option>`).join('');
+ const input=(name,label,value='',type='text')=>`<label>${label}<input id="rv${name}" type="${type}" value="${esc(value)}"></label>`;
+ const select=(name,label,values,value)=>`<label>${label}<select id="rv${name}">${options(values,value)}</select></label>`;
+ const group=(types,body)=>`<div data-review-types="${types}">${body}</div>`;
+ const amount=v=>Number(v??0).toLocaleString('es-AR',{maximumFractionDigits:2});
+ $('reviewMovementEditor').innerHTML=`<div class="card"><h3>${i>=0?'Editar movimiento':'Agregar movimiento'}</h3>
+ ${input('Date','Fecha del movimiento',e.fecha||$('reviewDate').value,'date')}
+ <label>Tipo<select id="rvType" onchange="reviewFields()">${options(['Reserva','Clase','Rendicion','Evento','Tienda','Otro ingreso','Gasto','Retiro'],e.tipo)}</select></label>
+ ${group('Reserva',select('Reservation','Tipo de reserva',['Abonos','Regulares'],e.categoria)+`<label><input type="checkbox" id="rvOnlyPayment" ${e.tipo==='Reserva'&&e.cantidad===0?'checked':''}> Solo cobro de una reserva registrada</label>`)}
+ ${group('Clase|Rendicion',select('Teacher','Profesor',['',...new Set([...(cfg.profesores||[]),...(e.profesor?[e.profesor]:[])])],e.profesor))}
+ ${group('Clase',input('Students','Alumnos (1 a 4)',e.alumnos||1,'number')+input('Time','Hora',d.horario||'','time')+
+   select('ClassKind','Tipo de clase',['Tradicional','Clase-partido'],d.tipo)+input('Price','Precio total (tradicional)',d.precio==null?'':amount(d.precio))+
+   input('WinAmount','Importe para WIN (clase-partido)',d.importeWIN==null?'':amount(d.importeWIN))+input('Percent','Porcentaje de WIN (opcional)',d.porcentaje==null?'':amount(d.porcentaje)))}
+ ${group('Evento',select('Event','Tipo de evento',['Cancha abierta','Torneo'],e.categoria)+input('EventOwner','Responsable del evento',e.concepto||''))}
+ ${group('Reserva|Evento|Rendicion',input('Quantity','Cantidad (reservas, inscriptos o clases rendidas)',e.cantidad??1,'number'))}
+ ${group('Reserva|Evento|Rendicion|Tienda|Otro ingreso',input('Cash','Efectivo',amount(e.efectivo))+input('Transfer','Transferencia',amount(e.transferencia)))}
+ ${group('Gasto|Otro ingreso|Tienda',input('Concept','Concepto',e.concepto||''))}
+ ${group('Retiro',input('RetiroMotivo','Motivo del retiro',e.concepto||'')+
+   input('Destinatario','Destinatario del efectivo',e.destinatario||''))}
+ ${group('Gasto|Retiro',input('Expense','Importe de egreso',amount(e.importe))+select('Method','Medio',['Efectivo','Transferencia'],e.medio))}
+ ${group('Gasto',select('ExpenseCategory','Categoría de gasto',['',...new Set([...(cfg.gastos||[]),...(e.categoria?[e.categoria]:[])])],e.categoria)+input('Subcategory','Subcategoría',e.subcategoria||''))}
+ ${input('Note','Observación',e.nota||'')}${input('Reason','Motivo del cambio')}
+ <div class="actions"><button onclick="saveReviewMovement()">Guardar movimiento</button><button class="secondary" onclick="this.closest('.card').remove()">Cancelar</button></div></div>`;
+ reviewFields();
+ $('reviewMovementEditor').scrollIntoView({block:'nearest'});
+}
+function reviewFields(){
+ const type=$('rvType').value;
+ $('reviewMovementEditor').querySelectorAll('[data-review-types]').forEach(e=>e.hidden=!e.dataset.reviewTypes.split('|').includes(type));
+}
+function saveReviewMovement(){
+ const val=name=>$('rv'+name).value;
+ const numeric=name=>val(name).trim()===''?'':num(val(name));
+ const tipo=val('Type'),e=reviewSelection;
+ const categoria={Reserva:val('Reservation'),Evento:val('Event'),Gasto:val('ExpenseCategory')}[tipo]||'';
+ const movimiento={fecha:val('Date'),tipo,categoria,profesor:val('Teacher'),alumnos:Number(val('Students')),cantidad:tipo==='Clase'?1:Number(val('Quantity')),
+  soloCobro:$('rvOnlyPayment').checked,horarioClase:val('Time'),tipoClase:val('ClassKind'),precioClase:numeric('Price'),importeWIN:numeric('WinAmount'),porcentajeWIN:numeric('Percent'),
+  efectivo:numeric('Cash'),transferencia:numeric('Transfer'),concepto:val(tipo==='Retiro'?'RetiroMotivo':'Concept'),destinatario:val('Destinatario'),responsableEvento:val('EventOwner'),
+  importe:numeric('Expense'),medio:val('Method'),subcategoria:val('Subcategory'),nota:val('Note')};
+ if(Object.values(movimiento).some(v=>typeof v==='number'&&!Number.isFinite(v))){msg('Revisá los importes y cantidades.');return;}
+ submitReviewMovement({accion:e?'editar':'alta',id:e?.id,version:e?.version,motivo:val('Reason'),movimiento});
+}
+function voidReviewMovement(i){
+ const e=reviewMovements[i],motivo=prompt('Motivo para anular este movimiento');
+ if(!motivo?.trim())return;
+ submitReviewMovement({accion:'anular',id:e.id,version:e.version,motivo});
+}
+function submitReviewMovement(change){
+ if(!change.motivo?.trim()){msg('Indicá el motivo.');return;}
+ api('adminGestionarMovimientoCerrado',{...session,...change},r=>{
+  $('reviewMovementEditor').innerHTML='';
+  exportPack=null;exportQuery++;$('copyAsientos').disabled=true;
+  $('exportResult').textContent='Volvé a consultar los asientos de la jornada.';
+  $('reviewDate').value=r.fecha;
+  cargarControl();
+  cargarAdmin();
+  msg('Cambio registrado. Revisá la jornada actualizada.',true);
+ });
+}
+
+let canchasActividad=new Set(),duracionSeleccionada=60;
+function prepararFormularioActividad(tipo,categoria){
+ canchasActividad.clear();
+ $('seJugo').checked=true;
+ $('abonoJuego').classList.toggle('hide',tipo!=='Reserva'||categoria!=='Abonos');
+ $('qtyBlock').classList.toggle('hide',tipo!=='Evento');
+ $('mediumBlock').classList.add('hide');
+ ['classCobrado','classRemuneracion','classMotivo','classIncidencia'].forEach(id=>$(id).value='');
+ $('classException').open=false;
+ setClassTime('');$('finHora').value='';$('finMinuto').value='00';
+ $('diaSiguiente').checked=$('date').value!==today();
+ $('duracionPersonal').classList.toggle('hide',tipo!=='Clase');
+ seleccionarDuracion(60);mostrarSeleccionCanchas();ajustarActividad();
+ if(tipo==='Clase'){suggestClassPrice();syncClassPercent();}
+}
+function ajustarActividad(){
+ const tipo=chosen?.tipo;
+ const actividad=['Reserva','Clase','Evento'].includes(tipo)&&!(chosen?.categoria==='Abonos'&&!$('seJugo').checked);
+ $('formActividad').classList.toggle('hide',!actividad);
+ $('selectorDuracion').classList.toggle('hide',tipo==='Evento');
+ $('actividadFinEvento').classList.toggle('hide',tipo!=='Evento');
+}
+function mostrarSeleccionCanchas(){
+ $('canchaBotones').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(canchasActividad.has(b.dataset.cancha))));
+}
+function seleccionarCancha(cancha){
+ if(chosen?.tipo!=='Evento')canchasActividad.clear();
+ if(canchasActividad.has(cancha))canchasActividad.delete(cancha);else canchasActividad.add(cancha);
+ mostrarSeleccionCanchas();
+}
+function seleccionarDuracion(duracion,desdeBoton=true){
+ duracionSeleccionada=duracion;
+ if(desdeBoton)$('duracionActividad').value=String(duracion);
+ $('duracionBotones').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',String(Number(b.dataset.duracion)===duracion)));
+ actualizarFinActividad();
+}
+function actualizarFinActividad(){
+ const hora=$('classTime').value;
+ if(!hora||!duracionSeleccionada){$('actividadFin').textContent='';return;}
+ const [h,m]=hora.split(':').map(Number),fin=h*60+m+duracionSeleccionada;
+ $('actividadFin').textContent='Finaliza '+String(Math.floor(fin/60)%24).padStart(2,'0')+':'+String(fin%60).padStart(2,'0')+
+   (fin>=1440?' del día siguiente':'');
+}
+function horaFinalEvento(){
+ return $('finHora').value!==''&&$('finMinuto').value!==''?$('finHora').value+':'+$('finMinuto').value:'';
+}
+function cargarActividadPrevia(e){
+ if(e.soloCobro){$('seJugo').checked=false;ajustarActividad();}
+ else if(!e.actividad)$('formActividad').classList.add('hide');
+ else{
+  canchasActividad=new Set(e.actividad.canchas);
+  mostrarSeleccionCanchas();setClassTime(e.actividad.hora);seleccionarDuracion(e.actividad.duracion);
+  $('diaSiguiente').checked=!!e.actividad.diaSiguiente;
+  if(e.actividad.fin){$('finHora').value=e.actividad.fin.slice(0,2);$('finMinuto').value=e.actividad.fin.slice(3);}
+ }
+ $('classIncidencia').value=e.incidenciaClase||'';
+ if(e.economia?.motivo){
+  $('classException').open=true;
+  $('classCobrado').value=importeCampo(e.economia.cobrado);
+  $('classRemuneracion').value=importeCampo(e.economia.remuneracion);
+  $('classMotivo').value=e.economia.motivo;
+ }
+}
+function importeCampo(v){return Number(v||0).toLocaleString('es-AR',{maximumFractionDigits:2});}
+function actualizarEconomiaClase(){
+ const habitual=Number(cfg.preciosClases?.[$('students').value]||0),poro=Number($('classPercent').value);
+ const base=Math.round(habitual*(100-poro))/100;
+ const real=$('classException').open&&$('classCobrado').value.trim()?num($('classCobrado').value):habitual;
+ const profesor=$('classException').open&&$('classRemuneracion').value.trim()?num($('classRemuneracion').value):base;
+ $('classEstimado').textContent='Profesor '+money(profesor)+' · WIN '+money(Math.max(0,real-profesor))+
+  (real<profesor?' · A favor del profesor '+money(profesor-real):'');
+}
+function volverResumen(){$('resumenCaja').scrollIntoView({behavior:'smooth',block:'start'});}
+function verIndicadorCaja(medio){
+ if(!state?.turno)return;
+ $('historialPeriodo').value='caja';
+ if(medio==='Efectivo'){
+  const t=state.totales;
+  const line=(label,value)=>'<div class="row"><span>'+label+'</span><strong>'+money(value)+'</strong></div>';
+  $('efectivoDesglose').innerHTML=line('Apertura',state.turno.saldoInicial)+line('Ingresos en efectivo',t.efectivo)+
+    line('Gastos en efectivo',-t.gastosEfectivo)+line('Retiros',-t.retiros)+line('Efectivo esperado',t.esperado);
+  $('efectivoDesglose').classList.remove('hide');
+ }
+ cambiarPeriodoHistoria();filterMovements(medio);
+ $('historialRecepcion').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function verClasesCaja(){
+ const grupos=new Map();
+ (state?.entradas||[]).filter(e=>e.tipo==='Clase').forEach(e=>{
+  const g=grupos.get(e.profesor)||[0,0,0,0];
+  if(e.alumnos>=1&&e.alumnos<=4)g[e.alumnos-1]+=e.cantidad;
+  grupos.set(e.profesor,g);
+ });
+ $('clasesCajaDetalle').innerHTML=grupos.size?[...grupos].map(([name,g])=>
+  `<div class="item"><strong>${esc(name)}</strong><div class="small">Individuales ${g[0]} · De 2 ${g[1]} · De 3 ${g[2]} · De 4 ${g[3]}</div></div>`).join(''):'<p>Sin clases en esta caja.</p>';
+ $('clasesCajaDetalle').classList.toggle('hide');
+}
+
+let historiaResultados=[],historiaViva=[],paginaHistoria=1,reporteHistoria=0;
+const filtroTipo=e=>e.tipo==='RendicionDistribuida'?'Rendicion':e.tipo==='Reserva'?e.categoria:e.tipo;
+function filtraHistorial(e){
+ const tipo=$('historialTipo').value,texto=$('historialBuscar').value.trim().toLowerCase();
+ return movementHasMedium(e,movementFilter)&&(!tipo||tipo===filtroTipo(e))&&(!texto||
+  [e.tipo,e.categoria,e.concepto,e.profesor,e.destinatario,e.responsable,e.nota,e.actividad?.hora,...(e.actividad?.canchas||[])].join(' ').toLowerCase().includes(texto));
+}
+function fechaOffset(dias){
+ const d=new Date(today()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+dias);return d.toISOString().slice(0,10);
+}
+function cambiarPeriodoHistoria(){
+ const periodo=$('historialPeriodo').value;
+ $('historialFechaWrapper').classList.toggle('hide',periodo!=='fecha');$('historialMesWrapper').classList.toggle('hide',periodo!=='mes');
+ if(!$('historialFecha').value)$('historialFecha').value=today();
+ if(!$('historialMes').value)$('historialMes').value=today().slice(0,7);
+ consultarHistorial();
+}
+function consultarHistorial(pagina=1){
+ if(!session)return;
+ const reporte=++reporteHistoria,periodo=$('historialPeriodo').value||'caja';
+ cerrarDetalleHistoria(false);
+ for(const button of $('movementFilters').querySelectorAll('button'))button.setAttribute('aria-pressed',String(button.textContent===movementFilter));
+ if(periodo==='caja'){renderMovementList();return;}
+ let desde=today(),hasta=desde;
+ if(periodo==='ayer')desde=hasta=fechaOffset(-1);
+ if(periodo==='semana')desde=fechaOffset(-6);
+ if(periodo==='fecha')desde=hasta=$('historialFecha').value;
+ if(periodo==='mes'){
+  const mes=$('historialMes').value;if(!mes)return;
+  desde=mes+'-01';const d=new Date(desde+'T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+1);d.setUTCDate(0);hasta=d.toISOString().slice(0,10);
+ }
+ if(!desde||!hasta)return;
+ api('historialRecepcion',{...session,desde,hasta,pagina,tipo:$('historialTipo').value,medio:movementFilter,buscar:$('historialBuscar').value},r=>{
+  if(reporte!==reporteHistoria)return;
+  historiaResultados=r.movimientos;paginaHistoria=r.pagina;
+  $('entries').classList.add('hide');$('historialArchivado').classList.remove('hide');
+  $('entryCount').textContent=r.total+' registros';
+  $('historialArchivado').innerHTML=r.movimientos.map((e,i)=>filaHistoria(e,i,false)).join('')||'<p class="muted">No hay movimientos para estos filtros.</p>';
+  $('paginasHistoria').classList.toggle('hide',r.paginas<2);
+  $('paginaHistoriaAnterior').classList.toggle('hide',paginaHistoria<=1);
+  $('paginaHistoriaSiguiente').classList.toggle('hide',paginaHistoria>=r.paginas);
+ });
+}
+function infoActividad(e){
+ const a=e.actividad;
+ return a?esc(a.canchas.join(', '))+' · '+esc(a.hora)+' a '+esc(a.fin)+(a.diaSiguiente?' · Después de medianoche':''):'';
+}
+function importesHistoria(e){
+ if(movementFilter==='Efectivo'&&e.efectivo>0)return 'Efectivo '+money(e.efectivo);
+ if(movementFilter==='Transferencia'&&e.transferencia>0)return 'Transferencia '+money(e.transferencia);
+ return movementPayments(e);
+}
+function filaHistoria(e,i,viva){
+ const titulo=e.tipo==='RendicionDistribuida'?'Rendición · '+e.profesor:e.soloCobro?'Abono · Pago anticipado':title(e);
+ return `<div class="item row"><div><strong>${esc(titulo)}</strong> ${e.estado==='ANULADA'?'<span class="pill">Anulado</span>':''} ${e.modificado?'<span class="pill">Modificado</span>':''}
+  <div class="muted small">${registrationLabel(e)} · Caja ${esc(e.caja||state?.turno?.responsable||'sin referencia')}</div>
+  <div class="small">${infoActividad(e)}</div></div><div><strong>${importesHistoria(e)}</strong>
+  <button type="button" class="secondary" onclick="abrirDetalleHistoria(${i},${viva})">Ver detalle</button></div></div>`;
+}
+function renderMovimientoActual(e,i,entradas){
+ if(i===0)historiaViva=entradas.slice().reverse();
+ return filaHistoria({...e,caja:state?.turno?.responsable},i,true);
+}
+let tarjetaHistoria=null,posicionHistoria=0;
+function abrirDetalleHistoria(i,viva){
+ const e=(viva?historiaViva:historiaResultados)[i];if(!e)return;
+ tarjetaHistoria=e;posicionHistoria=window.scrollY||0;
+ const acciones=viva&&e.puedeCorregir!==false?(e.origen==='DISTRIBUIDO'?
+  `<button onclick="openReceiptEditor('${esc(e.id)}')">Editar rendición</button><button class="secondary" onclick="voidReceipt('${esc(e.id)}')">Anular</button>`:
+  e.tipo==='Rendicion'?'':`<button onclick="editar('${esc(e.id)}')">Editar</button><button class="secondary" onclick="anular('${esc(e.id)}')">Anular</button>`):'';
+ const propuesta=e.cajaCerrada&&e.estado==='ACTIVA'&&e.tipo!=='Clase'?
+  '<button type="button" class="secondary" onclick="abrirPropuestaCaja()">Proponer corrección financiera</button>':'';
+ const detalle=$('historialDetalle');
+ detalle.innerHTML=`<div class="row"><h3>Detalle del movimiento</h3><button class="secondary" onclick="cerrarDetalleHistoria()">Volver a la lista</button></div>
+  <p>${registrationLabel(e)} · Caja ${esc(e.caja||state?.turno?.responsable||'sin referencia')}</p>
+  <p>Actividad ${esc(shortDate(e.fecha))} ${infoActividad(e)}<br>${esc(e.concepto||e.profesor)}<br>${movementPayments(e)}<br>${esc(e.nota||'')}</p>
+  ${e.destinatario?'<p>Entregado a '+esc(e.destinatario)+'</p>':''}
+  ${(e.distribucion||[]).map(d=>'<div class="small">'+esc(shortDate(d.fecha))+' · '+money(d.importe)+'</div>').join('')}
+  ${e.saldoFavor?'<p>Saldo a favor '+money(e.saldoFavor)+'</p>':''}
+  <div class="actions">${acciones}${propuesta}</div><div id="propuestaCajaEditor"></div><div id="historiaAuditoria"></div>`;
+ detalle.classList.remove('hide');detalle.scrollIntoView({behavior:'smooth',block:'start'});
+ api('auditoriaMovimientoRecepcion',{...session,id:e.id},a=>{
+  if(tarjetaHistoria!==e)return;
+  $('historiaAuditoria').innerHTML=a.length?'<h3>Historial de cambios</h3>'+a.map(r=>{
+   const montos=m=>m?[m.efectivo!=null?'Efectivo '+money(m.efectivo):'',m.transferencia!=null?'Transferencia '+money(m.transferencia):'',
+    m.importe?'Importe '+money(m.importe):'',m.actividad?.hora||'',m.nota||''].filter(Boolean).join(' · '):'';
+   return `<div class="item"><strong>${esc(r.usuario)} · ${esc(r.fechaHora)}</strong><div>${esc(r.motivo||r.estado||'Movimiento actualizado')}</div>
+    ${r.antes?'<small>Antes '+esc(montos(r.antes))+'</small><br>':''}${r.despues?'<small>Después '+esc(montos(r.despues))+'</small>':''}</div>`;
+  }).join(''):'';
+ });
+}
+function cerrarDetalleHistoria(volver=true){
+ $('historialDetalle').classList.add('hide');$('historialDetalle').textContent='';tarjetaHistoria=null;
+ if(volver&&window.scrollTo)window.scrollTo({top:posicionHistoria,behavior:'instant'});
+}
+function limpiarHistorial(){
+ reporteHistoria++;historiaResultados=[];historiaViva=[];cerrarDetalleHistoria(false);
+ $('historialPeriodo').value='caja';$('historialTipo').value='';$('historialBuscar').value='';
+ $('entries').textContent='';$('historialArchivado').textContent='';$('avisosLista').textContent='';
+}
+function abrirPropuestaCaja(){
+ const e=tarjetaHistoria;if(!e)return;
+ const salida=['Gasto','Retiro'].includes(e.tipo),input=(id,label,value)=>
+  '<label for="'+id+'">'+label+'</label><input id="'+id+'" inputmode="decimal" value="'+esc(value)+'" onblur="formatInput(this)">';
+ $('propuestaCajaEditor').innerHTML='<div class="booking-detail"><h3>Corrección provisional</h3>'+
+  (salida?input('propuestaImporte','Importe corregido',importeCampo(e.importe))+
+    (e.tipo==='Gasto'?'<label for="propuestaMedio">Medio</label><select id="propuestaMedio"><option>Efectivo</option><option>Transferencia</option></select>':''):
+   input('propuestaEfectivo','Efectivo real',importeCampo(e.efectivo))+input('propuestaTransferencia','Transferencia real',importeCampo(e.transferencia)))+
+  '<label for="propuestaMotivo">Motivo obligatorio</label><textarea id="propuestaMotivo" maxlength="300"></textarea>'+
+  '<button onclick="enviarPropuestaCaja()">Enviar a Administración</button></div>';
+ if(e.tipo==='Gasto')$('propuestaMedio').value=e.medio;
+}
+function enviarPropuestaCaja(){
+ const e=tarjetaHistoria;if(!e)return;
+ const motivo=$('propuestaMotivo').value.trim(),salida=['Gasto','Retiro'].includes(e.tipo);
+ if(!motivo){msg('Indicá el motivo de la corrección.');return;}
+ const valores=salida?{importe:num($('propuestaImporte').value),medio:e.tipo==='Retiro'?'Efectivo':$('propuestaMedio').value}:
+  {efectivo:num($('propuestaEfectivo').value),transferencia:num($('propuestaTransferencia').value)};
+ if(Object.values(valores).some(x=>typeof x==='number'&&(!Number.isFinite(x)||x<0))){msg('Revisá los importes.');return;}
+ api('solicitarCorreccionCaja',{...session,id:e.id,version:e.version,origen:e.origen||'ANOTACION',motivo,...valores},()=>{
+  $('propuestaCajaEditor').innerHTML='';listarJornadasCaja();
+  msg('Corrección provisional enviada. Avisá a Administración.',true);
+ });
+}
+let propuestasAdmin=[];
+function cargarCorreccionesCaja(){
+ if(session?.responsable!=='Admin')return;
+ api('adminCorreccionesCaja',{...session,todas:$('correccionesTodas').checked},r=>{
+  propuestasAdmin=r;
+  $('correccionesCajaListado').innerHTML=r.map((e,i)=>`<div class="item"><strong>${esc(e.tipo)} · ${esc(shortDate(e.jornada))} · ${esc(e.estado)}</strong>
+  <p>${esc(e.autor)} · ${esc(e.nota)}</p><div class="small">Transferencias ${money(e.antes.transferencia)} → ${money(e.despues.transferencia)} ·
+  Efecto en efectivo ${money(e.antes.saldo)} → ${money(e.despues.saldo)}</div>
+  ${e.resolucion?'<p class="small">'+esc(e.resolucion)+' · '+esc(e.resueltoPor)+' · '+esc(e.resueltoEl)+'</p>':''}
+  ${e.estado==='PENDIENTE'?'<div class="actions"><button onclick="resolverCorreccionCaja('+i+',\'APROBADA\')">Aprobar</button><button class="secondary" onclick="resolverCorreccionCaja('+i+',\'RECHAZADA\')">Rechazar</button></div>':''}</div>`).join('')||'<p class="muted">Sin correcciones para revisar.</p>';
+ });
+}
+function resolverCorreccionCaja(i,estado){
+ const e=propuestasAdmin[i];if(!e)return;
+ const nota=prompt(estado==='APROBADA'?'Motivo de la aprobación':'Motivo del rechazo');
+ if(!nota?.trim())return;
+ api('adminResolverCorreccionCaja',{...session,id:e.id,estado,nota},()=>{
+  cargarCorreccionesCaja();cargarControl();msg('Decisión guardada. Revisá la conciliación y los asientos afectados.',true);
+ });
+}
+function guardarComisionClase(){
+ const profesor=$('comisionProfesor').value,fecha=$('comisionDesde').value,motivo=$('comisionMotivo').value;
+ const porcentaje=$('comisionValor').value.trim()?num($('comisionValor').value):'';
+ api('adminConfigurarComisionClase',{...session,profesor,fecha,porcentaje,motivo},()=>{
+  $('comisionValor').value='';$('comisionMotivo').value='';msg('Comisión guardada.',true);
+ });
+}
+let avisosResueltos=false,avisosActuales=[];
+function mostrarAvisos(resueltos){
+ if(!session)return;
+ avisosResueltos=resueltos;
+ api('avisosRecepcion',{...session,resueltos},r=>{
+  if(avisosResueltos!==resueltos)return;
+  avisosActuales=r.avisos;
+  $('avisosCantidad').textContent=String(r.pendientes);
+  $('avisosLista').innerHTML=r.avisos.map((a,i)=>`<div class="item row"><div><strong>${esc(a.mensaje)}</strong>
+   <div class="small">${esc(a.autor)} · ${esc(a.fechaHora)}</div>
+   ${a.resuelto?'<small>Resuelto por '+esc(a.resueltoPor)+' · '+esc(a.resueltoEl)+' · '+esc(a.nota||'')+'</small>':''}</div>
+   ${a.resuelto?'':`<button type="button" class="secondary" onclick="resolverAviso(${i})">${a.tipo==='MANUAL'?'Resolver':'Revisar incidencia'}</button>`}</div>`).join('')||
+   '<p class="muted">Sin avisos '+(resueltos?'resueltos':'pendientes')+'.</p>';
+ });
+}
+function nuevoAviso(){
+ if(chosen||!$('distributedSection').classList.contains('hide')){msg('Terminá o cancelá el movimiento abierto antes de escribir un aviso.');return;}
+ $('avisoForm').classList.remove('hide');$('avisoTexto').focus();
+}
+function cerrarAviso(){$('avisoForm').classList.add('hide');$('avisoTexto').value='';}
+function enviarAviso(){
+ const mensaje=$('avisoTexto').value.trim();
+ if(!mensaje){msg('Escribí el aviso para el siguiente turno.');return;}
+ api('guardarAvisoRecepcion',{...session,mensaje},()=>{cerrarAviso();mostrarAvisos(false);msg('Aviso guardado.',true);});
+}
+function resolverAviso(i){
+ const a=avisosActuales[i];if(!a||a.resuelto)return;
+ const nota=prompt(a.tipo==='MANUAL'?'Comentario de resolución (opcional)':'Contá cómo se resolvió la incidencia');
+ if(nota===null||a.tipo!=='MANUAL'&&!nota.trim())return;
+ api(a.tipo==='MANUAL'?'resolverAvisoRecepcion':'revisarOrigenAviso',{...session,id:a.id,origen:a.origen,tipo:a.tipo,nota},()=>{mostrarAvisos(false);msg('Resolución guardada.',true);});
+}
+
+function guardarAccionSaldo(){
+ if(!splitReport||!state?.turno)return;
+ const importe=$('saldoImporte').value.trim()?num($('saldoImporte').value):'';
+ const accion=$('saldoAccion').value,fecha=$('saldoFecha').value,motivo=$('saldoMotivo').value.trim();
+ if(!Number.isFinite(importe)||importe<=0||!motivo||accion==='APLICAR'&&!fecha){msg('Ingresá el importe, el motivo y la fecha si aplicás un saldo.');return;}
+ api('moverSaldoProfesor',{...session,turnoId:state.turno.id,profesor:splitReport.profesor,importe,accion,fecha,motivo},()=>{
+  $('saldoImporte').value='';$('saldoMotivo').value='';refresh();splitLoadBalances();msg('Saldo actualizado.',true);
+ });
+}
+function abrirCobroOmitido(){
+ if(!session)return;
+ if(chosen||!$('distributedSection').classList.contains('hide')){msg('Terminá el movimiento abierto antes de informar otro.');return;}
+ cerrarDetalleHistoria(false);
+ $('historialDetalle').classList.remove('hide');
+ $('historialDetalle').innerHTML=`<h3>Informar un cobro omitido</h3>
+ <p class="small muted">Elegí la caja que recibió el dinero y describí cómo verificarlo. Administración confirma el ajuste.</p>
+ <label>Jornada de la caja <input id="omitidoFecha" type="date" value="${esc($('historialFecha').value||today())}" onchange="consultarCajasOmitido()"></label>
+ <label>Caja cerrada <select id="omitidoCaja"></select></label>
+ <label>Tipo de ingreso <select id="omitidoTipo"><option>Otro ingreso</option><option>Tienda</option><option value="Regulares">Reserva regular ya registrada</option><option value="Abonos">Abono</option></select></label>
+ <div class="grid"><label>Efectivo <input id="omitidoEfectivo" inputmode="decimal" onblur="formatInput(this)"></label>
+ <label>Transferencia <input id="omitidoTransferencia" inputmode="decimal" onblur="formatInput(this)"></label></div>
+ <label>Concepto o referencia <input id="omitidoConcepto" maxlength="150"></label><label>Motivo <textarea id="omitidoMotivo" maxlength="300"></textarea></label>
+ <div class="actions"><button type="button" class="secondary" onclick="cerrarDetalleHistoria(false)">Cancelar</button>
+ <button type="button" onclick="enviarCobroOmitido()">Enviar a Administración</button></div>`;
+ consultarCajasOmitido();$('historialDetalle').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function consultarCajasOmitido(){
+ const fecha=$('omitidoFecha')?.value;if(!fecha)return;
+ api('cajasCerradasRecepcion',{...session,fecha},r=>{
+  if(!$('omitidoCaja')||$('omitidoFecha').value!==fecha)return;
+  $('omitidoCaja').innerHTML=r.length?r.map(c=>`<option value="${esc(c.id)}">${esc(c.responsable)} · ${esc(c.apertura.slice(-8,-3))}</option>`).join(''):
+   '<option value="">No hay cajas cerradas en esa jornada</option>';
+ });
+}
+function enviarCobroOmitido(){
+ const turnoId=$('omitidoCaja').value,valor=$('omitidoTipo').value,categoria=['Abonos','Regulares'].includes(valor)?valor:'';
+ const efectivo=num($('omitidoEfectivo').value),transferencia=num($('omitidoTransferencia').value);
+ const concepto=$('omitidoConcepto').value.trim(),motivo=$('omitidoMotivo').value.trim();
+ if(!turnoId||!concepto||!motivo||![efectivo,transferencia].every(v=>Number.isFinite(v)&&v>=0)||efectivo+transferencia<=0){
+  msg('Completá la caja, el concepto, el motivo y el importe realmente recibido.');return;
+ }
+ api('solicitarCorreccionCaja',{...session,accion:'ALTA',turnoId,tipo:categoria?'Reserva':valor,categoria,efectivo,transferencia,concepto,motivo},()=>{
+  cerrarDetalleHistoria(false);listarJornadasCaja();msg('Cobro omitido enviado a revisión.',true);
+ });
+}
+
+init();
+</script></body></html>
