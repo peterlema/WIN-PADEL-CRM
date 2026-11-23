@@ -191,3 +191,10 @@ dialog.modal::backdrop { background: #12122bcc; }
 .barra strong { display:none; }
 .barra .usuario { margin-left:0; color:var(--texto); }
 .barra button { margin-left:auto; }
+
+/* Ajustes comprobados en la vista publicada. */
+.cal { max-width:1120px; padding-left:22px; padding-right:22px; }
+.cal>.cal-fila h1 { color:#fff; }
+.subnav a.activa { background:#c43b59; }
+.win-login-card button[type="submit"], .win-bar-form>button, .win-rec-form button { background:#c43b59; }
+@media(max-width:700px){ .cal {padding-left:12px;padding-right:12px;} }
