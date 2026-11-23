@@ -11,6 +11,7 @@ import './calendario.css'
 import './recepcion.css'
 import './recepcion-v5.css'
 import './tema-win.css'
+import './bar.css'
 
 // MODO DEMO (#/demo): pantallas de adentro con datos de ejemplo, sin iniciar sesión ni llamar al backend real.
 const DEMO = window.location.hash.startsWith('#/demo')
