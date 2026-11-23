@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { callApi, clearToken } from '../api.js'
 import { callCourts } from '../courtsApi.js'
+import Modal from '../components/Modal.jsx'
 
 // Horario de la grilla (a confirmar con el club): 08:00 a 01:00 de la jornada comercial.
 const COURTS = ['C1', 'C2', 'C3', 'C4']
@@ -145,7 +146,7 @@ export default function Calendario() {
   return (
     <main className="cal">
       <h1>Calendario de canchas</h1>
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && !form && !detalle && <p className="error" role="alert">{error}</p>}
       {aviso && <p className="aviso" role="status">{aviso}</p>}
 
       <div className="cal-layout">
@@ -232,8 +233,9 @@ export default function Calendario() {
           )}
 
           {form && (
+            <Modal titulo={`Nueva reserva · ${fechaLarga(fecha)}`} onCerrar={() => setForm(null)}>
+            {error && <p className="error" role="alert">{error}</p>}
             <form className="cal-form" onSubmit={reservar}>
-              <h2>Nueva reserva · {fechaLarga(fecha)}</h2>
               <label>Cancha
                 <select value={form.court} onChange={e => setForm({ ...form, court: e.target.value })}>{COURTS.map(c => <option key={c}>{c}</option>)}</select>
               </label>
@@ -259,11 +261,13 @@ export default function Calendario() {
                 <button type="button" className="secundario" onClick={() => setForm(null)}>Cerrar</button>
               </div>
             </form>
+            </Modal>
           )}
 
           {detalle && (
+            <Modal titulo={`${KINDS[detalle.tipo]} · ${detalle.cancha}`} onCerrar={() => setDetalle(null)}>
+            {error && <p className="error" role="alert">{error}</p>}
             <div className="cal-form">
-              <h2>{KINDS[detalle.tipo]} · {detalle.cancha}</h2>
               <p>{detalle.titular} · {detalle.inicio}–{detalle.fin} ({detalle.duracion} min)</p>
               {detalle.nota && <p>Observación: {detalle.nota}</p>}
               {detalle.creadoPor && <p className="cal-resumen">Cargó: {detalle.creadoPor}</p>}
@@ -280,6 +284,7 @@ export default function Calendario() {
               )}
               {!puedeCancelar(detalle) && <div className="cal-acciones"><button type="button" className="secundario" onClick={() => setDetalle(null)}>Cerrar</button></div>}
             </div>
+            </Modal>
           )}
         </section>
       </div>

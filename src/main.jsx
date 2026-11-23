@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
 import Calendario from './pages/Calendario.jsx'
 import Recepcion from './pages/Recepcion.jsx'
+import Bar from './pages/Bar.jsx'
 import { installDemoServer } from './demo/mockServer.js'
 import { callApi, clearToken, readToken } from './api.js'
 import './styles.css'
@@ -12,7 +13,9 @@ import './tema-win.css'
 
 // MODO DEMO (#/demo): pantallas de adentro con datos de ejemplo, sin iniciar sesión ni llamar al backend real.
 const DEMO = window.location.hash.startsWith('#/demo')
-if (DEMO) installDemoServer()
+// #/demo/bar muestra la vista del empleado de Bar (sólo esa pestaña).
+const DEMO_BAR = window.location.hash.startsWith('#/demo/bar')
+if (DEMO) installDemoServer(DEMO_BAR ? { rol: 'BAR', nombre: 'Gerson (demo)' } : {})
 const RAIZ = DEMO ? '#/demo/caja' : '#/'
 const CALENDARIO = DEMO ? '#/demo/calendario' : '#/calendario'
 const RECEPCION = '#/demo'
@@ -32,12 +35,17 @@ function RecepcionConUsuario({ onSalir }) {
 function Raiz() {
   const [hash, setHash] = useState(window.location.hash)
   const [token, setToken] = useState(readToken())
+  const [rol, setRol] = useState(null)
   useEffect(() => {
     const onHash = () => setHash(window.location.hash)
     window.addEventListener('hashchange', onHash)
     const timer = setInterval(() => setToken(readToken()), 1000)
     return () => { window.removeEventListener('hashchange', onHash); clearInterval(timer) }
   }, [])
+  useEffect(() => {
+    if (!token) { setRol(null); return }
+    callApi('me').then(r => setRol(r.user.role)).catch(() => {})
+  }, [token])
   const ruta = rutaDe(hash)
   const enCalendario = ruta === 'calendario'
   const enRecepcion = DEMO && (ruta === '' || ruta === 'recepcion')
@@ -47,6 +55,18 @@ function Raiz() {
   }
   function salirDelDemo() {
     clearToken(); window.location.hash = '#/'; window.location.reload()
+  }
+  if (token && rol === null) return <><header className="marca"><div><h1>WIN <span>PADEL CLUB</span></h1><small>GESTIÓN · CAJA Y TURNOS</small></div></header><main className="centro"><p>Verificando sesión…</p></main><Version /></>
+  if (token && rol === 'BAR') {
+    return (
+      <>
+        {DEMO && <div className="demo-banner" role="status">MODO DEMO · vista del empleado de Bar<button type="button" className="enlace" onClick={salirDelDemo}>Salir del demo</button></div>}
+        <header className="marca"><div><h1>WIN <span>PADEL CLUB</span></h1><small>GESTIÓN · BAR</small></div><span className="pill">Bar</span></header>
+        <nav className="subnav" aria-label="Secciones"><a href={DEMO ? '#/demo/bar' : '#/'} className="activa">Bar</a><button type="button" className="enlace" onClick={DEMO ? salirDelDemo : salir}>Salir</button></nav>
+        <Bar />
+        <Version />
+      </>
+    )
   }
   return (
     <>

@@ -85,3 +85,17 @@ body { padding-bottom: 30px; }
   padding: 6px 12px; background: #fde9c4; color: #6b4400; font-size: 0.85rem; font-weight: 600;
 }
 .demo-banner .enlace { background: none; color: #6b4400; text-decoration: underline; padding: 0; font-size: inherit; }
+
+/* Ventana emergente */
+dialog.modal { border: 0; padding: 0; border-radius: 18px; width: min(560px, calc(100vw - 24px)); max-height: calc(100vh - 24px); box-shadow: 0 18px 60px rgba(21, 26, 44, 0.28); color: var(--texto); }
+dialog.modal::backdrop { background: rgba(23, 25, 35, 0.5); }
+.modal-caja { padding: 20px 22px 22px; display: grid; gap: 14px; overflow-y: auto; max-height: calc(100vh - 24px); }
+.modal-cabeza { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.modal-cabeza h2 { margin: 0; font-size: 1.1rem; text-transform: none; }
+.modal-cabeza h2::first-letter { text-transform: uppercase; }
+.modal-x { min-height: 34px; padding: 4px 11px; }
+dialog.modal .cal-form { border-top: 0; padding-top: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+dialog.modal .cal-form label { display: grid; gap: 6px; }
+dialog.modal .cal-form input, dialog.modal .cal-form select { width: 100%; min-width: 0; }
+dialog.modal .cal-form .cal-acciones button:first-child { flex: 1; }
+@media (max-width: 480px) { dialog.modal .cal-form { grid-template-columns: 1fr; } .modal-caja { padding: 16px; } }

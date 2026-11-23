@@ -70,8 +70,9 @@ function courts(body) {
   throw fail('Operación desconocida', 404)
 }
 
+let usuario = { id: 'demo', name: 'Usuario demo', role: 'ADMIN' }
+
 function api(body) {
-  const usuario = { id: 'demo', name: 'Usuario demo', role: 'ADMIN' }
   switch (body.action) {
     case 'login': return { token: 'd'.repeat(64), user: usuario, expiresAt: new Date(Date.now() + 8 * 3600e3).toISOString() }
     case 'me': return { user: usuario, expiresAt: new Date(Date.now() + 8 * 3600e3).toISOString() }
@@ -92,7 +93,8 @@ function api(body) {
   }
 }
 
-export function installDemoServer() {
+export function installDemoServer({ rol = 'ADMIN', nombre = 'Usuario demo' } = {}) {
+  usuario = { id: 'demo', name: nombre, role: rol }
   const real = window.fetch.bind(window)
   window.fetch = async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input.url
