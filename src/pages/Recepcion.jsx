@@ -66,9 +66,16 @@ function Horario({ f, set, evento }) {
           </div>
         )}
       </div>
-      {!evento && f.tipoDuracion !== 'minutos' && <p className="rec-suave">Turno de 90 minutos.</p>}
+      {!evento && f.tipoDuracion !== 'minutos' && (
+        <>
+          <label>Duración</label>
+          <div className="rec-sel">
+            {[60, 90, 120].map(d => <button type="button" key={d} className="secundario" aria-pressed={f.duracion === d} onClick={() => set({ duracion: d })}>{d} min</button>)}
+          </div>
+        </>
+      )}
       {!evento && f.tipoDuracion === 'minutos' && (
-        <label>Minutos<input type="number" inputMode="numeric" min="1" max="720" value={f.duracion} onChange={e => set({ duracion: Number(e.target.value) })} /></label>
+        <label>Minutos (clase particular 60 · clase partido 90)<input type="number" readOnly value={f.duracion} /></label>
       )}
       <label className="rec-check"><input type="checkbox" checked={f.diaSiguiente} onChange={e => set({ diaSiguiente: e.target.checked })} /> La actividad empieza después de medianoche, en la misma jornada</label>
     </div>
@@ -319,7 +326,7 @@ export default function Recepcion({ user, onSalir }) {
                     <label>Alumnos por clase<select value={f.alumnos} onChange={e => set({ alumnos: Number(e.target.value) })}>{[1, 2, 3, 4].map(n => <option key={n} value={n}>{n} {n === 1 ? 'alumno' : 'alumnos'}</option>)}</select></label>
                     <label>Profesor<select value={f.profesor} onChange={e => set({ profesor: e.target.value })} required><option value="">Elegí un profesor</option>{o.profesores.map(p => <option key={p}>{p}</option>)}</select></label>
                   </div>
-                  <label>Tipo de clase<select value={f.tipoClase} onChange={e => set({ tipoClase: e.target.value })}>{o.tiposClase.map(p => <option key={p}>{p}</option>)}</select></label>
+                  <label>Tipo de clase<select value={f.tipoClase} onChange={e => set({ tipoClase: e.target.value, duracion: e.target.value === 'Clase-partido' ? 90 : 60 })}>{o.tiposClase.map(p => <option key={p}>{p}</option>)}</select></label>
                   {f.tipoClase === 'Tradicional' ? (
                     <>
                       <div className="rec-grid">

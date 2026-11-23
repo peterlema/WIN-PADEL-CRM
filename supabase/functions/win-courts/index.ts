@@ -118,7 +118,8 @@ Deno.serve(async (req) => {
     name = "win_courts_abono_create";
     Object.assign(params, { p_request_id: requestId, p_court: String(data.court || ""), p_date: date, p_start: String(data.start || ""),
       p_customer_name: String(data.customerName || ""), p_customer_whatsapp: String(data.whatsapp || ""),
-      p_method: String(data.method || ""), p_note: String(data.note || "") });
+      p_method: String(data.method || ""), p_note: String(data.note || ""),
+      p_duration: Number.isInteger(Number(data.duration)) ? Number(data.duration) : 90 });
   } else if (action === "courts.abono.end") {
     const abonoId = String(data.abonoId || "");
     const from = String(data.from || "");

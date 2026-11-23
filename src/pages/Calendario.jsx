@@ -12,8 +12,12 @@ const SLOTS = Array.from({ length: (LAST - FIRST) / STEP }, (_, i) => FIRST + i 
 const CAPACITY = COURTS.length * (LAST - FIRST)
 const DURATIONS_FREE = Array.from({ length: 16 }, (_, i) => (i + 1) * STEP)
 const KINDS = { RESERVA: 'Reserva', CLASE: 'Clase', EVENTO: 'Evento', BLOQUEO: 'Bloqueo', ABONO: 'Abono' }
-const KINDS_NUEVOS = ['RESERVA', 'ABONO', 'CLASE', 'EVENTO', 'BLOQUEO']
-const duracionesPara = kind => (['RESERVA', 'ABONO'].includes(kind) ? [90] : kind === 'CLASE' ? [60, 90, 120] : DURATIONS_FREE)
+// Tipos del formulario. Clase particular dura 60 min; clase partido, 90; reserva y abono, 60, 90 o 120 (90 por defecto).
+const TIPOS_NUEVOS = { RESERVA: 'Reserva', ABONO: 'Abono', CLASE_PARTICULAR: 'Clase particular', CLASE_PARTIDO: 'Clase partido', EVENTO: 'Evento', BLOQUEO: 'Bloqueo' }
+const apiKind = k => (k.startsWith('CLASE') ? 'CLASE' : k)
+const conCliente = k => ['RESERVA', 'ABONO'].includes(k)
+const duracionesPara = kind => (conCliente(kind) ? [60, 90, 120] : kind === 'CLASE_PARTICULAR' ? [60] : kind === 'CLASE_PARTIDO' ? [90] : DURATIONS_FREE)
+const etiquetaTipo = b => (b.tipo === 'CLASE' ? (b.duracion === 60 ? 'Clase particular' : b.duracion === 90 ? 'Clase partido' : 'Clase') : KINDS[b.tipo])
 const METODOS = { CASH: 'Efectivo', TRANSFER: 'Transferencia' }
 const DIAS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']
 const DIAS_LARGOS = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
@@ -99,7 +103,9 @@ export default function Calendario() {
   const puedeReservar = Boolean(user) && user.role !== 'BAR'
   const esAdmin = user?.role === 'ADMIN'
   const puedeCancelar = b => Boolean(user) && (['ADMIN', 'MANAGER'].includes(user.role) || b.creadoPorId === user.id)
-  const precio = dia?.precio || { efectivo: 90000, transferencia: 100000 }
+  const precios = dia?.precios || {}
+  const precioDe = dur => precios[dur] || (dur === 90 && dia?.precio) || { efectivo: null, transferencia: null }
+  const textoPrecios = [60, 90, 120].map(d => { const p = precioDe(d); return p.efectivo == null ? `${d} min: sin precio` : `${d} min: ${money(p.efectivo)} efectivo · ${money(p.transferencia)} transferencia` }).join('  |  ')
   const modalAbierto = Boolean(form || detalle || horarios)
 
   const { celdas, fuera, minutosDia } = useMemo(() => {
@@ -130,7 +136,7 @@ export default function Calendario() {
   function cambiarTipo(kind) {
     setForm(f => {
       const permitidas = duracionesPara(kind)
-      return { ...f, kind, duration: permitidas.includes(Number(f.duration)) ? f.duration : permitidas[0] }
+      return { ...f, kind, duration: permitidas.includes(Number(f.duration)) ? Number(f.duration) : permitidas.includes(90) ? 90 : permitidas[0] }
     })
   }
 
@@ -141,12 +147,12 @@ export default function Calendario() {
     try {
       // El mismo requestId se reutiliza si hay que reintentar: el servidor no duplica la reserva.
       if (form.kind === 'ABONO') {
-        await callCourts('courts.abono.create', { requestId: form.requestId, court: form.court, date: fecha, start: form.start,
+        await callCourts('courts.abono.create', { requestId: form.requestId, court: form.court, date: fecha, start: form.start, duration: Number(form.duration),
           customerName: form.nombre, whatsapp: form.whatsapp, note: form.note })
         setAviso(`Abono fijo creado: ${form.court} los ${DIAS_LARGOS[diaSemana(fecha)].toLowerCase()} a las ${form.start}, desde hoy hasta que se dé de baja.`)
       } else {
         await callCourts('courts.book', { requestId: form.requestId, court: form.court, date: fecha, start: form.start,
-          duration: Number(form.duration), kind: form.kind, holder: form.holder, note: form.note,
+          duration: Number(form.duration), kind: apiKind(form.kind), holder: form.holder, note: form.note,
           customerName: form.nombre, whatsapp: form.whatsapp })
         setAviso(`Reserva confirmada: ${form.court} a las ${form.start}.`)
       }
@@ -193,7 +199,7 @@ export default function Calendario() {
         requestId: pago.requestId, bookingId: detalle.tipo === 'ABONO' ? null : detalle.id, abonoId: detalle.tipo === 'ABONO' ? detalle.abonoId : null,
         date: detalle.tipo === 'ABONO' ? fecha : null, method: pago.method,
         receivedBy: pago.method === 'CASH' ? pago.receivedBy || null : null, receiptPath })
-      setAviso(`Cobro registrado: ${detalle.titular} · ${METODOS[pago.method]} ${money(pago.method === 'CASH' ? precio.efectivo : precio.transferencia)}.`)
+      setAviso(`Cobro registrado: ${detalle.titular} · ${METODOS[pago.method]} ${money(pago.method === 'CASH' ? precioDe(detalle.duracion).efectivo : precioDe(detalle.duracion).transferencia)}.`)
       cerrarTodo(); setRefresco(v => v + 1)
     } catch (err) {
       falla(err)
@@ -298,7 +304,7 @@ export default function Calendario() {
           </div>
           <p className="cal-resumen">
             {cargando ? 'Cargando…' : `${dia?.reservas?.length || 0} reservas · ${Math.round((minutosDia / CAPACITY) * 100)}% ocupado`}
-            {` · Turno de 90 min: ${money(precio.efectivo)} efectivo · ${money(precio.transferencia)} transferencia`}
+            {` · ${textoPrecios}`}
             {!puedeReservar && user && ' · Sólo lectura'}
           </p>
 
@@ -319,7 +325,7 @@ export default function Calendario() {
                           <td key={c} rowSpan={cel.n} className={`ocupada ${b.tipo}${b.pago ? ' cobrada' : ''}`}>
                             <button type="button" className="reserva" onClick={() => abrirDetalle(b)}>
                               <strong>{b.pago ? '✓ ' : ''}{b.titular}</strong>
-                              <span>{KINDS[b.tipo]} · {b.inicio}–{b.fin}</span>
+                              <span>{etiquetaTipo(b)} · {b.inicio}–{b.fin}</span>
                             </button>
                           </td>
                         )
@@ -353,14 +359,14 @@ export default function Calendario() {
               <select value={form.start} onChange={e => setForm({ ...form, start: e.target.value })}>{SLOTS.map(s => <option key={s}>{minToLabel(s)}</option>)}</select>
             </label>
             <label>Tipo
-              <select value={form.kind} onChange={e => cambiarTipo(e.target.value)}>{KINDS_NUEVOS.map(k => <option key={k} value={k}>{KINDS[k]}</option>)}</select>
+              <select value={form.kind} onChange={e => cambiarTipo(e.target.value)}>{Object.entries(TIPOS_NUEVOS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
             </label>
             <label>Duración
-              <select value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })}>
+              <select value={form.duration} onChange={e => setForm({ ...form, duration: Number(e.target.value) })}>
                 {duracionesPara(form.kind).map(d => <option key={d} value={d}>{d} min</option>)}
               </select>
             </label>
-            {['RESERVA', 'ABONO'].includes(form.kind) ? (
+            {conCliente(form.kind) ? (
               <>
                 <label className="cal-ancho">Nombre completo
                   <input value={form.nombre} maxLength={120} required autoFocus autoComplete="off" placeholder="Nombre y apellido" onChange={e => setForm({ ...form, nombre: e.target.value })} />
@@ -368,7 +374,7 @@ export default function Calendario() {
                 <label>WhatsApp
                   <input type="tel" inputMode="tel" value={form.whatsapp} maxLength={20} required placeholder="Ej. 11 5555 1234" onChange={e => setForm({ ...form, whatsapp: e.target.value })} />
                 </label>
-                <p className="cal-ancho cal-resumen">El método de pago (efectivo {money(precio.efectivo)} o transferencia {money(precio.transferencia)}) se marca después, al cobrar el turno.</p>
+                <p className="cal-ancho cal-resumen">El método de pago se marca después, al cobrar el turno ({precioDe(Number(form.duration)).efectivo == null ? 'precio de esa duración sin cargar' : `${money(precioDe(Number(form.duration)).efectivo)} efectivo · ${money(precioDe(Number(form.duration)).transferencia)} transferencia`}).</p>
                 {form.kind === 'ABONO' && <p className="cal-ancho cal-resumen">Abono fijo: se repite todos los {DIAS_LARGOS[diaSemana(fecha)].toLowerCase()} a esta hora, desde hoy hasta que se dé de baja. Cada juego se cobra aparte.</p>}
               </>
             ) : (
@@ -388,7 +394,7 @@ export default function Calendario() {
       )}
 
       {detalle && (
-        <Modal titulo={`${KINDS[detalle.tipo]} · ${detalle.cancha}`} onCerrar={cerrarTodo}>
+        <Modal titulo={`${etiquetaTipo(detalle)} · ${detalle.cancha}`} onCerrar={cerrarTodo}>
           {errorEnVentana}
           <div className="cal-form">
             <p><b>{detalle.titular}</b> · {fechaLarga(fecha)} · {detalle.inicio}–{detalle.fin} ({detalle.duracion} min)</p>
@@ -402,7 +408,7 @@ export default function Calendario() {
                 {detalle.pago
                   ? <>Cobrado en {METODOS[detalle.pago.metodo].toLowerCase()} · {money(detalle.pago.monto)}{detalle.pago.recibioNombre ? ` · recibió ${detalle.pago.recibioNombre}` : ''}
                     {detalle.pago.ruta && <> · <button type="button" className="enlace" onClick={() => verComprobante(detalle.pago.ruta)}>Ver comprobante</button></>}</>
-                  : <>Pendiente · se marca al cobrar ({money(precio.efectivo)} efectivo · {money(precio.transferencia)} transferencia)</>}
+                  : <>Pendiente · se marca al cobrar ({precioDe(detalle.duracion).efectivo == null ? 'precio sin cargar' : `${money(precioDe(detalle.duracion).efectivo)} efectivo · ${money(precioDe(detalle.duracion).transferencia)} transferencia`})</>}
               </p>
             )}
 
@@ -415,7 +421,7 @@ export default function Calendario() {
                 <div className="rec-sel" role="group" aria-label="Método de pago real">
                   {Object.entries(METODOS).map(([k, v]) => (
                     <button type="button" key={k} className="secundario" aria-pressed={pago.method === k} onClick={() => setPago({ ...pago, method: k })}>
-                      {v} · {money(k === 'CASH' ? precio.efectivo : precio.transferencia)}
+                      {v} · {precioDe(detalle.duracion).efectivo == null ? 'sin precio' : money(k === 'CASH' ? precioDe(detalle.duracion).efectivo : precioDe(detalle.duracion).transferencia)}
                     </button>
                   ))}
                 </div>
@@ -434,7 +440,7 @@ export default function Calendario() {
                     {pago.preview && <img className="cal-foto" src={pago.preview} alt="Vista previa del comprobante" />}
                   </div>
                 )}
-                <button disabled={ocupado || !pago.method}>{ocupado ? 'Guardando…' : !pago.method ? 'Elegí el método de pago' : `Marcar cobrado ${money(pago.method === 'CASH' ? precio.efectivo : precio.transferencia)}`}</button>
+                <button disabled={ocupado || !pago.method || precioDe(detalle.duracion).efectivo == null}>{ocupado ? 'Guardando…' : precioDe(detalle.duracion).efectivo == null ? `Falta cargar el precio de ${detalle.duracion} min` : !pago.method ? 'Elegí el método de pago' : `Marcar cobrado ${money(pago.method === 'CASH' ? precioDe(detalle.duracion).efectivo : precioDe(detalle.duracion).transferencia)}`}</button>
               </form>
             )}
 

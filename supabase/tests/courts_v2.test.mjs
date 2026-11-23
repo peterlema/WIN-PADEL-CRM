@@ -52,7 +52,8 @@ ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'18:00
 ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'18:00',90,'RESERVA','x','','Juan','1155551234','CASH')`, [U(1), manana])).includes('CUSTOMER_REQUIRED'), 'nombre de una sola palabra se rechaza')
 ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'18:00',90,'RESERVA','x','','Juan Pérez','12345','CASH')`, [U(1), manana])).includes('CUSTOMER_REQUIRED'), 'WhatsApp inválido se rechaza')
 console.log('   (el método de pago ya no se pide al reservar)')
-ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'18:00',60,'RESERVA','x','','Juan Pérez','1155551234','CASH')`, [U(1), manana])).includes('DURATION_INVALID'), 'reserva de 60 min se rechaza: los turnos son de 90')
+ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'18:00',45,'RESERVA','x','','Juan Pérez','1155551234',null)`, [U(1), manana])).includes('DURATION_INVALID'), 'reserva de 45 min se rechaza (sólo 60, 90 o 120)')
+ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'20:00',120,'CLASE','Clase','',null,null,null)`, [U(1), manana])).includes('DURATION_INVALID'), 'clase de 120 min se rechaza (particular 60, partido 90)')
 const r1 = await book('tok-recep', U(1), 'C1', manana, '18:00', 90)
 ok(r1.nombreCompleto === 'Juan Pérez' && r1.whatsapp === '5491155551234' && r1.metodoPrevisto === null && r1.montoPrevisto === null, 'reserva guarda nombre y WhatsApp normalizado, sin método ni importe (se definen al cobrar)')
 const r1t = await book('tok-recep', U(2), 'C2', manana, '18:00', 90, 'RESERVA', 'x', 'Ana Gómez', '1144443333', 'TRANSFER')
@@ -65,6 +66,14 @@ ok(Number(pf.monto) === 95000, 'el importe del cobro usa el precio vigente en la
 const cl = await book('tok-recep', U(4), 'C4', manana, '10:00', 60, 'CLASE', 'Clase Chino', null, null, null)
 ok(cl.tipo === 'CLASE' && cl.nombreCompleto === null, 'clase de 60 min no pide datos de cliente')
 
+const r60 = await book('tok-recep', U(50), 'C3', manana, '10:00', 60, 'RESERVA', 'x', 'Eva Ruiz', '1133330000', null)
+const r120 = await book('tok-recep', U(51), 'C3', manana, '12:00', 120, 'RESERVA', 'x', 'Ivo Paz', '1133331111', null)
+ok(r60.duracion === 60 && r120.duracion === 120, 'reservas de 60 y 120 minutos permitidas')
+const cp = await book('tok-recep', U(52), 'C4', manana, '12:00', 60, 'CLASE', 'Clase particular', null, null, null)
+const cm = await book('tok-recep', U(53), 'C4', manana, '14:00', 90, 'CLASE', 'Clase partido', null, null, null)
+ok(cp.duracion === 60 && cm.duracion === 90, 'clase particular de 60 y clase partido de 90 minutos')
+const dprecios = (await q(`select public.win_courts_day('tok-recep',$1::date) r`, [manana]))[0].r
+ok(Number(dprecios.precios['90'].efectivo) === 90000 && dprecios.precios['60'].efectivo === null, 'el día informa el precio de 90 min y que falta el de 60')
 // 3. Permisos
 ok((await err(`select public.win_courts_day('tok-bar',$1::date)`, [manana])).includes('NOT_AUTHORIZED'), 'BAR no ve el calendario')
 ok((await err(`select public.win_courts_book('tok-bar',$1,'C1',$2::date,'20:00',90,'RESERVA','x','','Juan Pérez','1155551234','CASH')`, [U(9), manana])).includes('NOT_AUTHORIZED'), 'BAR no reserva')
@@ -98,6 +107,10 @@ const dAyer = (await q(`select public.win_courts_day('tok-recep',$1::date) r`, [
 ok(dAyer.reservas.find(x => x.id === pasada.id).pago.metodo === 'CASH' && dAyer.reservas.find(x => x.id === pasada2.id).pago.comprobante === true, 'el día muestra el cobro de cada turno')
 ok(Number(dAyer.precio.efectivo) === 90000 && Number(dAyer.precio.transferencia) === 100000, 'el día informa los precios vigentes')
 
+const pas60 = await book('tok-admin', U(60), 'C2', ayer, '14:00', 60, 'RESERVA', 'x', 'Tomás Gil', '1144440000', null)
+ok((await err(`select public.win_courts_pay('tok-recep',$1,$2,null,null,'CASH')`, [U(61), pas60.id])).includes('PRICE_MISSING'), 'turno de 60 min sin precio cargado: no se cobra (PRICE_MISSING)')
+await db.query(`insert into public.win_price_list(code, duration_min, amount_cash, amount_transfer, valid_from) values ('COURT_TURN', 60, 65000, 70000, date '2020-01-01')`)
+ok(Number((await pay('tok-recep', U(61), pas60.id, null, null, 'TRANSFER')).monto) === 70000, 'con el precio de 60 min cargado, la transferencia cobra $ 70.000')
 // 5. Abonos fijos
 await book('tok-recep', U(30), 'C1', d14, '18:00', 90)
 const abo = (tok, req, court, date, start, nombre = 'Laura Pérez', wpp = '1122223333', met = 'CASH') =>
@@ -108,6 +121,10 @@ ok(A1.id && A1.diaSemana >= 1, 'abono semanal creado')
 ok((await err(`select public.win_courts_abono_create('tok-recep',$1,'C2',$2::date,'20:30','Otra Persona','1100001111','CASH')`, [U(33), manana])).includes('ABONO_CONFLICT'), 'abono superpuesto con otro abono se rechaza')
 const A2 = await abo('tok-recep', U(34), 'C2', manana, '21:00', 'Carlos Soto', '1100001111', 'TRANSFER')
 ok(!!A2.id, 'abono contiguo (19:30 y 21:00) permitido')
+const A3 = await q(`select public.win_courts_abono_create('tok-recep',$1,'C1',$2::date,'10:00','Rosa Díaz','1100002222',null,'',120) r`, [U(70), await f(4)]).then(r => r[0].r)
+ok(!!A3.id && A3.duracion === 120, 'abono de 120 minutos')
+ok((await err(`select public.win_courts_abono_create('tok-recep',$1,'C1',$2::date,'11:30','Otra Persona','1100003333',null,'',90)`, [U(71), await f(4)])).includes('ABONO_CONFLICT'), 'el abono de 120 min bloquea el horario completo')
+ok((await err(`select public.win_courts_abono_create('tok-recep',$1,'C2',$2::date,'09:00','Otra Persona','1100003333',null,'',45)`, [U(72), await f(4)])).includes('BOOKING_INVALID'), 'abono de 45 min se rechaza')
 const dia = async (d) => (await q(`select public.win_courts_day('tok-recep',$1::date) r`, [d]))[0].r.reservas.filter(x => x.tipo === 'ABONO')
 ok((await dia(manana)).length === 2, 'el abono aparece el primer día')
 ok((await dia(d7)).length === 2, 'el abono aparece la semana siguiente, sin cargar nada')

@@ -132,7 +132,7 @@ function guardar(body) {
       x = { ...base, tipo: 'Reserva', categoria: 'Abonos', cantidad: 0, efectivo, transferencia, soloCobro: true }
     } else {
       const ac = actividad(a.actividad); superposicion(fecha, ac)
-      if (ac.duracion !== 90) throw fail('Los turnos de reserva son de 90 minutos.', 400)
+      if (![60, 90, 120].includes(ac.duracion)) throw fail('Los turnos de reserva son de 60, 90 o 120 minutos.', 400)
       if (a.categoria === 'Regulares' && efectivo + transferencia === 0 && !base.nota) throw fail('Indicá el motivo de la cortesía en Observación.', 400)
       x = { ...base, tipo: 'Reserva', categoria: a.categoria, cantidad: 1, efectivo, transferencia, actividad: ac }
     }
@@ -142,6 +142,7 @@ function guardar(body) {
     const profesor = OPCIONES.profesores.find(p => p === a.profesor)
     if (!profesor) throw fail('Profesor no habilitado.', 400)
     const ac = actividad(a.actividad); superposicion(fecha, ac)
+    if (ac.duracion !== (a.tipoClase === 'Clase-partido' ? 90 : 60)) throw fail('La clase particular dura 60 minutos y la clase partido, 90.', 400)
     x = { ...base, tipo: 'Clase', cantidad: 1, alumnos, profesor, actividad: ac, economia: economiaClase(a, alumnos, profesor), incidencia: String(a.incidencia || '').trim().slice(0, 300) }
   } else if (a.tipo === 'Evento') {
     if (!OPCIONES.tiposEvento.includes(a.categoria)) throw fail('Evento inválido.', 400)

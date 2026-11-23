@@ -3,8 +3,8 @@
 Pantallas: Recepción (`#/demo` en modo demo), Caja, Calendario. Versión visible al pie de la web.
 
 ## Reglas confirmadas por el dueño del negocio
-1. **Turnos de cancha de 90 minutos, siempre.** Las reservas y abonos duran 90 min. Las clases mantienen su duración propia (60 por defecto).
-2. **Precio de la cancha:** $ 100.000 por transferencia o $ 90.000 en efectivo, por turno de 90 min. Debe quedar registrado en Supabase (tabla de precios con vigencia).
+1. **Duraciones:** reservas y abonos de 60, 90 o 120 min (90 por defecto); clase particular 60 min; clase partido 90 min.
+2. **Precio de la cancha:** $ 100.000 por transferencia o $ 90.000 en efectivo, por turno de 90 min (tabla `win_price_list`, con precio por duración y vigencia). Los precios de 60 y 120 min están por definir: hasta cargarlos, esos turnos no se pueden cobrar.
 3. **Al cargar una reserva** el recepcionista informa: nombre completo, WhatsApp y método de pago previsto. **Después del turno** marca el método de pago real.
 4. **Abonos fijos:** turno semanal fijo (cancha, día, hora) que se repite indefinidamente hasta que se da de baja. Cada pago queda registrado.
 5. **Comprobantes:** poder subir la foto del comprobante de transferencia (almacenamiento privado, enlazado al cobro).
@@ -13,7 +13,7 @@ Pantallas: Recepción (`#/demo` en modo demo), Caja, Calendario. Versión visibl
 ## Estado
 | Regla | Pantalla (v0.7.0) | Base de datos (Supabase) |
 |---|---|---|
-| Turnos de 90 min | Hecho (Recepción y Calendario) | Escrito y probado; falta aplicar (ver `docs/prompts/01-reservas-v2-supabase.md`) |
+| Duraciones 60/90/120 y clases 60/90 | Hecho (Recepción y Calendario) | v3 |
 | Precio 100k/90k | Hecho (se muestra y se cobra) | Idem: tabla `win_price_list` con vigencia |
 | Nombre y WhatsApp al reservar | Hecho (popup de reserva); el método de pago ya no se pide al reservar | v3: `20261124_win_courts_v3_payment_method_at_collection.sql` |
 | Cobro real cuando termina el turno | Hecho (detalle de la reserva; el método se elige al cobrar y la recepción sólo puede cobrar cuando el turno terminó) | v3: `win_court_payments`, un cobro por turno |
