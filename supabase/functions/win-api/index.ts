@@ -14,7 +14,7 @@ function adminClient() {
   if(!url||!key) throw new Error("BACKEND_NOT_CONFIGURED");
   return createClient(url,key,{auth:{persistSession:false,autoRefreshToken:false}});
 }
-const errors:Record<string,string>={SESSION_INVALID:"La sesión expiró. Volvé a ingresar.",NOT_AUTHORIZED:"Tu usuario no tiene permisos para esta acción.",SHIFT_ALREADY_OPEN:"Ya hay una caja abierta.",SHIFT_NOT_OPEN:"La caja ya no está abierta.",AMOUNT_INVALID:"Revisá el importe.",METHOD_INVALID:"Medio de pago no permitido.",CATEGORY_INVALID:"Categoría no permitida.",REQUEST_ID_REUSED:"La solicitud ya fue usada con otros datos.",DIFFERENCE_REQUIRES_NOTE:"Explicá la diferencia del cierre.",NOTE_TOO_LONG:"La observación es demasiado larga.",CONFIG_INVALID:"Revisá los datos: nombre, importe o porcentaje.",CONFIG_NOT_FOUND:"El dato ya no existe. Actualizá la pantalla.",NAME_TAKEN:"Ya existe uno con ese nombre.",PRICE_DATE_PAST:"Los precios sólo se cambian desde hoy o una fecha futura."};
+const errors:Record<string,string>={SESSION_INVALID:"La sesión expiró. Volvé a ingresar.",NOT_AUTHORIZED:"Tu usuario no tiene permisos para esta acción.",SHIFT_ALREADY_OPEN:"Ya hay una caja abierta.",SHIFT_NOT_OPEN:"La caja ya no está abierta.",AMOUNT_INVALID:"Revisá el importe.",METHOD_INVALID:"Medio de pago no permitido.",CATEGORY_INVALID:"Categoría no permitida.",REQUEST_ID_REUSED:"La solicitud ya fue usada con otros datos.",DIFFERENCE_REQUIRES_NOTE:"Explicá la diferencia del cierre.",NOTE_TOO_LONG:"La observación es demasiado larga.",PRODUCT_INVALID:"Revisá los datos del producto.",PRODUCT_NOT_FOUND:"El producto no existe.",CONFIG_INVALID:"Revisá los datos: nombre, importe o porcentaje.",CONFIG_NOT_FOUND:"El dato ya no existe. Actualizá la pantalla.",NAME_TAKEN:"Ya existe uno con ese nombre.",PRICE_DATE_PAST:"Los precios sólo se cambian desde hoy o una fecha futura."};
 Deno.serve(async req=>{
   const origin=req.headers.get("Origin")||"";
   if(origin&&!allowedOrigins.has(origin)) return reply({error:"Origen no autorizado"},403);
@@ -62,6 +62,11 @@ Deno.serve(async req=>{
       Object.assign(params,{p_code:data.code,p_duration:data.duration,p_cash:data.cash,p_transfer:data.transfer,p_valid_from:data.validFrom});
     } else if(action==="config.price.cancel"){
       name="win_config_price_cancel";Object.assign(params,{p_code:data.code,p_duration:data.duration,p_valid_from:data.validFrom});
+    }
+    else if(action==="bar.products") name="win_bar_products_list";
+    else if(action==="bar.product.save"){
+      name="win_bar_product_save";
+      Object.assign(params,{p_product_id:data.id||null,p_name:data.name,p_variant:data.variant||"",p_category:data.category,p_price:data.salePrice??null,p_cost:data.unitCost??null,p_barcode:data.barcode||null,p_active:data.active??true});
     }
     else if(action==="cash.state") name="win_cash_state";
     else if(action==="imported.snapshot") name="win_imported_snapshot";
