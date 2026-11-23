@@ -23,7 +23,7 @@ begin
   from public.win_ops_records o join public.win_cash_shifts sh on sh.id=o.shift_id join win_auth.login_accounts a on a.id=o.actor_id join win_auth.login_accounts owner on owner.id=sh.opened_by left join public.win_coaches c on c.id=o.teacher_id
   where (o.created_at at time zone 'America/Argentina/Buenos_Aires')::date between start_day and end_day
   union all
-  select 'cash:'||m.id,m.occurred_at,m.kind,'ACTIVE',m.note,
+  select 'cash:'||m.id,m.occurred_at,m.kind,case when exists(select 1 from public.win_cash_movements rev where rev.reversal_of=m.id) then 'VOID' else 'ACTIVE' end,m.note,
    case when m.payment_method='CASH' then m.amount_signed else 0 end,
    case when m.payment_method='TRANSFER' then m.amount_signed else 0 end,0,null,null,null,'{}',null,'',a.display_name,owner.display_name,m.shift_id,sh.status,m.recorded_by,false,'',m.amount_signed,
    jsonb_build_array(jsonb_build_object('id',m.id,'amount',m.amount_signed,'method',m.payment_method))
@@ -65,6 +65,7 @@ begin
 end $$;
 
 create or replace function public.win_ops_control(p_token text,p jsonb) returns jsonb language plpgsql set search_path='' as $$
+#variable_conflict use_variable
 declare a uuid; role_ text; action_ text; req uuid; old public.win_ops_requests; sh public.win_cash_shifts; previous public.win_cash_shifts; m public.win_cash_movements;
  dt date; cash numeric; tr numeric; cnt int; expected numeric; tx numeric; reason text; checks_ text; notified boolean; result jsonb; new_id uuid; ns text; item record; correction public.win_ops_corrections;
 begin
@@ -213,6 +214,8 @@ declare sh public.win_cash_shifts; mid uuid;
 begin
  select * into sh from public.win_cash_shifts where status='OPEN' for update;
  if not found then raise exception 'SHIFT_NOT_OPEN';end if;
+ if exists(select 1 from public.win_ops_records o where o.status='ACTIVE' and o.cash+o.transfer>0 and
+  ((new.booking_id is not null and o.booking_id=new.booking_id) or (new.abono_id is not null and o.abono_id=new.abono_id and o.activity_date=new.occurrence_date))) then raise exception 'BOOKING_ALREADY_PAID';end if;
  insert into public.win_cash_movements(request_id,shift_id,recorded_by,kind,business_unit,payment_method,amount_signed,reference_type,reference_id,note)
  values(new.request_id,sh.id,new.recorded_by,'SALE','COURTS',new.method,new.amount,'COURT_PAYMENT',new.id::text,case when new.abono_id is null then 'Cobro de reserva desde Calendario' else 'Cobro de abono desde Calendario' end) returning id into mid;
  if new.method='TRANSFER' then

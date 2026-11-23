@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Login from './pages/Login.jsx'
-import RecepcionV5 from './pages/RecepcionV5.jsx'
+import RecepcionV5 from './pages/OperationalReception.jsx'
 import { callApi, readToken, saveToken, clearToken } from './api.js'
 
 export default function App() {

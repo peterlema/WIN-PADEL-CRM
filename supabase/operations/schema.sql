@@ -113,6 +113,7 @@ end $$;
 create or replace function public.win_ops_money(p jsonb,k text) returns numeric language plpgsql immutable set search_path='' as $$
 declare n numeric;
 begin
+ if p ? k and jsonb_typeof(p->k)='null' then raise exception 'AMOUNT_INVALID';end if;
  n=coalesce(nullif(p->>k,'')::numeric,0);
  if n<0 or n>1000000000 or n<>round(n,2) then raise exception 'AMOUNT_INVALID';end if;
  return n;

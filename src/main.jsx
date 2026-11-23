@@ -4,7 +4,7 @@ import App from './App.jsx'
 import Calendario from './pages/Calendario.jsx'
 import Recepcion from './pages/Recepcion.jsx'
 import Bar from './pages/Bar.jsx'
-import Administracion from './pages/Administracion.jsx'
+import Administracion from './pages/OperationalAdmin.jsx'
 import Configuracion from './pages/Configuracion.jsx'
 import { installDemoServer } from './demo/mockServer.js'
 import { callApi, clearToken, readToken } from './api.js'
@@ -16,6 +16,7 @@ import './bar.css'
 import './admin.css'
 import './config.css'
 import './tema-win.css'
+import './operations.css'
 
 // MODO DEMO (#/demo): pantallas de adentro con datos de ejemplo, sin iniciar sesión ni llamar al backend real.
 const DEMO = window.location.hash.startsWith('#/demo')

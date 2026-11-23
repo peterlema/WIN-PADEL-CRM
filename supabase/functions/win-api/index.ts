@@ -1,3 +1,4 @@
+import { operationsError } from './operations.ts';
 import { createClient } from "npm:@supabase/supabase-js@2.119.2";
 
 const allowedOrigins = new Set(["https://peterlema.github.io", "http://localhost:5173", "http://127.0.0.1:5173"]);
@@ -20,7 +21,7 @@ Deno.serve(async req=>{
   if(origin&&!allowedOrigins.has(origin)) return reply({error:"Origen no autorizado"},403);
   if(req.method==="OPTIONS") return reply({},204,origin);
   if(req.method!=="POST") return reply({error:"Método no permitido"},405,origin);
-  if(Number(req.headers.get("content-length")||0)>8192) return reply({error:"Solicitud demasiado grande"},413,origin);
+  if(Number(req.headers.get("content-length")||0)>65536) return reply({error:"Solicitud demasiado grande"},413,origin);
   let data:Record<string,unknown>;
   try { data=await req.json(); if(!data||typeof data!=="object"||Array.isArray(data)) throw Error(); }
   catch {return reply({error:"Formato inválido"},400,origin);}
@@ -46,6 +47,12 @@ Deno.serve(async req=>{
     if(!identity) return reply({error:"Sesión inválida o vencida"},401,origin);
     if(action==="me") return reply({user:{id:identity.account_id,name:identity.display_name,role:identity.role},expiresAt:identity.expires_at},200,origin);
     if(action==="logout") { await db.rpc("win_pin_logout",{p_token:token});return reply({ok:true},200,origin); }
+    if(action.startsWith("ops.")) {
+      const {data:result,error}=await db.rpc("win_ops_api",{p_token:token,p_action:action.slice(4),p_data:data});
+      if(error){const failure=operationsError(error);return reply({error:failure.message},failure.status,origin);}
+      return reply(result,200,origin);
+    }
+    if(action==="cash.close" || action==="cash.open") return reply({error:"Actualizá la página para usar apertura y conciliación completas."},409,origin);
     let name="", params:Record<string,unknown>={p_token:token};
     if(action==="admin.finance"){name="win_admin_finance_report";params.p_start=data.start;params.p_end=data.end;}
     else if(action==="admin.control"){name="win_admin_cash_control";params.p_start=data.start;params.p_end=data.end;}

@@ -91,6 +91,12 @@ begin
  when 'save' then return public.win_ops_save(p_token,p_data);
  when 'control' then return public.win_ops_control(p_token,p_data);
  when 'day' then return public.win_ops_day(p_token,(p_data->>'date')::date);
+ when 'export' then
+  select role into r from public.win_pin_session(p_token);if r<>'ADMIN' then raise exception 'NOT_AUTHORIZED';end if;
+  d1=(p_data->>'start')::date;d2=(p_data->>'end')::date;
+  if d1 is null or d2 is null or d2<d1 or d2>d1+366 then raise exception 'PERIOD_INVALID';end if;
+  if (select count(*) from public.win_ops_ledger where business_date between d1 and d2)>20000 then raise exception 'EXPORT_LIMIT';end if;
+  return jsonb_build_object('rows',coalesce((select jsonb_agg(to_jsonb(x) order by occurred_at,id) from(select l.*,u.display_name author from public.win_ops_ledger l join win_auth.login_accounts u on u.id=l.recorded_by where business_date between d1 and d2)x),'[]'));
  when 'admin' then return public.win_ops_admin(p_token,p_data);
  when 'availability' then
   select role into r from public.win_pin_session(p_token);if r<>'ADMIN' then raise exception 'NOT_AUTHORIZED';end if;
