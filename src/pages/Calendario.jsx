@@ -65,6 +65,9 @@ export default function Calendario() {
   const [aviso, setAviso] = useState('')
   const [form, setForm] = useState(null)
   const [detalle, setDetalle] = useState(null)
+  const [barPending, setBarPending] = useState(null)
+  const [barError, setBarError] = useState('')
+  const [barPayment, setBarPayment] = useState(null)
   const [motivo, setMotivo] = useState('')
   const [accion, setAccion] = useState('')          // '', 'cancelar', 'saltear', 'baja'
   const [pago, setPago] = useState(null)            // formulario de cobro del detalle
@@ -127,7 +130,7 @@ export default function Calendario() {
   }, [dia])
 
   function irAFecha(iso) { setFecha(iso); setMes(monthOf(iso)); cerrarTodo(); setAviso(''); setError('') }
-  function cerrarTodo() { setForm(null); setDetalle(null); setAccion(''); setMotivo(''); setPago(null); setHorarios(null) }
+  function cerrarTodo() { setForm(null); setDetalle(null); setAccion(''); setMotivo(''); setPago(null); setHorarios(null); setBarPayment(null); setBarPending(null); setBarError('') }
 
   function abrirForm(court, minutos) {
     cerrarTodo(); setAviso(''); setError('')
@@ -168,13 +171,35 @@ export default function Calendario() {
   async function abrirDetalle(b) {
     cerrarTodo(); setAviso(''); setError('')
     setDetalle(b)
+    setBarPending(null);setBarError('');setBarPayment(null)
+    if(['ADMIN','MANAGER','RECEPTION'].includes(user?.role)){
+      callApi('bar.court.pending',{court:b.cancha,date:fecha,start:b.inicio})
+        .then(r=>setBarPending(r.orders||[]))
+        .catch(e=>setBarError(e.message||'No se pudo consultar el Bar.'))
+    }
     if (['RESERVA', 'ABONO'].includes(b.tipo) && !b.pago && puedeReservar) {
       setPago({ method: '', receivedBy: '', file: null, preview: '', requestId: crypto.randomUUID() })
       try { const r = await callCourts('courts.receivers'); setReceptores(r); setPago(p => p && ({ ...p, receivedBy: (r.deTurno || [])[0] || user?.id || '' })) } catch { /* se puede cobrar igual */ }
     }
   }
 
-  function elegirFoto(e) {
+  async function cobrarBarPendiente(e){
+    e.preventDefault()
+    if(ocupado||!barPayment)return
+    const n=Number(String(barPayment.amount).replace(/\\./g,'').replace(',','.'))
+    if(!Number.isFinite(n)||n<=0||n>Number(barPayment.balance)){setBarError('Importe inválido para esta deuda.');return}
+    if(!window.confirm('¿Confirmás el cobro del Bar por '+money(n)+'?'))return
+    setOcupado(true);setBarError('')
+    try{
+      await callApi('bar.order.pay',{requestId:barPayment.requestId,orderId:barPayment.id,amount:n,method:barPayment.method})
+      const response=await callApi('bar.court.pending',{court:detalle.cancha,date:fecha,start:detalle.inicio})
+      setBarPending(response.orders||[]);setBarPayment(null)
+      setAviso('Consumo del Bar cobrado. La deuda se actualizó sin generar otra venta ni descontar stock nuevamente.')
+    }catch(err){setBarError((err.message||'No se pudo confirmar el cobro.')+' Verificá la caja antes de volver a intentar.')}
+    finally{setOcupado(false)}
+  }
+
+    function elegirFoto(e) {
     const file = e.target.files?.[0]
     if (!file) return
     if (!/^image\//.test(file.type)) { setError('Subí una foto (JPG, PNG o WEBP).'); return }
@@ -402,6 +427,24 @@ export default function Calendario() {
             {detalle.tipo === 'ABONO' && <p className="cal-resumen">Abono fijo semanal desde el {detalle.desde}. Se repite hasta que se dé de baja.</p>}
             {detalle.nota && <p>Observación: {detalle.nota}</p>}
             {detalle.creadoPor && <p className="cal-resumen">Cargó: {detalle.creadoPor}</p>}
+            {['ADMIN','MANAGER','RECEPTION'].includes(user?.role)&&<div className="cal-ancho bar-calendar-pending">
+              <h3>Consumos pendientes del Bar</h3>
+              {barError&&<p className="error" role="alert">{barError}</p>}
+              {barPending===null&&!barError&&<p className="cal-resumen">Consultando consumos de esta cancha y turno…</p>}
+              {barPending?.length===0&&<p className="cal-resumen">No hay consumos pendientes asociados a este turno.</p>}
+              {barPending?.map(item=><div className="bar-calendar-item" key={item.id}>
+                <div><b>{item.description}</b><small>{item.note||'Consumo pendiente'}</small></div>
+                <strong>{money(item.balance)}</strong>
+                {user?.role!=='COACH'&&<button type="button" className="secundario" onClick={()=>setBarPayment({id:item.id,balance:item.balance,amount:String(item.balance),method:'CASH',requestId:crypto.randomUUID()})}>Cobrar Bar</button>}
+              </div>)}
+              {barPayment&&<form className="bar-calendar-pay" onSubmit={cobrarBarPendiente}>
+                <label>Importe ($)<input inputMode="decimal" value={barPayment.amount} onChange={e=>setBarPayment({...barPayment,amount:e.target.value})} required/></label>
+                <label>Medio de pago<select value={barPayment.method} onChange={e=>setBarPayment({...barPayment,method:e.target.value})}><option value="CASH">Efectivo</option><option value="TRANSFER">Transferencia</option><option value="CARD">Tarjeta</option></select></label>
+                <button disabled={ocupado}>Confirmar cobro del Bar</button>
+                <button type="button" className="secundario" onClick={()=>setBarPayment(null)}>Cancelar</button>
+              </form>}
+              <p className="cal-resumen">El cobro del Bar es independiente del pago de la reserva. No modifica el precio del turno.</p>
+            </div>}
 
             {['RESERVA', 'ABONO'].includes(detalle.tipo) && (
               <p className="cal-ancho"><b>Cobro:</b>{' '}
