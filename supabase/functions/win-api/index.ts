@@ -55,7 +55,7 @@ Deno.serve(async req=>{
     else if(action==="config.setting.set"){name="win_config_setting_set";Object.assign(params,{p_key:data.key,p_value:data.value});}
     else if(action==="config.item.save"){
       name="win_config_item_save";
-      Object.assign(params,{p_id:data.id||null,p_unit:data.unit,p_name:data.name,p_category:data.category||"",p_price:data.price,p_active:data.active!==false});
+      Object.assign(params,{p_id:data.id||null,p_unit:data.unit,p_name:data.name,p_category:data.category||"",p_price:data.price,p_active:data.active!==false,p_variant:data.variant||""});
     } else if(action==="config.coach.save"){
       name="win_config_coach_save";
       Object.assign(params,{p_id:data.id||null,p_name:data.name,p_win_pct:data.winPct,p_active:data.active!==false});
