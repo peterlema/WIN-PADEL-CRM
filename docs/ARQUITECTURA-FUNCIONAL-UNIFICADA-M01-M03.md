@@ -141,3 +141,15 @@ Jerarquía M03:
 - Cómo migrar histórico Sheets y cómo reconciliar cobros, sin mezclar actividad programada/real.
 
 **Regla de entrega:** implementar una vez, guardar una vez, contabilizar una vez; la UI sólo muestra vistas adaptadas al rol.
+
+
+## 10. Administración y Reportes — Módulo 04 (agregado 23/11/2026)
+El documento aprobado M04 se incorpora como **complemento funcional**, sin reescribir ni duplicar las reglas de caja, actividad y roles anteriores.
+
+- **Documento único M04:** [Módulo 04: Administración, indicadores y reportes](MODULO-04-ADMINISTRACION-REPORTES.md).
+- Una sola área Administración con pestañas `Resumen General / Finanzas / Actividad (Ocupación y Eventos) / Academia / Control y herramientas` y filtros comunes.
+- Mismo origen de datos, dos fechas: actividad efectivamente realizada y movimiento financiero real; el **neto generado WIN** no es utilidad empresarial.
+- Gráficos de barras verticales y tablas, comparaciones de períodos equivalentes, cuatro semanas, acceso a detalle rastreable.
+- Horarios de capacidad y referencia ARS 60.000 por hora del M04 deben verificarse contra la operación real; no son tarifas ni horarios de atención confirmados.
+- No implementar todavía libro administrativo integral de gastos, explícitamente fuera de alcance del M04.
+- **Estado:** especificación integrada a GitHub; reportes y nuevas pantallas pendientes de implementación/pruebas.
