@@ -1,5 +1,6 @@
 import { recepcion } from './mockRecepcion.js'
 import { courts } from './mockCourts.js'
+import { configDemo } from './mockConfig.js'
 
 // MODO DEMO: servidor simulado en el navegador, con datos de ejemplo.
 // Se activa sólo con la dirección #/demo. No llama a Supabase ni guarda nada: al recargar vuelve a empezar.
@@ -38,6 +39,11 @@ function api(body) {
       return { ok: true }
     }
     case 'cash.close': turno = null; return { ok: true }
+    case 'config.list': return configDemo.list()
+    case 'config.item.save': return configDemo.item(body)
+    case 'config.coach.save': return configDemo.coach(body)
+    case 'config.price.set': return configDemo.price(body)
+    case 'config.price.cancel': return configDemo.cancel(body)
     default: return String(body.action).startsWith('rec.') ? recepcion(body) : courts(body, usuario)
   }
 }

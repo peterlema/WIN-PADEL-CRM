@@ -1,0 +1,32 @@
+/* Configuración: productos, precios y profesores. Tablas al ancho del contenido. */
+.cfg-page{max-width:1120px;margin:0 auto;padding:15px 16px 70px;color:#232344;display:grid;grid-template-columns:minmax(0,1fr);gap:14px;justify-items:start}
+.cfg-page>*{max-width:100%}
+.cfg-heading h2{font-size:26px;letter-spacing:-.6px;margin:0}.cfg-heading p{margin:4px 0;color:#667085;font-size:14px}
+.cfg-card{background:#fff;border:1px solid #e6e8ee;border-radius:16px;padding:20px;box-shadow:0 3px 15px #14183208;display:grid;gap:12px;justify-items:start;max-width:100%;min-width:0}
+.cfg-card h3{font-size:19px;margin:0}
+.cfg-head{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.cfg-seg{display:flex;gap:6px}
+.cfg-seg button{background:#fff;color:#232344;border:1px solid #d8dce4;border-radius:9px;font-size:13px;min-height:38px}
+.cfg-seg button[aria-pressed="true"]{background:#232344;border-color:#232344;color:#fff}
+.cfg-tools{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.cfg-tools input[type=search]{padding:8px;width:240px;max-width:100%}
+.cfg-check{display:flex!important;gap:6px;align-items:center;font-size:13px}
+.cfg-muted{color:#667085;font-size:13px;margin:0}
+.cfg-msg{padding:10px 14px;border-radius:9px;font-size:14px;margin:0}
+.cfg-msg.error{background:#fdecee;color:#9c2c49;border:1px solid #f4c7d0}
+.cfg-msg.good{background:#ecf8f0;color:#1f6b3a;border:1px solid #c9ebd5}
+.cfg-form{display:flex;flex-wrap:wrap;gap:12px;align-items:end;background:#f7f8fb;border:1px solid #e9ebf2;border-radius:12px;padding:14px}
+.cfg-form label{display:grid;gap:5px;font-size:12px}
+.cfg-form input{padding:8px}
+.cfg-form .cfg-num{width:11ch;text-align:right}
+.cfg-form-title{flex-basis:100%;font-size:14px}
+.cfg-actions{display:flex;gap:8px}
+.cfg-table{border-collapse:collapse;font-size:14px;width:auto;display:block;max-width:100%;overflow-x:auto}
+.cfg-table th,.cfg-table td{padding:7px 12px;border-bottom:1px solid #eceef3;text-align:left;white-space:nowrap;width:1%}
+.cfg-table th{font-size:12px;color:#667085;font-weight:600}
+.cfg-table td:first-child{width:auto}
+.cfg-table .n{text-align:right;font-variant-numeric:tabular-nums}
+.cfg-table tr.baja td{color:#98a0ae}
+.cfg-table tr.sin-precio td{color:#9c2c49}
+.cfg-table tr.futuro td{color:#745322;background:#fffaf0;font-size:13px}
+@media (max-width:600px){.subnav{flex-wrap:wrap;row-gap:6px}}

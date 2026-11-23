@@ -5,6 +5,7 @@ import Calendario from './pages/Calendario.jsx'
 import Recepcion from './pages/Recepcion.jsx'
 import Bar from './pages/Bar.jsx'
 import Administracion from './pages/Administracion.jsx'
+import Configuracion from './pages/Configuracion.jsx'
 import { installDemoServer } from './demo/mockServer.js'
 import { callApi, clearToken, readToken } from './api.js'
 import './styles.css'
@@ -14,6 +15,7 @@ import './recepcion-v5.css'
 import './tema-win.css'
 import './bar.css'
 import './admin.css'
+import './config.css'
 
 // MODO DEMO (#/demo): pantallas de adentro con datos de ejemplo, sin iniciar sesión ni llamar al backend real.
 const DEMO = window.location.hash.startsWith('#/demo')
@@ -24,6 +26,7 @@ const RAIZ = DEMO ? '#/demo/caja' : '#/'
 const CALENDARIO = DEMO ? '#/demo/calendario' : '#/calendario'
 const BAR = DEMO ? '#/demo/bar' : '#/bar'
 const ADMIN = DEMO ? '#/demo/admin' : '#/admin'
+const CONFIG = DEMO ? '#/demo/config' : '#/config'
 const RECEPCION = '#/demo'
 const rutaDe = hash => (DEMO ? hash.replace(/^#\/demo\/?/, '') : hash.replace(/^#\/?/, ''))
 
@@ -56,6 +59,7 @@ function Raiz() {
   const enCalendario = ruta === 'calendario'
   const enBar = ruta === 'bar'
   const enAdmin = ruta === 'admin'
+  const enConfig = ruta === 'config'
   const enRecepcion = DEMO && (ruta === '' || ruta === 'recepcion')
   async function salir() {
     try { await callApi('logout') } catch { /* la sesión local se cierra igual */ }
@@ -91,14 +95,17 @@ function Raiz() {
       {token && (
         <nav className="subnav" aria-label="Secciones">
           {DEMO && <a href={RECEPCION} className={enRecepcion ? 'activa' : ''}>Recepción (borrador)</a>}
-          <a href={RAIZ} className={enCalendario || enBar || enAdmin || enRecepcion ? '' : 'activa'}>Recepción</a>
+          <a href={RAIZ} className={enCalendario || enBar || enAdmin || enConfig || enRecepcion ? '' : 'activa'}>Recepción</a>
           <a href={CALENDARIO} className={enCalendario ? 'activa' : ''}>Calendario</a>
           {['ADMIN','MANAGER'].includes(rol) && <a href={BAR} className={enBar ? 'activa' : ''}>Bar / Buffet</a>}
           {rol === 'ADMIN' && <a href={ADMIN} className={enAdmin ? 'activa' : ''}>Administración</a>}
-          {(enCalendario || enBar || enAdmin) && <button type="button" className="enlace" onClick={salir}>Salir</button>}
+          {['ADMIN','MANAGER'].includes(rol) && <a href={CONFIG} className={enConfig ? 'activa' : ''}>Configuración</a>}
+          {(enCalendario || enBar || enAdmin || enConfig) && <button type="button" className="enlace" onClick={salir}>Salir</button>}
         </nav>
       )}
-      {enAdmin
+      {enConfig
+        ? (token && ['ADMIN','MANAGER'].includes(rol) ? <Configuracion /> : <main className="centro"><p>No tenés permiso para ingresar a Configuración.</p></main>)
+        : enAdmin
         ? (token && rol === 'ADMIN' ? <Administracion /> : <main className="centro"><p>No tenés permiso para ingresar a Administración.</p></main>)
         : enBar
           ? (token && ['ADMIN','MANAGER'].includes(rol) ? <Bar /> : <main className="centro"><p>No tenés permiso para ingresar al Bar.</p></main>)
