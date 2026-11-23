@@ -66,6 +66,7 @@ Deno.serve(async req=>{
     else if(action==="bar.customers") name="win_bar_customers";
     else if(action==="bar.customer.create"){name="win_bar_customer_create";params.p_name=data.name;}
     else if(action==="bar.courts"){name="win_bar_court_choices";params.p_day=data.date;}
+    else if(action==="bar.court.pending"){name="win_bar_court_pending";params.p_court=data.court;params.p_day=data.date;params.p_start=data.start;}
     else if(action==="bar.pending") name="win_bar_pending";
     else if(action==="bar.order.place"){
       name="win_bar_order_place";
