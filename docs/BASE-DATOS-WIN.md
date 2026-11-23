@@ -1,27 +1,22 @@
-# WIN Gestión — base inicial en Supabase
+# WIN Gestión — estado técnico de la base de datos
 
-## Estado
-Creada la estructura fundamental el 23/11/2026 en el proyecto Supabase existente (`cqvoherekzntmhyzdidj`). La migración de referencia es `win_foundation_users_cash_20261123`. **No es una aplicación operativa**: no hay usuarios cargados, datos migrados, endpoints ni integración con la web todavía.
+> Documento de estado técnico. **La especificación funcional única es** [ARQUITECTURA-FUNCIONAL-UNIFICADA-M01-M03.md](ARQUITECTURA-FUNCIONAL-UNIFICADA-M01-M03.md). No repetir reglas operativas aquí.
 
-## Tablas
-- `public.win_staff` — usuarios de Supabase Auth vinculados a los roles ADMIN, MANAGER, RECEPTION y BAR.
-- `public.win_cash_shifts` — apertura/cierre por jornada, responsable y efectivo contado.
-- `public.win_cash_movements` — movimientos firmados por unidad de negocio (COURTS, ACADEMY, EVENTS, CAFE_BAR, SHOP, GENERAL), medio de cobro y turno, con `request_id` único para idempotencia.
-- `public.win_cash_audit` — bitácora administrativa.
+## Infraestructura
+- Código versionado en `WIN-PADEL-CRM`. React en GitHub Pages; Supabase PostgreSQL para datos, y Edge Functions `win-api` y `win-courts` para servidor.
+- La aplicación histórica de Recepción en Google Apps Script/Sheets **permanece separada y sin modificaciones**.
+- Módulo de autenticación privado `win_auth.login_accounts`, `login_sessions`, `role_permissions` con usuario + PIN y controles de acceso backend. Identidad `win_staff` vinculada al account.
+- Caja: `win_cash_shifts`, `win_cash_movements`, `win_cash_audit`.
+- Canchas: `win_court_bookings`, `win_court_booking_events`.
 
-## Protección
-- RLS activado en todas las tablas.
-- **Sin políticas de acceso para roles de navegador** y privilegios de tabla revocados para `anon` y `authenticated`.
-- El backend confiable podrá utilizar `service_role` **exclusivamente en Supabase Edge Functions** y deberá verificar JWT, rol interno y permisos en cada operación; nunca exponerla en React ni en el repositorio.
-- La unicidad de turno abierto limita el diseño inicial a **una caja física activa**.
-- La estructura impone checks básicos y referencias, pero **todavía no garantiza** conservación inmutable ni transacciones de negocio completas: toda operación financiera definitiva debe implementarse mediante endpoints transaccionales que validen estado del turno, permisos, importes y auditoría.
-- No crear usuarios reales ni migrar datos de recepción hasta completar las pruebas.
+## Qué funciona técnicamente / qué falta
+- Persistencia básica de usuario, caja y agenda de canchas; roles implementados en PostgreSQL.
+- Validación de caja: una abierta; cierre por titular/administrador; bloqueo de movimiento en caja cerrada; clave de idempotencia por movimiento. **Gastos de Recepción sólo efectivo; salidas de efectivo no pueden superar saldo teórico.**
+- **Aún no es un sistema operativo completo:** no se implementó el modelo unificado de actividades efectivamente realizadas, asignaciones de pagos mixtos, conciliación detallada de transferencias/comprobantes, cierres de jornada, rendiciones de profesores, avisos, historiales auditados completos, Bar/Shop inventariados, reportes.
+- Ver brechas, modelado y orden de trabajo en la [especificación unificada](ARQUITECTURA-FUNCIONAL-UNIFICADA-M01-M03.md), y [roles](ROLES-Y-PERMISOS-WIN.md).
+- La caja y usuarios ya tienen datos de prueba; no borrar ni migrar automáticamente. Revisar estado de turnos antes de probar.
 
-## Pendiente de implementación
-1. Funciones de servidor: autenticar y autorizar por rol; abrir/cerrar caja; guardar/reversar movimientos con auditoría transaccional e idempotencia.
-2. Pruebas de concurrencia, control de cambios tras cierre, cobros mixtos y roles.
-3. Integración de React con Auth y backend; configuración de publicación de GitHub Pages.
-4. Migración controlada desde Sheets, conciliación y validación paralela.
-
-## Código y producción
-Repositorio fuente: `peterlema/WIN-PADEL-CRM`. La versión actual de Google Apps Script y Sheets de Recepción permanece intacta.
+## Política de despliegue y migración
+- No introducir movimiento real mientras falten aceptación, conciliación, QA con dos usuarios/dispositivos y plan de reversión.
+- Migraciones SQL versionadas en `supabase/migrations/`; funciones Deno en `supabase/functions/`.
+- No versionar PIN, credenciales, clientes ni comprobantes privados.
