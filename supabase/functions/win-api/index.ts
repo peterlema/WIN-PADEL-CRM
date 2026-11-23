@@ -79,6 +79,7 @@ Deno.serve(async req=>{
     } else return reply({error:"Operación desconocida"},404,origin);
     const {data:result,error}=await db.rpc(name,params);
     if(error) {
+      if(error.code==="23505") return reply({error:"Ya existe un producto con ese nombre y variante, o el código de barras ya está utilizado."},409,origin);
       const match=Object.keys(errors).find(k=>error.message.includes(k));
       return reply({error:match?errors[match]:"No se pudo completar la operación. Revisá el estado antes de reintentar."},match?409:500,origin);
     }
