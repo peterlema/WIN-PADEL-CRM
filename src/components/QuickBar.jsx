@@ -9,7 +9,7 @@ function positive(value){
  const n=Number(String(value||'').trim().replace(/\./g,'').replace(',','.'))
  return Number.isFinite(n)&&n>0&&Math.round(n*100)/100===n?n:null
 }
-export default function QuickBar(){
+export default function QuickBar({soloVenta=false}){
  const [products,setProducts]=useState([])
  const [customers,setCustomers]=useState([])
  const [bookings,setBookings]=useState([])
@@ -60,7 +60,11 @@ export default function QuickBar(){
 
  const all=products.filter(p=>p.active)
  const categories=['Todas',...new Set(all.map(p=>p.category||'Otros'))]
- const shown=all.filter(p=>(category==='Todas'||p.category===category)&&[p.name,p.variant].join(' ').toLowerCase().includes(search.toLowerCase()))
+ const hasPrice=p=>p.salePrice!=null&&Number(p.salePrice)>0
+ const matching=all.filter(p=>(category==='Todas'||p.category===category)&&[p.name,p.variant].join(' ').toLowerCase().includes(search.toLowerCase()))
+ // Con precio primero; los que no tienen precio no se pueden vender: el empleado los ve aparte, sin botones apagados.
+ const shown=soloVenta?matching.filter(hasPrice):[...matching.filter(hasPrice),...matching.filter(p=>!hasPrice(p))]
+ const sinPrecio=matching.filter(p=>!hasPrice(p))
  const items=Object.entries(cart).map(([id,qty])=>({...products.find(p=>p.id===id),quantity:qty})).filter(p=>p.id)
  const total=items.reduce((v,p)=>v+Number(p.salePrice||0)*p.quantity,0)
  const selected=bookings.find(b=>b.id===bookingId)
@@ -135,23 +139,28 @@ export default function QuickBar(){
  }
  function chooseSettle(p){setPaymentOrder(p);setPaymentAmount(String(p.balance).replace('.',','));paymentRequest.current=crypto.randomUUID();setError('')}
  const formatDate=v=>new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(v))
- return <div className="bar-pos">
-  <section className="win-bar-card">
-   <div className="win-bar-row"><div><h3>Venta rápida por productos</h3><p className="win-bar-muted">Elegí una categoría y tocá cada bebida. El precio se toma de Stock.</p></div><button type="button" className="secundario" onClick={reload} disabled={busy||loading}>Actualizar</button></div>
-   <div className="win-bar-row"><span className="win-bar-status">{loading?'Cargando…':shift?'Caja abierta · '+shift.business_date:'Caja cerrada'}</span><span className="win-bar-status">{products.length} productos · {pending.length} consumos pendientes</span></div>
+ return <div className={'bar-pos'+(soloVenta?' bar-pos-solo':'')}>
+  <div className="bar-pos-main">
+  <section className="win-bar-card bar-pos-catalogo">
+   <div className="win-bar-row"><div><h3>{soloVenta?'Vender':'Venta rápida por productos'}</h3>{!soloVenta&&<p className="win-bar-muted">Elegí una categoría y tocá cada bebida. El precio se toma de Stock.</p>}</div>
+    <div className="bar-pos-head-actions"><span className={'win-bar-status'+(shift?' abierta':shift===null?' cerrada':'')}>{loading?'Cargando…':shift?'Caja abierta':'Caja cerrada'}</span><button type="button" className="secundario" onClick={reload} disabled={busy||loading}>Actualizar</button></div></div>
    {error&&<p className="win-bar-message" role="alert">{error}</p>}
    {notice&&<p className="win-bar-message good" role="status">{notice}</p>}
    {uncertain&&<div className="win-bar-warning">El resultado de la última operación no pudo confirmarse. Revisá movimientos y pendientes con Actualizar. No la repitas sin comprobar que no se registró.</div>}
-   <div className="bar-pos-filters">{categories.map(x=><button key={x} type="button" aria-pressed={category===x} onClick={()=>setCategory(x)}>{x}</button>)}</div>
-   <label className="bar-pos-search">Buscar producto<input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ej. Gatorade, Patagonia, Coca" /></label>
+   <div className="bar-pos-toolbar">
+    <div className="bar-pos-filters">{categories.map(x=><button key={x} type="button" aria-pressed={category===x} onClick={()=>setCategory(x)}>{x}</button>)}</div>
+    <input className="bar-pos-search-input" type="search" aria-label="Buscar producto" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar: Gatorade, Coca…" />
+   </div>
    <div className="bar-pos-products">{shown.map(p=><button className="bar-pos-product" type="button" key={p.id} disabled={p.salePrice==null||Number(p.salePrice)<=0} onClick={()=>put(p)}>
-    <span>{p.name}{p.variant&&<small>{p.variant}</small>}</span>
-    <strong>{p.salePrice==null||Number(p.salePrice)<=0?'Sin precio':MONEY(p.salePrice)}</strong>
+    <span className="bar-pos-name">{p.name}</span>{p.variant&&<small>{p.variant}</small>}
+    <strong>{hasPrice(p)?MONEY(p.salePrice):'Sin precio'}</strong>
+    {cart[p.id]>0&&<b className="bar-pos-badge">{cart[p.id]}</b>}
    </button>)}</div>
-   {!loading&&!shown.length&&<p className="win-bar-empty">No hay productos para este filtro.</p>}
+   {!loading&&!shown.length&&<p className="win-bar-empty">No hay productos para vender con este filtro.</p>}
+   {soloVenta&&sinPrecio.length>0&&<p className="bar-pos-sinprecio">Sin precio cargado, no se pueden vender todavía: {sinPrecio.map(p=>p.name+(p.variant?' '+p.variant:'')).join(', ')}. Avisá al encargado.</p>}
   </section>
-  <section className="win-bar-card">
-   <h3>Carrito <span className="bar-pos-count">{items.reduce((n,p)=>n+p.quantity,0)} unidades</span></h3>
+  <section className="win-bar-card bar-pos-carrito">
+   <div className="win-bar-row"><h3>Carrito <span className="bar-pos-count">{items.reduce((n,p)=>n+p.quantity,0)} unidades</span></h3>{items.length>0&&<button type="button" className="enlace" onClick={()=>setCart({})}>Vaciar</button>}</div>
    {!items.length?<p className="win-bar-empty">Tocá una bebida para agregarla.</p>:<div className="bar-pos-cart">
     {items.map(p=><div className="bar-pos-cart-line" key={p.id}><div><strong>{p.name}{p.variant?' · '+p.variant:''}</strong><small>{MONEY(p.salePrice)} c/u</small></div><div className="bar-pos-qty"><button type="button" onClick={()=>changeQty(p.id,-1)}>−</button><b>{p.quantity}</b><button type="button" onClick={()=>changeQty(p.id,1)}>+</button></div><b>{MONEY(p.quantity*Number(p.salePrice))}</b></div>)}
    </div>}
@@ -177,6 +186,7 @@ export default function QuickBar(){
     {!shift&&<p className="win-bar-warning">Para registrar entregas o cobros debe haber una caja abierta por Recepción.</p>}
    </form>
   </section>
+  </div>
   <section className="win-bar-card">
    <div className="win-bar-row"><div><h3>Consumos pendientes</h3><p className="win-bar-muted">Mercadería entregada y todavía no cobrada; pagar no vuelve a descontar stock.</p></div><strong>{MONEY(pendingSum)}</strong></div>
    <div className="bar-pos-filters">{[['ALL','Todos'],['COURT','Por cancha'],['ACCOUNT','Por persona']].map(([id,label])=><button type="button" key={id} aria-pressed={pendingFilter===id} onClick={()=>setPendingFilter(id)}>{label}</button>)}</div>
@@ -193,6 +203,6 @@ export default function QuickBar(){
     <button disabled={busy||uncertain}>Confirmar cobro</button>
    </form>}
   </section>
-  <p className="win-bar-warning">Control de stock: cada entrega crea una salida en Supabase. Las existencias físicas seguirán sin saldo calculado hasta registrar el conteo inicial. No usar esta versión para cobrar operaciones reales sin probar antes la conciliación con Recepción.</p>
+  {!soloVenta&&<p className="win-bar-warning">Control de stock: cada entrega crea una salida en Supabase. Las existencias físicas seguirán sin saldo calculado hasta registrar el conteo inicial. No usar esta versión para cobrar operaciones reales sin probar antes la conciliación con Recepción.</p>}
  </div>
 }

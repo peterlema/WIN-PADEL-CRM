@@ -104,3 +104,34 @@
 @media(max-width:900px){.bar-pos-products{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:650px){.bar-pos-products{grid-template-columns:repeat(2,minmax(0,1fr))}.bar-pos-cart-line{grid-template-columns:minmax(0,1fr) auto}.bar-pos-cart-line>b{grid-column:2}.bar-pos-court-manual{grid-template-columns:1fr}}
 @media(max-width:400px){.bar-pos-pending{flex-direction:column;gap:8px}.bar-pos-pending-amount{display:flex;justify-content:space-between;align-items:center}.bar-pos-product{padding:11px;min-height:82px}.bar-pos-product strong{font-size:14px}}
+
+/* Vista del empleado de Bar y punto de venta en dos columnas: productos a la izquierda, carrito fijo a la derecha */
+.bar-pos-main{display:grid;gap:16px;align-items:start}
+@media(min-width:1000px){
+ .bar-pos-main{grid-template-columns:minmax(0,1fr) 380px}
+ .bar-pos-carrito{position:sticky;top:12px;max-height:calc(100vh - 24px);overflow-y:auto}
+ .bar-pos-main .bar-pos-products{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+}
+.bar-pos-head-actions{display:flex;align-items:center;gap:10px}
+.win-bar-status.abierta{background:#e6f4ec;color:#1d6b3a}
+.win-bar-status.cerrada{background:#fde8e4;color:#9a2f1c}
+.bar-pos-toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:16px 0}
+.bar-pos-toolbar .bar-pos-filters{margin:0}
+.bar-pos-search-input{flex:0 1 260px;min-width:180px;min-height:40px;padding:8px 12px;border:1px solid #d9dce6;border-radius:9px;background:#fff;color:#232344;font:inherit;font-size:14px}
+.bar-pos-product{position:relative;justify-content:space-between;gap:4px}
+.bar-pos-product .bar-pos-name{font-weight:700;font-size:15px;line-height:1.2}
+.bar-pos-product small{margin-top:0}
+.bar-pos-product strong{margin-top:auto;font-size:17px}
+.bar-pos-product:disabled strong{color:#8a90a0;font-size:13px;font-weight:600}
+.bar-pos-badge{position:absolute;top:8px;right:8px;min-width:24px;height:24px;padding:0 7px;border-radius:12px;background:#d44664;color:#fff;font-size:13px;display:grid;place-items:center}
+.bar-pos-sinprecio{margin:14px 0 0;font-size:13px;color:#667085}
+.bar-pos-carrito .bar-pos-cart-line{grid-template-columns:minmax(0,1fr) auto auto}
+.bar-pos-carrito .bar-pos-checkout{max-width:none}
+.bar-pos-carrito .bar-pos-checkout>button[type=submit]{justify-self:stretch;width:100%}
+.bar-pos-carrito .enlace{background:none;color:#9c2c49;padding:4px 6px;min-height:0;font-size:13px}
+.win-bar-solo{padding-top:0}
+.subnav-usuario{color:#fff;font-weight:700;padding:10px 14px;white-space:nowrap}
+.bar-pos-carrito .bar-pos-choice,.bar-pos-carrito .win-bar-methods{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.bar-pos-carrito .bar-pos-choice legend,.bar-pos-carrito .win-bar-methods legend{grid-column:1/-1}
+.bar-pos-carrito .bar-pos-choice button,.bar-pos-carrito .win-bar-methods button{min-width:0;padding:8px 6px;font-size:13px;min-height:42px;line-height:1.15}
+.bar-pos-head-actions .secundario{min-height:36px;padding:6px 14px;font-size:14px}
