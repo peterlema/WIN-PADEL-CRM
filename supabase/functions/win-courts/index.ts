@@ -3,7 +3,12 @@
 // (funciones win_courts_*, que validan el token de sesión con win_pin_session).
 import { createClient } from "npm:@supabase/supabase-js@2.119.2";
 
-const allowedOrigins = new Set(["https://peterlema.github.io", "http://localhost:5173", "http://127.0.0.1:5173"]);
+const allowedOrigins = new Set([
+  "https://peterlema.github.io",
+  "https://win-padel-crm.peterlema35.workers.dev",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
 function reply(obj: unknown, status = 200, origin = "") {
   const headers: Record<string, string> = { "Content-Type": "application/json", "Cache-Control": "no-store", "Vary": "Origin" };
   if (allowedOrigins.has(origin)) {
