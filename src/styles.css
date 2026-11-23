@@ -68,3 +68,13 @@ button:disabled { opacity: 0.6; cursor: default; }
 .barra .usuario { margin-left: auto; color: var(--suave); font-size: 0.9rem; }
 
 .contenido { padding: 16px; max-width: 1100px; }
+
+/* WIN V5 — tarjeta y panel en formato responsive */
+.tarjeta.wide{width:100%;max-width:none}
+.dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:20px}
+.dashboard>.tarjeta:first-child{grid-column:1/-1}
+.dashboard .tarjeta{width:100%;max-width:none}
+.dashboard form{display:grid;gap:12px}
+.dashboard select{font:inherit;padding:10px;border:1px solid var(--borde);border-radius:6px;background:white;color:var(--texto)}
+.contenido{max-width:1100px;margin:0 auto;padding:22px}
+@media (max-width:650px){.dashboard{grid-template-columns:1fr}.dashboard>.tarjeta:first-child{grid-column:auto}.barra{flex-wrap:wrap}}
