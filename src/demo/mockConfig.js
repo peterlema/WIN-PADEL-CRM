@@ -17,7 +17,19 @@ let precios = [['COURT_TURN', 60, 60000, 70000], ['COURT_TURN', 90, 90000, 10000
 const mismo = (p, b) => p.codigo === b.code && p.duracion === Number(b.duration) && p.desde === b.validFrom
 const igual = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase()
 
+const ajustes = { GRID_OPEN_MIN: 480, GRID_CLOSE_MIN: 1500, BOOKING_DEFAULT_DURATION: 90, COACH_DEFAULT_WIN_PCT: 60 }
+
 export const configDemo = {
+  settings() { return { ...ajustes } },
+  setting(b) {
+    const v = Number(b.value); const nuevo = { ...ajustes, [b.key]: v }
+    const malo = !(b.key in ajustes) || !Number.isFinite(v)
+      || (['GRID_OPEN_MIN', 'GRID_CLOSE_MIN'].includes(b.key) && (v % 30 !== 0 || nuevo.GRID_OPEN_MIN < 360 || nuevo.GRID_CLOSE_MIN > 1800 || nuevo.GRID_CLOSE_MIN - nuevo.GRID_OPEN_MIN < 60))
+      || (b.key === 'BOOKING_DEFAULT_DURATION' && ![60, 90, 120].includes(v))
+      || (b.key === 'COACH_DEFAULT_WIN_PCT' && !(v >= 0 && v <= 100))
+    if (malo) throw fail('Revisá los datos: nombre, importe o porcentaje.')
+    ajustes[b.key] = v; return { key: b.key, value: v }
+  },
   list() {
     const vig = precios.filter(p => p.desde <= hoy && p.desde === precios.filter(x => x.codigo === p.codigo && x.duracion === p.duracion && x.desde <= hoy).map(x => x.desde).sort().at(-1))
     return {

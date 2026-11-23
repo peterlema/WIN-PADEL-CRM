@@ -3,13 +3,11 @@ import { callApi, clearToken } from '../api.js'
 import { callCourts } from '../courtsApi.js'
 import Modal from '../components/Modal.jsx'
 
-// Horario de la grilla (a confirmar con el club): 08:00 a 01:00 de la jornada comercial.
+// Horario de la grilla y duración propuesta: se leen de Configuración → Ajustes (settings.get).
+// Estos valores sólo se usan si el servidor todavía no respondió.
 const COURTS = ['C1', 'C2', 'C3', 'C4']
-const FIRST = 8 * 60
-const LAST = 25 * 60
+const AJUSTES_BASE = { GRID_OPEN_MIN: 8 * 60, GRID_CLOSE_MIN: 25 * 60, BOOKING_DEFAULT_DURATION: 90 }
 const STEP = 30
-const SLOTS = Array.from({ length: (LAST - FIRST) / STEP }, (_, i) => FIRST + i * STEP)
-const CAPACITY = COURTS.length * (LAST - FIRST)
 const DURATIONS_FREE = Array.from({ length: 16 }, (_, i) => (i + 1) * STEP)
 const KINDS = { RESERVA: 'Reserva', CLASE: 'Clase', EVENTO: 'Evento', BLOQUEO: 'Bloqueo', ABONO: 'Abono' }
 // Tipos del formulario. Clase particular dura 60 min; clase partido, 90; reserva y abono, 60, 90 o 120 (90 por defecto).
@@ -76,6 +74,11 @@ export default function Calendario() {
   const [horarios, setHorarios] = useState(null)    // ventana de horarios de recepción
   const [nuevoHorario, setNuevoHorario] = useState({ accountId: '', weekday: 1, from: '09:00', to: '17:00' })
   const [ocupado, setOcupado] = useState(false)
+  const [ajustes, setAjustes] = useState(AJUSTES_BASE)
+  const FIRST = Number(ajustes.GRID_OPEN_MIN)
+  const LAST = Number(ajustes.GRID_CLOSE_MIN)
+  const SLOTS = useMemo(() => Array.from({ length: Math.max(0, (LAST - FIRST) / STEP) }, (_, i) => FIRST + i * STEP), [FIRST, LAST])
+  const CAPACITY = COURTS.length * (LAST - FIRST)
   const hoy = hoyAR()
 
   function falla(e) {
@@ -85,6 +88,7 @@ export default function Calendario() {
   }
 
   useEffect(() => { callApi('me').then(r => setUser(r.user)).catch(falla) }, [])
+  useEffect(() => { callApi('settings.get').then(r => setAjustes(a => ({ ...a, ...r }))).catch(() => { /* quedan los valores base */ }) }, [])
   useEffect(()=>{
     if(!user||!['ADMIN','MANAGER','RECEPTION'].includes(user.role))return
     let alive=true
@@ -135,14 +139,14 @@ export default function Calendario() {
       for (let i = 1; i < n; i++) celdas[c][s + i] = 'x'
     }
     return { celdas, fuera, minutosDia }
-  }, [dia])
+  }, [dia, FIRST, SLOTS])
 
   function irAFecha(iso) { setFecha(iso); setMes(monthOf(iso)); cerrarTodo(); setAviso(''); setError('') }
   function cerrarTodo() { setForm(null); setDetalle(null); setAccion(''); setMotivo(''); setPago(null); setHorarios(null); setBarPayment(null); setBarPending(null); setBarError('') }
 
   function abrirForm(court, minutos) {
     cerrarTodo(); setAviso(''); setError('')
-    setForm({ court, start: minToLabel(minutos), duration: 90, kind: 'RESERVA', holder: '', note: '', nombre: '', whatsapp: '', requestId: crypto.randomUUID() })
+    setForm({ court, start: minToLabel(minutos), duration: Number(ajustes.BOOKING_DEFAULT_DURATION) || 90, kind: 'RESERVA', holder: '', note: '', nombre: '', whatsapp: '', requestId: crypto.randomUUID() })
   }
   function cambiarTipo(kind) {
     setForm(f => {

@@ -21,10 +21,13 @@ export default function Configuracion() {
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
   const [busy, setBusy] = useState(false)
+  const [ajustes, setAjustes] = useState(null)
 
   async function cargar() {
-    try { const r = await callApi('config.list'); setData(r); setError('') }
-    catch (e) { setError(e.message) }
+    try {
+      const [r, a] = await Promise.all([callApi('config.list'), callApi('settings.get').catch(() => null)])
+      setData(r); setAjustes(a); setError('')
+    } catch (e) { setError(e.message) }
   }
   useEffect(() => { cargar() }, [])
   async function guardar(action, params, mensaje) {
@@ -40,6 +43,7 @@ export default function Configuracion() {
     (p.bar || p.tienda) && ['productos', 'Productos'],
     p.precios && ['precios', 'Precios'],
     p.profesores && ['profesores', 'Profesores'],
+    p.precios && ajustes && ['ajustes', 'Ajustes'],
   ].filter(Boolean)
   const actual = tabs.some(t => t[0] === tab) ? tab : tabs[0]?.[0]
 
@@ -55,7 +59,8 @@ export default function Configuracion() {
     {!data && !error && <p className="cfg-muted">Cargando…</p>}
     {data && actual === 'productos' && <Productos data={data} guardar={guardar} busy={busy} />}
     {data && actual === 'precios' && <Precios data={data} guardar={guardar} busy={busy} />}
-    {data && actual === 'profesores' && <Profesores data={data} guardar={guardar} busy={busy} />}
+    {data && actual === 'profesores' && <Profesores data={data} guardar={guardar} busy={busy} pctBase={ajustes?.COACH_DEFAULT_WIN_PCT ?? 60} />}
+    {data && actual === 'ajustes' && <Ajustes ajustes={ajustes} guardar={guardar} busy={busy} />}
   </main>
 }
 
@@ -156,7 +161,7 @@ function Precios({ data, guardar, busy }) {
   </section>
 }
 
-function Profesores({ data, guardar, busy }) {
+function Profesores({ data, guardar, busy, pctBase }) {
   const [edit, setEdit] = useState(null)
   async function enviar(e) {
     e.preventDefault()
@@ -167,7 +172,7 @@ function Profesores({ data, guardar, busy }) {
   }
   const ejemplo = edit && pct(edit.porcentaje) >= 0 && pct(edit.porcentaje) <= 100
   return <section className="cfg-card">
-    <div className="cfg-head"><h3>Profesores</h3><button type="button" disabled={busy} onClick={() => setEdit({ id: null, nombre: '', porcentaje: '60', activo: true })}>+ Profesor</button></div>
+    <div className="cfg-head"><h3>Profesores</h3><button type="button" disabled={busy} onClick={() => setEdit({ id: null, nombre: '', porcentaje: String(pctBase).replace('.', ','), activo: true })}>+ Profesor</button></div>
     <p className="cfg-muted">El porcentaje es la parte de cada clase que queda para WIN; el profesor cobra el resto.</p>
     {edit && <form className="cfg-form" onSubmit={enviar}>
       <label>Nombre<input value={edit.nombre} maxLength={60} required autoFocus onChange={e => setEdit({ ...edit, nombre: e.target.value })} /></label>
@@ -182,6 +187,47 @@ function Profesores({ data, guardar, busy }) {
         <td>{x.nombre}</td><td className="n">{Number(x.porcentajeWin).toLocaleString('es-AR')} %</td><td className="n">{(100 - Number(x.porcentajeWin)).toLocaleString('es-AR')} %</td>
         <td>{x.activo ? 'Activo' : 'De baja'}</td>
         <td><button type="button" className="enlace" onClick={() => setEdit({ id: x.id, nombre: x.nombre, porcentaje: String(x.porcentajeWin).replace('.', ','), activo: x.activo })}>Editar</button></td>
+      </tr>)}</tbody>
+    </table>
+  </section>
+}
+
+// Valores numéricos de funcionamiento. Horarios en minutos de la jornada comercial (corta a las 06:00).
+const hhmm = m => `${String(Math.floor((m % 1440) / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+const HORAS = Array.from({ length: 49 }, (_, i) => 360 + i * 30)  // 06:00 a 06:00 del día siguiente, cada 30 min
+const AJUSTES = [
+  { key: 'GRID_OPEN_MIN', label: 'Calendario · apertura', tipo: 'hora', ayuda: 'Primer horario de la grilla de canchas.' },
+  { key: 'GRID_CLOSE_MIN', label: 'Calendario · cierre', tipo: 'hora', ayuda: 'Último horario; después de medianoche cuenta para la misma jornada.' },
+  { key: 'BOOKING_DEFAULT_DURATION', label: 'Reserva · duración propuesta', tipo: 'duracion', ayuda: 'Duración que aparece al cargar una reserva nueva.' },
+  { key: 'COACH_DEFAULT_WIN_PCT', label: 'Profesor nuevo · % WIN propuesto', tipo: 'pct', ayuda: 'Se puede cambiar en cada profesor.' },
+]
+const mostrar = (a, v) => a.tipo === 'hora' ? hhmm(Number(v)) + (Number(v) >= 1440 ? ' (día siguiente)' : '') : a.tipo === 'duracion' ? v + ' min' : Number(v).toLocaleString('es-AR') + ' %'
+
+function Ajustes({ ajustes, guardar, busy }) {
+  const [edit, setEdit] = useState(null)
+  async function enviar(e) {
+    e.preventDefault()
+    const value = edit.tipo === 'pct' ? pct(edit.valor) : Number(edit.valor)
+    if (!Number.isFinite(value)) return
+    if (await guardar('config.setting.set', { key: edit.key, value }, 'Ajuste guardado.')) setEdit(null)
+  }
+  return <section className="cfg-card">
+    <div className="cfg-head"><h3>Ajustes</h3></div>
+    <p className="cfg-muted">Valores de funcionamiento que antes estaban fijos. Sólo los cambia un administrador.</p>
+    {edit && <form className="cfg-form" onSubmit={enviar}>
+      <strong className="cfg-form-title">{edit.label}</strong>
+      {edit.tipo === 'hora' && <label>Horario<select value={edit.valor} autoFocus onChange={e => setEdit({ ...edit, valor: e.target.value })}>
+        {HORAS.map(m => <option key={m} value={m}>{hhmm(m)}{m >= 1440 ? ' (día siguiente)' : ''}</option>)}</select></label>}
+      {edit.tipo === 'duracion' && <label>Duración<select value={edit.valor} autoFocus onChange={e => setEdit({ ...edit, valor: e.target.value })}>
+        {[60, 90, 120].map(d => <option key={d} value={d}>{d} min</option>)}</select></label>}
+      {edit.tipo === 'pct' && <label>% WIN<input inputMode="decimal" className="cfg-num" value={edit.valor} required autoFocus onChange={e => setEdit({ ...edit, valor: e.target.value })} /></label>}
+      <div className="cfg-actions"><button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button><button type="button" className="secundario" onClick={() => setEdit(null)}>Cancelar</button></div>
+    </form>}
+    <table className="cfg-table">
+      <thead><tr><th>Ajuste</th><th className="n">Valor</th><th>Para qué sirve</th><th /></tr></thead>
+      <tbody>{AJUSTES.map(a => <tr key={a.key}>
+        <td>{a.label}</td><td className="n">{mostrar(a, ajustes[a.key])}</td><td className="cfg-ayuda">{a.ayuda}</td>
+        <td><button type="button" className="enlace" disabled={busy} onClick={() => setEdit({ ...a, valor: a.tipo === 'pct' ? String(ajustes[a.key]).replace('.', ',') : String(Number(ajustes[a.key])) })}>Cambiar</button></td>
       </tr>)}</tbody>
     </table>
   </section>

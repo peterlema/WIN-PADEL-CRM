@@ -30,3 +30,4 @@
 .cfg-table tr.sin-precio td{color:#9c2c49}
 .cfg-table tr.futuro td{color:#745322;background:#fffaf0;font-size:13px}
 @media (max-width:600px){.subnav{flex-wrap:wrap;row-gap:6px}}
+.cfg-table td.cfg-ayuda{white-space:normal;color:#667085;font-size:13px;min-width:22ch}

@@ -40,6 +40,8 @@ function api(body) {
     }
     case 'cash.close': turno = null; return { ok: true }
     case 'config.list': return configDemo.list()
+    case 'settings.get': return configDemo.settings()
+    case 'config.setting.set': return configDemo.setting(body)
     case 'config.item.save': return configDemo.item(body)
     case 'config.coach.save': return configDemo.coach(body)
     case 'config.price.set': return configDemo.price(body)

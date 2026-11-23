@@ -31,6 +31,8 @@ await db.exec(readFileSync(dir + '20261124_win_courts_v2_pricing_payments_abonos
 await db.exec(readFileSync(dir + '20261124_win_courts_v3_payment_method_at_collection.sql', 'utf8'))
 await db.exec(readFileSync(dir + '20261125_win_config_catalog_coaches_prices.sql', 'utf8'))
 await db.exec(readFileSync(dir + '20261125_win_config_catalog_coaches_prices.sql', 'utf8'))
+await db.exec(readFileSync(dir + '20261126_win_settings.sql', 'utf8'))
+await db.exec(readFileSync(dir + '20261126_win_settings.sql', 'utf8'))
 ok(true, 'migración de configuración aplicada y repetible')
 
 const hoy = (await one(`select public.win_config_today_()::text d`)).d
@@ -100,9 +102,26 @@ ok(Number((await one(`select public.win_court_price_($1::date,'TRANSFER',60) p`,
 ok(Number((await one(`select public.win_court_price_($1::date,'CASH',90) p`, [hoy])).p) === 90000, 'cargar 60 min no altera el de 90')
 ok((await err(`select public.win_config_price_set('tok-admin','CLASS_1',90,1,1,$1::date)`, [hoy])).includes('CONFIG_INVALID'), 'clase con duración distinta de 60 se rechaza')
 
+// 5c. Ajustes numéricos
+const aj = tok => one(`select public.win_settings_get($1) r`, [tok]).then(r => r.r)
+const setA = (tok, k, v) => q(`select public.win_config_setting_set($1,$2,$3)`, [tok, k, v])
+const a0 = await aj('tok-bar')
+ok(a0.GRID_OPEN_MIN == 480 && a0.GRID_CLOSE_MIN == 1500 && a0.BOOKING_DEFAULT_DURATION == 90 && a0.COACH_DEFAULT_WIN_PCT == 60, 'ajustes iniciales legibles por cualquier sesión (08:00–01:00, 90 min, 60 %)')
+ok((await err(`select public.win_settings_get('tok-nadie')`)).includes('SESSION_INVALID'), 'ajustes sin sesión se rechazan')
+ok((await err(`select public.win_config_setting_set('tok-mgr','GRID_OPEN_MIN',540)`)).includes('NOT_AUTHORIZED'), 'Encargado no cambia ajustes')
+await setA('tok-admin', 'GRID_OPEN_MIN', 540); await setA('tok-admin', 'GRID_CLOSE_MIN', 1560)
+ok((await aj('tok-recep')).GRID_OPEN_MIN == 540 && (await aj('tok-recep')).GRID_CLOSE_MIN == 1560, 'grilla 09:00–02:00 guardada')
+ok((await err(`select public.win_config_setting_set('tok-admin','GRID_CLOSE_MIN',1830)`)).includes('CONFIG_INVALID'), 'cierre después de las 06:00 se rechaza')
+ok((await err(`select public.win_config_setting_set('tok-admin','GRID_OPEN_MIN',1530)`)).includes('CONFIG_INVALID'), 'apertura posterior al cierre se rechaza')
+ok((await err(`select public.win_config_setting_set('tok-admin','GRID_OPEN_MIN',545)`)).includes('CONFIG_INVALID'), 'horario fuera de bloques de 30 min se rechaza')
+ok((await err(`select public.win_config_setting_set('tok-admin','BOOKING_DEFAULT_DURATION',75)`)).includes('CONFIG_INVALID'), 'duración por defecto distinta de 60/90/120 se rechaza')
+await setA('tok-admin', 'COACH_DEFAULT_WIN_PCT', 62.5)
+ok((await aj('tok-admin')).COACH_DEFAULT_WIN_PCT == 62.5, '% WIN por defecto actualizado')
+ok((await err(`select public.win_config_setting_set('tok-admin','OTRA',1)`)).includes('CONFIG_INVALID'), 'clave desconocida se rechaza')
+
 // 6. Auditoría y acceso directo
 const aud = Number((await one(`select count(*) n from public.win_config_audit`)).n)
-ok(aud >= 10, `cada cambio queda auditado (${aud} registros)`)
+ok(aud >= 13, `cada cambio queda auditado (${aud} registros)`)
 const priv = (await one(`select has_table_privilege('anon','public.win_catalog_items','select') a, has_table_privilege('authenticated','public.win_coaches','select') b,
   has_function_privilege('anon','public.win_config_list(text)','execute') c`))
 ok(!priv.a && !priv.b && !priv.c, 'el navegador (anon/authenticated) no accede a tablas ni funciones')
