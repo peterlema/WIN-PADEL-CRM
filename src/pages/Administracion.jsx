@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
 import { callApi } from '../api.js'
-import DatosImportados from '../components/DatosImportados.jsx'
 
 const money = n => '$ ' + Math.round(Number(n)||0).toLocaleString('es-AR')
 const fmtDate = iso => new Intl.DateTimeFormat('es-AR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(iso+'T12:00:00Z'))
@@ -8,7 +7,7 @@ const today = () => new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina
 const addDays = (iso,n) => {const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 const startOfWeek = iso => {const d=new Date(iso+'T12:00:00Z');const delta=(d.getUTCDay()+6)%7;return addDays(iso,-delta)}
 const endOfMonth = iso => {const [y,m]=iso.split('-').map(Number);return new Date(Date.UTC(y,m,0)).toISOString().slice(0,10)}
-const tabs = [['summary','Resumen General'],['finance','Finanzas'],['activity','Actividad'],['academy','Academia'],['control','Control y herramientas'],['imported','Datos importados']]
+const tabs = [['summary','Resumen General'],['finance','Finanzas'],['activity','Actividad'],['academy','Academia'],['control','Control y herramientas']]
 const units = {COURTS:'Canchas',ACADEMY:'Academia',EVENTS:'Eventos',CAFE_BAR:'Bar',SHOP:'Tienda',GENERAL:'General'}
 const kinds = {SALE:'Venta',DEPOSIT:'Otro ingreso',EXPENSE:'Gasto',WITHDRAWAL:'Retiro',REFUND:'Devolución',ADJUSTMENT:'Ajuste'}
 const methods = {CASH:'Efectivo',TRANSFER:'Transferencia',CARD:'Tarjeta',OTHER:'Otro'}
@@ -94,17 +93,16 @@ export default function Administracion() {
   return <main className="admin-page">
     <section className="admin-heading"><div><h2>Administración</h2><p>Indicadores y reportes · Acceso exclusivo de administradores</p></div></section>
     <nav className="admin-tabs" aria-label="Secciones de Administración">{tabs.map(([id,title])=><button type="button" key={id} className={section===id?'active':''} onClick={()=>{setSection(id);setDetail(null)}} aria-current={section===id?'page':undefined}>{title}</button>)}</nav>
-    {section!=='imported'&&<section className="admin-filters">
+    <section className="admin-filters">
       <div className="admin-periods" role="group" aria-label="Período del reporte">
         {[['today','Hoy'],['week','Semana'],['month','Mes'],['custom','Personalizado']].map(([id,label])=><button type="button" key={id} aria-pressed={range===id} onClick={()=>setRange(id)}>{label}</button>)}
       </div>
       {range==='custom'&&<div className="admin-dates"><label>Desde<input type="date" value={customStart} onChange={e=>setCustomStart(e.target.value)}/></label><label>Hasta<input type="date" value={customEnd} onChange={e=>setCustomEnd(e.target.value)}/></label></div>}
       <p>{fmtDate(bounds.start)} – {fmtDate(bounds.end)} · Comparación equivalente: {fmtDate(previousBounds.start)} – {fmtDate(previousBounds.end)}</p>
-    </section>}
+    </section>
     {error&&<div className="admin-error" role="alert">{error}</div>}
     {loading&&<p className="admin-status" role="status">Actualizando reportes de Supabase…</p>}
 
-    {section==='imported'&&<div className="admin-content"><DatosImportados/></div>}
 
     {section==='summary'&&<div className="admin-content">
       <section className="admin-card">
