@@ -83,7 +83,7 @@ function Raiz() {
       </header>
       {token && (
         <nav className="subnav" aria-label="Secciones">
-          {DEMO && <a href={RECEPCION} className={enRecepcion ? 'activa' : ''}>Recepción</a>}
+          {DEMO && <a href={RECEPCION} className={enRecepcion ? 'activa' : ''}>Recepción (borrador)</a>}
           <a href={RAIZ} className={enCalendario || enRecepcion ? '' : 'activa'}>Recepción</a>
           <a href={CALENDARIO} className={enCalendario ? 'activa' : ''}>Calendario</a>
           {enCalendario && <button type="button" className="enlace" onClick={salir}>Salir</button>}

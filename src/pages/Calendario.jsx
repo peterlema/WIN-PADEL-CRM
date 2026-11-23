@@ -156,7 +156,7 @@ export default function Calendario() {
     setDetalle(b)
     if (['RESERVA', 'ABONO'].includes(b.tipo) && !b.pago && puedeReservar) {
       setPago({ method: b.metodoPrevisto || 'CASH', receivedBy: '', file: null, preview: '', requestId: crypto.randomUUID() })
-      try { const r = await callCourts('courts.receivers'); setReceptores(r); setPago(p => p && ({ ...p, receivedBy: r.deTurno[0] || user?.id || '' })) } catch { /* se puede cobrar igual */ }
+      try { const r = await callCourts('courts.receivers'); setReceptores(r); setPago(p => p && ({ ...p, receivedBy: (r.deTurno || [])[0] || user?.id || '' })) } catch { /* se puede cobrar igual */ }
     }
   }
 
