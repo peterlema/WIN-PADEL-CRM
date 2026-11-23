@@ -1,0 +1,31 @@
+/* Bar / Buffet: separate module next to Reception and Calendar */
+.win-bar{max-width:1120px;margin:0 auto;padding:16px 22px 70px;display:grid;gap:16px;color:#232344}
+.win-bar-header,.win-bar-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.win-bar-header h2{font-size:25px;letter-spacing:-.7px;margin:0}
+.win-bar-header p{margin:4px 0 0;color:#667085;font-size:14px}
+.win-bar-tabs{display:flex;gap:7px;overflow-x:auto;border:1px solid #e5e7ed;background:white;border-radius:15px;padding:8px}
+.win-bar-tabs button{background:#fff;color:#232344;border:1px solid transparent;border-radius:10px;min-width:max-content;font-size:14px;padding:11px 17px}
+.win-bar-tabs button.current{background:#fff1f4;border-color:#f1c3cf;color:#9c2c49;box-shadow:inset 0 -2px 0 #d44664}
+.win-bar-card{background:white;border:1px solid #e7e9ef;border-radius:17px;padding:24px;box-shadow:0 3px 18px #151a2c09}
+.win-bar-card h3{margin:0;font-size:19px;letter-spacing:-.4px}
+.win-bar-card p{line-height:1.5}
+.win-bar-muted{color:#667085;font-size:13px;margin:6px 0 14px}
+.win-bar-status{font-size:12px;background:#f3f4f7;padding:7px 10px;border-radius:20px;color:#515b6d}
+.win-bar-warning{font-size:13px;color:#865615;background:#fff8e9;border:1px solid #f2e2bc;border-radius:9px;padding:12px}
+.win-bar-message{background:#fff1f2;color:#a42c30;padding:12px 15px;border-radius:10px}
+.win-bar-message.good{background:#ecf9f0;color:#176438}
+.win-bar-form{display:grid;gap:16px;max-width:630px;margin-top:18px}
+.win-bar-form label{display:grid;gap:7px;font-size:14px;font-weight:600}
+.win-bar-form input{padding:12px;min-height:46px}
+.win-bar-form>button{justify-self:start;padding:12px 24px;background:#232344}
+.win-bar-methods{display:flex;flex-wrap:wrap;gap:8px;padding:0;border:0;margin:0}
+.win-bar-methods legend{font-size:14px;font-weight:600;color:#505767;margin-bottom:9px}
+.win-bar-methods button{background:white;color:#232344;border:1px solid #d9dde3;min-width:110px}
+.win-bar-methods button.selected{background:#232344;color:white;border-color:#232344}
+.win-bar-empty{font-size:14px;color:#667085;background:#f6f7f9;padding:20px;border-radius:11px}
+.win-bar-sale{border-top:1px solid #eceff3;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:13px 0}
+.win-bar-sale small{display:block;margin-top:4px;color:#6b7280}
+.win-bar-feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:18px 0}
+.win-bar-feature{background:#f7f8fb;border-radius:12px;min-height:80px;padding:15px;font-size:13px;display:flex;gap:10px;align-items:center}
+.win-bar-feature span{color:#d44664;font-size:22px}
+@media(max-width:700px){.win-bar{padding:12px 12px 50px}.win-bar-card{padding:17px}.win-bar-feature-grid{grid-template-columns:1fr}.win-bar-header h2{font-size:22px}.win-bar-tabs button{padding:10px 12px}}
