@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { callApi } from '../api.js'
-import DatosImportados from '../components/DatosImportados.jsx'
 
 const currency = amount => '$ ' + Math.round(Number(amount) || 0).toLocaleString('es-AR')
 const dateTime = v => v ? new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hour:'2-digit',minute:'2-digit'}).format(new Date(v)) : '—'
@@ -136,7 +135,6 @@ export default function RecepcionV5({user,onLogout}) {
       </div>
     </section>
 
-    {user.role==='ADMIN'&&<DatosImportados/>}
 
     {status==='loading'&&!snapshot&&<section className="win-rec-panel"><p>Consultando la caja…</p></section>}
     {status==='error'&&!snapshot&&<section className="win-rec-panel"><p>No se pudieron recuperar los datos. Revisá la conexión y volvé a actualizar.</p></section>}
