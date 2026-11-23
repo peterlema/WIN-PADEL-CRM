@@ -17,6 +17,15 @@ function api(body) {
     case 'login': return { token: 'd'.repeat(64), user: usuario, expiresAt: new Date(Date.now() + 8 * 3600e3).toISOString() }
     case 'me': return { user: usuario, expiresAt: new Date(Date.now() + 8 * 3600e3).toISOString() }
     case 'logout': return { ok: true }
+    case 'reception.overview': return {
+      shift: turno ? {id:turno.id, opened_by:'demo', responsible:'Usuario demo', opened_at:new Date().toISOString(), business_date:turno.business_date, opening_cash:turno.opening_cash} : null,
+      totals: turno ? {cash_expected:turno.expected_cash, transfer_received:18000, transfer_out:0,cash_received:35000,cash_out:0,movements_count:2} : null,
+      movements: turno ? [
+        {id:'sample-1',date:new Date().toISOString(),kind:'SALE',unit:'SHOP',paymentMethod:'CASH',amount:15000,note:'Venta de pelotas',recordedBy:'Recepción demo',shiftOwner:'Recepción demo'},
+        {id:'sample-2',date:new Date().toISOString(),kind:'SALE',unit:'GENERAL',paymentMethod:'TRANSFER',amount:18000,note:'Ingreso de prueba',recordedBy:'Recepción demo',shiftOwner:'Recepción demo'}
+      ] : [],
+      activitiesAvailable:false, noticesAvailable:false, limitedHistory:true
+    }
     case 'cash.state': return { shift: turno ? { ...turno } : null }
     case 'cash.open':
       if (turno) throw fail('Ya hay una caja abierta.', 409)
