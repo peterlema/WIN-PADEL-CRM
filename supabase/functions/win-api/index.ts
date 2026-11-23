@@ -76,7 +76,7 @@ Deno.serve(async req=>{
       Object.assign(params,{p_request_id:data.requestId,p_items:data.items,p_destination:data.destination,
         p_customer_id:data.customerId||null,p_booking_id:data.bookingId||null,p_court:data.court||null,
         p_court_date:data.courtDate||null,p_court_start:data.courtStart||null,p_note:data.note||"",
-        p_method:data.method||null});
+        p_method:data.method||null,p_client_unknown:data.clientUnknown===true});
     }
     else if(action==="bar.order.pay"){
       name="win_bar_order_pay";
