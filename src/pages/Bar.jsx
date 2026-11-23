@@ -9,8 +9,10 @@ const sections=[
  {id:'accounts',label:'Cuentas corrientes'}
 ]
 
-export default function Bar(){
+export default function Bar({soloVenta=false}){
  const [tab,setTab]=useState('sales')
+ // Empleado de Bar (rol BAR): sólo vende y cobra pendientes; no edita precios ni ve secciones vacías.
+ if(soloVenta) return <main className="win-bar win-bar-solo"><QuickBar soloVenta/></main>
  return <main className="win-bar">
    <section className="win-bar-header"><div><h2>Bar / Buffet</h2><p>Venta rápida, consumos pendientes e inventario</p></div></section>
    <nav className="win-bar-tabs" aria-label="Áreas del Bar">

@@ -74,8 +74,8 @@ function Raiz() {
       <>
         {DEMO && <div className="demo-banner" role="status">MODO DEMO · vista del empleado de Bar<button type="button" className="enlace" onClick={salirDelDemo}>Salir del demo</button></div>}
         <header className="marca"><div><h1>WIN <span>PADEL CLUB</span></h1><small>GESTIÓN · BAR</small></div><span className="pill">Bar</span></header>
-        <nav className="subnav" aria-label="Secciones"><a href={BAR} className="activa">Bar / Buffet</a><button type="button" className="enlace" onClick={DEMO ? salirDelDemo : salir}>Salir</button></nav>
-        <Bar />
+        <nav className="subnav" aria-label="Sesión"><span className="subnav-usuario">Bar / Buffet</span><button type="button" className="enlace" onClick={DEMO ? salirDelDemo : salir}>Salir</button></nav>
+        <Bar soloVenta />
         <Version />
       </>
     )
