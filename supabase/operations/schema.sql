@@ -85,7 +85,8 @@ create table if not exists public.win_ops_corrections (
  decided_by uuid references win_auth.login_accounts(id), decided_at timestamptz, decision_note text,
  constraint win_ops_correction_amount check(abs(proposed_amount)<=1000000000)
 );
-create unique index if not exists win_ops_correction_pending_uq on public.win_ops_corrections(movement_id) where status in ('PENDING','APPROVED');
+drop index if exists public.win_ops_correction_pending_uq;
+create unique index win_ops_correction_pending_uq on public.win_ops_corrections(movement_id) where status='PENDING';
 
 -- Vista financiera definitiva: anulaciones como asientos inversos trazables y ajustes aprobados.
 create or replace view public.win_ops_ledger with(security_invoker=true) as
@@ -97,7 +98,7 @@ create or replace view public.win_ops_ledger with(security_invoker=true) as
  from public.win_cash_movements m
  join public.win_cash_shifts sh on sh.id=m.shift_id
  left join public.win_cash_movements original on original.id=m.reversal_of
- left join public.win_ops_corrections c on c.movement_id=m.id and c.status='APPROVED'
+ left join lateral(select proposed_method,proposed_amount from public.win_ops_corrections c0 where c0.movement_id=m.id and c0.status='APPROVED' order by c0.decided_at desc,c0.created_at desc,c0.id desc limit 1)c on true
  left join public.win_ops_records o on m.reference_type='OPERATION' and m.reference_id=o.id::text;
 revoke all on public.win_ops_ledger from public,anon,authenticated;
 grant select on public.win_ops_ledger to service_role;
@@ -128,9 +129,9 @@ create or replace function public.win_ops_balance(p_teacher uuid) returns jsonb 
    coalesce((select sum(a.amount) from public.win_ops_allocations a join public.win_ops_records o on o.id=a.settlement_id where a.teacher_id=p_teacher and a.activity_date=d.activity_date and o.status='ACTIVE'),0) allocated
   from dates d
  ) select jsonb_build_object('teacherId',p_teacher,'days',coalesce((select jsonb_agg(jsonb_build_object('date',activity_date,'due',due,'allocated',allocated,'pending',due-allocated) order by activity_date) from debts where due<>allocated),'[]'::jsonb),
- 'credit',coalesce((select sum(cash+transfer-refund_cash) from public.win_ops_records where teacher_id=p_teacher and type='RENDICION' and status='ACTIVE'),0)
+ 'credit',coalesce((select sum(l.amount_signed) from public.win_ops_ledger l join public.win_ops_records pay on l.reference_type='OPERATION' and l.reference_id=pay.id::text where pay.teacher_id=p_teacher and pay.type='RENDICION' and pay.status='ACTIVE'),0)
   -coalesce((select sum(a.amount) from public.win_ops_allocations a join public.win_ops_records o on o.id=a.settlement_id where a.teacher_id=p_teacher and o.status='ACTIVE'),0),
- 'balance',coalesce((select sum(due) from debts),0)-coalesce((select sum(cash+transfer-refund_cash) from public.win_ops_records where teacher_id=p_teacher and type='RENDICION' and status='ACTIVE'),0))
+ 'balance',coalesce((select sum(due) from debts),0)-coalesce((select sum(l.amount_signed) from public.win_ops_ledger l join public.win_ops_records pay on l.reference_type='OPERATION' and l.reference_id=pay.id::text where pay.teacher_id=p_teacher and pay.type='RENDICION' and pay.status='ACTIVE'),0))
 $$;
 
 create or replace function public.win_ops_save(p_token text,p jsonb) returns jsonb language plpgsql set search_path='' as $$

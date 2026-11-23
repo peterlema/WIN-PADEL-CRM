@@ -58,9 +58,11 @@ Deno.serve(async req=>{
     else if(action==="admin.control"){name="win_admin_cash_control";params.p_start=data.start;params.p_end=data.end;}
     else if(action==="reception.overview") name="win_reception_overview";
     else if(action==="config.list") name="win_config_list";
+    else if(action==="settings.get") name="win_settings_get";
+    else if(action==="config.setting.set"){name="win_config_setting_set";Object.assign(params,{p_key:data.key,p_value:data.value});}
     else if(action==="config.item.save"){
       name="win_config_item_save";
-      Object.assign(params,{p_id:data.id||null,p_unit:data.unit,p_name:data.name,p_category:data.category||"",p_price:data.price,p_active:data.active!==false});
+      Object.assign(params,{p_id:data.id||null,p_unit:data.unit,p_name:data.name,p_category:data.category||"",p_price:data.price,p_active:data.active!==false,p_variant:data.variant||""});
     } else if(action==="config.coach.save"){
       name="win_config_coach_save";
       Object.assign(params,{p_id:data.id||null,p_name:data.name,p_win_pct:data.winPct,p_active:data.active!==false});
@@ -81,7 +83,7 @@ Deno.serve(async req=>{
       Object.assign(params,{p_request_id:data.requestId,p_items:data.items,p_destination:data.destination,
         p_customer_id:data.customerId||null,p_booking_id:data.bookingId||null,p_court:data.court||null,
         p_court_date:data.courtDate||null,p_court_start:data.courtStart||null,p_note:data.note||"",
-        p_method:data.method||null});
+        p_method:data.method||null,p_client_unknown:data.clientUnknown===true});
     }
     else if(action==="bar.order.pay"){
       name="win_bar_order_pay";

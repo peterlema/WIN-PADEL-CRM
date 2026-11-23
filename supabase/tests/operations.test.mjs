@@ -127,5 +127,19 @@ console.log('OK cortesía remunerada, compensación, devolución real e historia
 assert.equal((await one("select has_function_privilege('anon','public.win_ops_api(text,text,jsonb)','EXECUTE') allowed")).allowed,false)
 assert.equal((await one("select has_table_privilege('authenticated','public.win_ops_records','SELECT') allowed")).allowed,false)
 console.log('OK reportes, disponibilidad real, historial, RLS y permisos')
+
+const approved1=await control('two','correction',{id:mv.id,amount:59000,method:'CASH',note:'Importe revisado con documento original'});
+await control('admin','decide',{id:approved1.id,approve:true,note:'Importe confirmado por Administración'});
+assert.equal(Number((await one('select win_net from public.win_ops_records where id=$1',[court.id])).win_net),59000);
+const approved2=await control('two','correction',{id:mv.id,amount:58000,method:'TRANSFER',note:'Verificación de medio y monto definitivos'});
+await control('admin','decide',{id:approved2.id,approve:true,note:'Comprobante bancario confirmado'});
+assert.equal(Number((await one('select amount_signed from public.win_ops_ledger where id=$1',[mv.id])).amount_signed),58000);
+assert.equal((await one('select count(*)::int n from public.win_ops_ledger where id=$1',[mv.id])).n,1);
+assert.equal(Number((await one('select transfer from public.win_ops_records where id=$1',[court.id])).transfer),58000);
+const proposed=await control('two','correction',{id:mv.id,amount:57000,method:'CASH',note:'Nueva propuesta pendiente de validación'});
+assert.equal(Number((await api('one','day',{date:day})).provisional),-58000);
+await control('admin','decide',{id:proposed.id,approve:false,note:'No corresponde esta nueva modificación'});
+assert.equal(Number((await one('select amount_signed from public.win_ops_ledger where id=$1',[mv.id])).amount_signed),58000);
+console.log('OK aprobación sucesiva, efecto provisional y rechazo sin duplicar dinero');
 await db.close()
 console.log('PASS operaciones y conciliación integral')

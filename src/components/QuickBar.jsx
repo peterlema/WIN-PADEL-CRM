@@ -33,6 +33,8 @@ export default function QuickBar({soloVenta=false}){
  const [court,setCourt]=useState('C1')
  const [courtStart,setCourtStart]=useState('')
  const [note,setNote]=useState('')
+ // Cobrar ahora: de qué cancha y horario era el cliente ('COURT') o 'UNKNOWN' (No conozco cliente). Obligatorio elegir.
+ const [cliente,setCliente]=useState('')
  const [paymentOrder,setPaymentOrder]=useState(null)
  const [paymentAmount,setPaymentAmount]=useState('')
  const [paymentMethod,setPaymentMethod]=useState('CASH')
@@ -70,6 +72,7 @@ export default function QuickBar({soloVenta=false}){
  const selected=bookings.find(b=>b.id===bookingId)
  const selectedCourt=selected?.court||court
  const selectedStart=selected?.start||courtStart
+ const conCancha=destination==='COURT'||(destination==='IMMEDIATE'&&cliente==='COURT')
  const cannotSubmit=items.some(x=>x.salePrice==null||Number(x.salePrice)<=0)
  const groupedPending=pending.filter(p=>p.balance>0).sort((a,b)=>new Date(b.date)-new Date(a.date))
  const pendingSum=groupedPending.reduce((x,o)=>x+Number(o.balance),0)
@@ -102,20 +105,22 @@ export default function QuickBar({soloVenta=false}){
   if(!items.length){setError('Seleccioná al menos un producto.');return}
   if(cannotSubmit){setError('Hay productos sin precio de venta.');return}
   if(destination==='ACCOUNT'&&!accountId){setError('Elegí o agregá una persona.');return}
-  if(destination==='COURT'&&(!selectedCourt||!selectedStart)){setError('Seleccioná una reserva o indicá cancha y horario.');return}
+  if(destination==='IMMEDIATE'&&!cliente){setError('Indicá la cancha y el horario del cliente, o elegí No conozco cliente.');return}
+  if(conCancha&&(!selectedCourt||!selectedStart)){setError('Seleccioná una reserva o indicá cancha y horario.');return}
   if(!window.confirm(destination==='IMMEDIATE'?'¿Confirmar cobro de '+MONEY(total)+'?':'¿Registrar consumo pendiente por '+MONEY(total)+'?'))return
   setBusy(true);setError('');setNotice('')
   try {
    const r=await callApi('bar.order.place',{
     requestId:requestId.current,items:items.map(p=>({id:p.id,quantity:p.quantity})),
     destination,customerId:destination==='ACCOUNT'?accountId:null,
-    bookingId:destination==='COURT'&&selected?.id?selected.id:null,
-    court:destination==='COURT'?selectedCourt:null,
-    courtDate:destination==='COURT'?day:null,
-    courtStart:destination==='COURT'?selectedStart:null,
+    bookingId:conCancha&&selected?.id?selected.id:null,
+    court:conCancha?selectedCourt:null,
+    courtDate:conCancha?day:null,
+    courtStart:conCancha?selectedStart:null,
+    clientUnknown:destination==='IMMEDIATE'&&cliente==='UNKNOWN',
     method:destination==='IMMEDIATE'?method:null,note:note.trim()
    })
-   setCart({});setNote('');requestId.current=crypto.randomUUID()
+   setCart({});setNote('');setCliente('');setBookingId('');setCourtStart('');requestId.current=crypto.randomUUID()
    setNotice(destination==='IMMEDIATE'?'Cobro registrado: '+MONEY(r.total):'Consumo pendiente registrado: '+MONEY(r.total))
    await reload()
   }catch(e){setUncertain(true);setError((e.message||'No se pudo confirmar.')+' Consultá los pendientes y la caja antes de intentar otra vez.')}
@@ -170,19 +175,23 @@ export default function QuickBar({soloVenta=false}){
      {[['IMMEDIATE','Cobrar ahora'],['COURT','Pendiente de cancha'],['ACCOUNT','Cuenta corriente']].map(([id,label])=><button type="button" key={id} aria-pressed={destination===id} onClick={()=>setDestination(id)}>{label}</button>)}
     </fieldset>
     {destination==='IMMEDIATE'&&<fieldset className="win-bar-methods"><legend>Medio de pago</legend>{payMethods.map(([v,label])=><button key={v} type="button" className={method===v?'selected':''} onClick={()=>setMethod(v)}>{label}</button>)}</fieldset>}
+    {destination==='IMMEDIATE'&&<fieldset className="bar-pos-choice bar-pos-cliente"><legend>¿De qué cancha era?</legend>
+     <button type="button" aria-pressed={cliente==='COURT'} onClick={()=>setCliente('COURT')}>Cancha y horario</button>
+     <button type="button" aria-pressed={cliente==='UNKNOWN'} onClick={()=>{setCliente('UNKNOWN');setBookingId('')}}>No conozco cliente</button>
+    </fieldset>}
     {destination==='ACCOUNT'&&<div className="bar-pos-inline">
       <label>Persona / socio<select value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="">Elegir una persona</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
       <button type="button" className="secundario" onClick={()=>setShowNew(s=>!s)}>+ Nueva persona</button>
       {showNew&&<div className="bar-pos-inline-form"><label>Nombre de la persona<input value={newName} maxLength={120} onChange={e=>setNewName(e.target.value)}/></label><button type="button" disabled={busy||newName.trim().length<2} onClick={addCustomer}>Crear cuenta</button></div>}
     </div>}
-    {destination==='COURT'&&<div className="bar-pos-inline">
+    {conCancha&&<div className="bar-pos-inline">
      <label>Fecha del turno<input type="date" value={day} onChange={e=>{setDay(e.target.value);setBookingId('')}}/></label>
      <label>Reserva del calendario<select value={bookingId} onChange={e=>setBookingId(e.target.value)}><option value="">Asignar manualmente si no figura</option>{bookings.map(b=><option key={b.id} value={b.id}>{b.court} · {b.start} · {b.holder} ({b.kind})</option>)}</select></label>
      {!bookingId&&<div className="bar-pos-court-manual"><label>Cancha<select value={court} onChange={e=>setCourt(e.target.value)}>{courts.map(x=><option key={x}>{x}</option>)}</select></label><label>Inicio del turno<input type="time" value={courtStart} onChange={e=>setCourtStart(e.target.value)} required/></label></div>}
-     <p className="win-bar-muted">{selected?'Vinculado a la reserva '+selected.holder+'. Se mostrará como pendiente hasta cobrarlo.':'Si no aparece una reserva, registrá cancha y horario para localizar el consumo después.'}</p>
+     <p className="win-bar-muted">{destination==='IMMEDIATE'?(selected?'Se cobra ahora y queda asociado a '+selected.holder+'.':'Se cobra ahora y queda asociado a esa cancha y horario.'):selected?'Vinculado a la reserva '+selected.holder+'. Se mostrará como pendiente hasta cobrarlo.':'Si no aparece una reserva, registrá cancha y horario para localizar el consumo después.'}</p>
     </div>}
     <label>Observación (opcional)<input value={note} maxLength={400} onChange={e=>setNote(e.target.value)} placeholder="Ej. Llevó a la cancha; cobra Recepción" /></label>
-    <button type="submit" disabled={!shift||!items.length||cannotSubmit||busy||uncertain}>{busy?'Guardando…':destination==='IMMEDIATE'?'Cobrar '+MONEY(total):'Guardar pendiente '+MONEY(total)}</button>
+    <button type="submit" disabled={!shift||!items.length||cannotSubmit||busy||uncertain||(destination==='IMMEDIATE'&&!cliente)}>{busy?'Guardando…':destination==='IMMEDIATE'?'Cobrar '+MONEY(total):'Guardar pendiente '+MONEY(total)}</button>
     {!shift&&<p className="win-bar-warning">Para registrar entregas o cobros debe haber una caja abierta por Recepción.</p>}
    </form>
   </section>

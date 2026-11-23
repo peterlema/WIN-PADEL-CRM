@@ -62,7 +62,7 @@ begin
  end if;
  return jsonb_build_object('shift',case when sh.id is null then null else to_jsonb(sh)||jsonb_build_object('responsible',(select display_name from win_auth.login_accounts where id=sh.opened_by)) end,
   'totals',stats,'classesByTeacher',teachers,'notices',notices,'lastClosed',lastclosed,'pendingDays',days,
-  'settlementPending',(select count(*) from public.win_coaches c where (public.win_ops_balance(c.id)->>'balance')::numeric<>0));
+  'settlementPending',(select count(*) from public.win_coaches c where (public.win_ops_balance(c.id)->>'balance')::numeric>0));
 end $$;
 
 create or replace function public.win_ops_control(p_token text,p jsonb) returns jsonb language plpgsql set search_path='' as $$
@@ -107,8 +107,8 @@ begin
   if not exists(select 1 from public.win_cash_shifts where business_date=dt) then raise exception 'PERIOD_INVALID';end if;
   select coalesce(sum(amount_signed),0) into tx from public.win_ops_ledger where business_date=dt and payment_method='TRANSFER';
   -- Ajustes provisionales afectan la conciliación, nunca la presentación definitiva de Finanzas.
-  tx=tx+coalesce((select sum(case when c.proposed_method='TRANSFER' then c.proposed_amount else 0 end-case when cmov.payment_method='TRANSFER' then cmov.amount_signed else 0 end) from public.win_ops_corrections c join public.win_cash_movements cmov on cmov.id=c.movement_id join public.win_cash_shifts s on s.id=cmov.shift_id where c.status='PENDING' and s.business_date=dt),0);
-  ns=case when tr<>tx then 'EXCEPTION' when exists(select 1 from public.win_ops_corrections c join public.win_cash_movements cmov on cmov.id=c.movement_id join public.win_cash_shifts s on s.id=cmov.shift_id where c.status='PENDING' and s.business_date=dt) then 'PROVISIONAL' else 'CONFIRMED' end;
+  tx=tx+coalesce((select sum(case when c.proposed_method='TRANSFER' then c.proposed_amount else 0 end-case when cmov.payment_method='TRANSFER' then cmov.amount_signed else 0 end) from public.win_ops_corrections c join public.win_ops_ledger cmov on cmov.id=c.movement_id join public.win_cash_shifts s on s.id=cmov.shift_id where c.status='PENDING' and s.business_date=dt),0);
+  ns=case when tr<>tx then 'EXCEPTION' when exists(select 1 from public.win_ops_corrections c join public.win_ops_ledger cmov on cmov.id=c.movement_id join public.win_cash_shifts s on s.id=cmov.shift_id where c.status='PENDING' and s.business_date=dt) then 'PROVISIONAL' else 'CONFIRMED' end;
   if tr<>tx and (length(reason)<5 or length(checks_)<5 or not notified) then raise exception 'CLOSE_EXCEPTION_REQUIRED';end if;
   insert into public.win_ops_day_controls values(dt,tr,cnt,tx,a,now(),reason,checks_,notified,ns)
   on conflict(business_date) do update set transfer_counted=excluded.transfer_counted,receipt_count=excluded.receipt_count,expected_transfer=excluded.expected_transfer,actor_id=excluded.actor_id,updated_at=excluded.updated_at,note=excluded.note,checks=excluded.checks,admin_notified=excluded.admin_notified,status=excluded.status;
@@ -179,6 +179,7 @@ begin
   cash=(p->>'amount')::numeric;
   if cash is null or abs(cash)>1000000000 or cash<>round(cash,2) or (m.amount_signed<0 and cash>0) or (m.amount_signed>0 and cash<0) then raise exception 'AMOUNT_INVALID';end if;
   if sh.status<>'CLOSED' then raise exception 'CLOSED_CORRECTION_REQUIRED';end if;
+  if m.kind in ('EXPENSE','WITHDRAWAL','REFUND') and m.reference_type='OPERATION' and p->>'method'<>'CASH' then raise exception 'METHOD_INVALID';end if;
   insert into public.win_ops_corrections(request_id,movement_id,actor_id,proposed_amount,proposed_method,reason) values(req,m.id,a,cash,p->>'method',reason) returning id into new_id;
   update public.win_ops_day_controls set status='PROVISIONAL' where business_date=sh.business_date;
   result=jsonb_build_object('id',new_id,'saved',true);
@@ -188,7 +189,26 @@ begin
   if not found or correction.status<>'PENDING' then raise exception 'CORRECTION_NOT_PENDING';end if;
   if length(reason)<5 then raise exception 'EXCEPTION_REASON_REQUIRED';end if;
   ns=case when coalesce((p->>'approve')::boolean,false) then 'APPROVED' else 'REJECTED' end;
-  update public.win_ops_corrections set status=ns,decided_by=a,decided_at=now(),decision_note=reason where id=correction.id;
+  update public.win_ops_corrections set status=ns,decided_by=a,decided_at=clock_timestamp(),decision_note=reason where id=correction.id;
+  if ns='APPROVED' then
+   select * into m from public.win_cash_movements where id=correction.movement_id;
+   if m.reference_type='OPERATION' then
+    insert into public.win_cash_audit(actor_id,action,entity_type,entity_id,detail) select a,'BEFORE_CORRECTION','OPERATION',id::text,to_jsonb(o) from public.win_ops_records o where id::text=m.reference_id;
+    update public.win_ops_records o set
+     cash=coalesce((select sum(case when o.type in ('GASTO','RETIRO') then -l.amount_signed else greatest(l.amount_signed,0) end) from public.win_ops_ledger l where l.reference_type='OPERATION' and l.reference_id=o.id::text and l.payment_method='CASH'),0),
+     transfer=coalesce((select sum(l.amount_signed) from public.win_ops_ledger l where l.reference_type='OPERATION' and l.reference_id=o.id::text and l.payment_method='TRANSFER'),0),
+     refund_cash=case when o.type='RENDICION' then coalesce((select sum(-least(l.amount_signed,0)) from public.win_ops_ledger l where l.reference_type='OPERATION' and l.reference_id=o.id::text and l.payment_method='CASH'),0) else 0 end,
+     win_net=case when o.type in ('RESERVA','EVENTO') then coalesce((select sum(l.amount_signed) from public.win_ops_ledger l where l.reference_type='OPERATION' and l.reference_id=o.id::text),0) else o.win_net end,
+     updated_at=now()
+    where o.id::text=m.reference_id;
+   elsif m.reference_type='COURT_PAYMENT' then
+    update public.win_ops_records o set win_net=
+     coalesce((select sum(coalesce((select l.amount_signed from public.win_ops_ledger l where l.reference_type='COURT_PAYMENT' and l.reference_id=cp.id::text limit 1),cp.amount)) from public.win_court_payments cp where cp.booking_id=o.booking_id),0)
+     +coalesce((select sum(l.amount_signed) from public.win_ops_ledger l where l.reference_type='OPERATION' and l.reference_id=o.id::text),0),
+     updated_at=now()
+    where o.type='RESERVA' and o.booking_id=(select cp.booking_id from public.win_court_payments cp where cp.id::text=m.reference_id);
+   end if;
+  end if;
   update public.win_ops_day_controls set status='REVIEW' where business_date=(select s.business_date from public.win_cash_movements cmov join public.win_cash_shifts s on s.id=cmov.shift_id where cmov.id=correction.movement_id);
   result=jsonb_build_object('saved',true,'status',ns);
  else raise exception 'ACTION_INVALID';end if;
@@ -203,7 +223,7 @@ begin
  select jsonb_build_object('date',dt,'transferExpected',coalesce(sum(amount_signed) filter(where payment_method='TRANSFER'),0),
   'shifts',coalesce((select jsonb_agg(jsonb_build_object('id',s.id,'owner',u.display_name,'status',s.status,'transferCounted',s.transfer_counted,'receiptCount',s.receipt_count,'expected',(select coalesce(sum(amount_signed),0) from public.win_ops_ledger l where l.shift_id=s.id and l.payment_method='TRANSFER'))) from public.win_cash_shifts s join win_auth.login_accounts u on u.id=s.opened_by where s.business_date=dt),'[]'),
   'control',(select to_jsonb(d) from public.win_ops_day_controls d where d.business_date=dt),
-  'provisional',coalesce((select sum(case when c.proposed_method='TRANSFER' then c.proposed_amount else 0 end-case when cmov.payment_method='TRANSFER' then cmov.amount_signed else 0 end) from public.win_ops_corrections c join public.win_cash_movements cmov on cmov.id=c.movement_id join public.win_cash_shifts s on s.id=cmov.shift_id where c.status='PENDING' and s.business_date=dt),0)) into data
+  'provisional',coalesce((select sum(case when c.proposed_method='TRANSFER' then c.proposed_amount else 0 end-case when cmov.payment_method='TRANSFER' then cmov.amount_signed else 0 end) from public.win_ops_corrections c join public.win_ops_ledger cmov on cmov.id=c.movement_id join public.win_cash_shifts s on s.id=cmov.shift_id where c.status='PENDING' and s.business_date=dt),0)) into data
  from public.win_ops_ledger where business_date=dt;
  return data;
 end $$;
