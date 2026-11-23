@@ -19,7 +19,7 @@ begin
    coalesce(c.name,'') teacher,a.display_name author,owner.display_name responsible,o.shift_id,sh.status shift_status,o.actor_id,
    o.updated_at is not null modified,o.review_note,
    case when o.type in ('GASTO','RETIRO') then -o.cash else o.cash+o.transfer-o.refund_cash end amount,
-   (select coalesce(jsonb_agg(jsonb_build_object('id',m.id,'amount',m.amount_signed,'method',m.payment_method)), '[]') from public.win_cash_movements m where m.reference_type='OPERATION' and m.reference_id=o.id::text and m.reversal_of is null) payments
+   (select coalesce(jsonb_agg(jsonb_build_object('id',cmov.id,'amount',cmov.amount_signed,'method',cmov.payment_method)), '[]') from public.win_cash_movements cmov where cmov.reference_type='OPERATION' and cmov.reference_id=o.id::text and cmov.reversal_of is null) payments
   from public.win_ops_records o join public.win_cash_shifts sh on sh.id=o.shift_id join win_auth.login_accounts a on a.id=o.actor_id join win_auth.login_accounts owner on owner.id=sh.opened_by left join public.win_coaches c on c.id=o.teacher_id
   where (o.created_at at time zone 'America/Argentina/Buenos_Aires')::date between start_day and end_day
   union all
@@ -27,7 +27,7 @@ begin
    case when m.payment_method='CASH' then m.amount_signed else 0 end,
    case when m.payment_method='TRANSFER' then m.amount_signed else 0 end,0,null,null,null,'{}',null,'',a.display_name,owner.display_name,m.shift_id,sh.status,m.recorded_by,false,'',m.amount_signed,
    jsonb_build_array(jsonb_build_object('id',m.id,'amount',m.amount_signed,'method',m.payment_method))
-  from public.win_cash_movements m join public.win_cash_shifts sh on sh.id=m.shift_id join win_auth.login_accounts a on a.id=m.recorded_by join win_auth.login_accounts owner on owner.id=sh.opened_by
+  from public.win_cash_movements cmov join public.win_cash_shifts sh on sh.id=cmov.shift_id join win_auth.login_accounts a on a.id=cmov.recorded_by join win_auth.login_accounts owner on owner.id=sh.opened_by
   where m.reference_type is distinct from 'OPERATION' and m.reversal_of is null and (m.occurred_at at time zone 'America/Argentina/Buenos_Aires')::date between start_day and end_day
  ), filtered as (
  select * from rows where (coalesce(p->>'type','ALL')='ALL' or type=p->>'type')
@@ -69,7 +69,7 @@ declare a uuid; role_ text; action_ text; req uuid; old public.win_ops_requests;
  dt date; cash numeric; tr numeric; cnt int; expected numeric; tx numeric; reason text; checks_ text; notified boolean; result jsonb; new_id uuid; ns text; item record; correction public.win_ops_corrections;
 begin
  a=public.win_ops_actor(p_token);select s.role into role_ from public.win_pin_session(p_token)s;
- action_=p->>'action';req=(p->>'requestId')::uuid;
+ action_=coalesce(p->>'operation',p->>'action');req=(p->>'requestId')::uuid;
  if req is null then raise exception 'REQUEST_REQUIRED';end if;
  perform pg_catalog.pg_advisory_xact_lock(438011,2);
  select * into old from public.win_ops_requests where request_id=req;
@@ -105,8 +105,8 @@ begin
   if not exists(select 1 from public.win_cash_shifts where business_date=dt) then raise exception 'PERIOD_INVALID';end if;
   select coalesce(sum(amount_signed),0) into tx from public.win_ops_ledger where business_date=dt and payment_method='TRANSFER';
   -- Ajustes provisionales afectan la conciliación, nunca la presentación definitiva de Finanzas.
-  tx=tx+coalesce((select sum(case when c.proposed_method='TRANSFER' then c.proposed_amount else 0 end-case when m.payment_method='TRANSFER' then m.amount_signed else 0 end) from public.win_ops_corrections c join public.win_cash_movements m on m.id=c.movement_id join public.win_cash_shifts s on s.id=m.shift_id where c.status='PENDING' and s.business_date=dt),0);
-  ns=case when tr<>tx then 'EXCEPTION' when exists(select 1 from public.win_ops_corrections c join public.win_cash_movements m on m.id=c.movement_id join public.win_cash_shifts s on s.id=m.shift_id where c.status='PENDING' and s.business_date=dt) then 'PROVISIONAL' else 'CONFIRMED' end;
+  tx=tx+coalesce((select sum(case when c.proposed_method='TRANSFER' then c.proposed_amount else 0 end-case when cmov.payment_method='TRANSFER' then cmov.amount_signed else 0 end) from public.win_ops_corrections c join public.win_cash_movements cmov on cmov.id=c.movement_id join public.win_cash_shifts s on s.id=cmov.shift_id where c.status='PENDING' and s.business_date=dt),0);
+  ns=case when tr<>tx then 'EXCEPTION' when exists(select 1 from public.win_ops_corrections c join public.win_cash_movements cmov on cmov.id=c.movement_id join public.win_cash_shifts s on s.id=cmov.shift_id where c.status='PENDING' and s.business_date=dt) then 'PROVISIONAL' else 'CONFIRMED' end;
   if tr<>tx and (length(reason)<5 or length(checks_)<5 or not notified) then raise exception 'CLOSE_EXCEPTION_REQUIRED';end if;
   insert into public.win_ops_day_controls values(dt,tr,cnt,tx,a,now(),reason,checks_,notified,ns)
   on conflict(business_date) do update set transfer_counted=excluded.transfer_counted,receipt_count=excluded.receipt_count,expected_transfer=excluded.expected_transfer,actor_id=excluded.actor_id,updated_at=excluded.updated_at,note=excluded.note,checks=excluded.checks,admin_notified=excluded.admin_notified,status=excluded.status;
@@ -131,15 +131,34 @@ begin
   if not found then raise exception 'OPERATION_NOT_FOUND';end if;
   update public.win_ops_notices set resolved_by=a,resolved_at=now(),resolution=reason where source_type='OPERATION' and source_id=p->>'id';
   result=jsonb_build_object('saved',true);
+ elsif action_='incident' then
+  if role_<>'ADMIN' then raise exception 'NOT_AUTHORIZED';end if;
+  if length(reason)<5 then raise exception 'EXCEPTION_REASON_REQUIRED';end if;
+  update public.win_ops_notices set resolved_at=now(),resolved_by=a,resolution=reason where id=(p->>'id')::uuid and source_type in ('HANDOVER','CLOSURE');
+  if not found then raise exception 'OPERATION_NOT_FOUND';end if;
+  result=jsonb_build_object('saved',true);
+ elsif action_='voidMovement' then
+  select * into m from public.win_cash_movements where id=(p->>'id')::uuid for update;
+  if not found or m.reference_type in ('OPERATION','BAR_ORDER','COURT_PAYMENT') or m.reversal_of is not null or exists(select 1 from public.win_cash_movements where reversal_of=m.id) then raise exception 'EDIT_AT_ORIGIN';end if;
+  select * into sh from public.win_cash_shifts where id=m.shift_id for update;
+  if sh.status<>'OPEN' then raise exception 'CLOSED_CORRECTION_REQUIRED';end if;
+  if role_<>'ADMIN' and a<>m.recorded_by and a<>sh.opened_by then raise exception 'NOT_AUTHORIZED';end if;
+  if length(reason)<5 then raise exception 'EXCEPTION_REASON_REQUIRED';end if;
+  insert into public.win_cash_movements(request_id,shift_id,recorded_by,kind,business_unit,payment_method,amount_signed,note,reversal_of)
+   values(gen_random_uuid(),sh.id,a,'ADJUSTMENT',m.business_unit,m.payment_method,-m.amount_signed,reason,m.id);
+  if sh.opening_cash+coalesce((select sum(amount_signed) from public.win_cash_movements where shift_id=sh.id and payment_method='CASH'),0)<0 then raise exception 'INSUFFICIENT_CASH';end if;
+  result=jsonb_build_object('saved',true);
  elsif action_='void' then
   if length(reason)<5 then raise exception 'EXCEPTION_REASON_REQUIRED';end if;
   select s.* into sh from public.win_ops_records o join public.win_cash_shifts s on s.id=o.shift_id where o.id=(p->>'id')::uuid for update of s;
-  if not found or sh.status<>'OPEN' then raise exception 'CLOSED_CORRECTION_REQUIRED';end if;
+  if not found then raise exception 'OPERATION_NOT_FOUND';end if;
+  if sh.status<>'OPEN' and not exists(select 1 from public.win_ops_records where id=(p->>'id')::uuid and type='CLASE') then raise exception 'CLOSED_CORRECTION_REQUIRED';end if;
   if role_<>'ADMIN' and sh.opened_by<>a and not exists(select 1 from public.win_ops_records where id=(p->>'id')::uuid and actor_id=a) then raise exception 'NOT_AUTHORIZED';end if;
   if exists(select 1 from public.win_ops_records where id=(p->>'id')::uuid and type='RENDICION') then
    -- Su anulación devuelve crédito; no permitir consumir un crédito ya aplicado en otro registro.
    if exists(select 1 from public.win_ops_records r where r.id=(p->>'id')::uuid and (public.win_ops_balance(r.teacher_id)->>'credit')::numeric < r.cash+r.transfer-r.refund_cash-coalesce((select sum(amount) from public.win_ops_allocations where settlement_id=r.id),0)) then raise exception 'CREDIT_ALREADY_USED';end if;
   end if;
+  insert into public.win_cash_audit(actor_id,action,entity_type,entity_id,detail) select a,'BEFORE_VOID','OPERATION',id::text,to_jsonb(o) from public.win_ops_records o where id=(p->>'id')::uuid;
   update public.win_ops_records set status='VOID',updated_at=now() where id=(p->>'id')::uuid and status='ACTIVE';
   if not found then raise exception 'OPERATION_NOT_FOUND';end if;
   update public.win_ops_resources set active=false where operation_id=(p->>'id')::uuid;
@@ -168,7 +187,7 @@ begin
   if length(reason)<5 then raise exception 'EXCEPTION_REASON_REQUIRED';end if;
   ns=case when coalesce((p->>'approve')::boolean,false) then 'APPROVED' else 'REJECTED' end;
   update public.win_ops_corrections set status=ns,decided_by=a,decided_at=now(),decision_note=reason where id=correction.id;
-  update public.win_ops_day_controls set status='REVIEW' where business_date=(select s.business_date from public.win_cash_movements m join public.win_cash_shifts s on s.id=m.shift_id where m.id=correction.movement_id);
+  update public.win_ops_day_controls set status='REVIEW' where business_date=(select s.business_date from public.win_cash_movements cmov join public.win_cash_shifts s on s.id=cmov.shift_id where cmov.id=correction.movement_id);
   result=jsonb_build_object('saved',true,'status',ns);
  else raise exception 'ACTION_INVALID';end if;
  insert into public.win_cash_audit(actor_id,action,entity_type,entity_id,detail) values(a,'OPS_'||upper(action_),'OPERATION',coalesce(result->>'id',p->>'id',req::text),p-'requestId');
@@ -182,7 +201,7 @@ begin
  select jsonb_build_object('date',dt,'transferExpected',coalesce(sum(amount_signed) filter(where payment_method='TRANSFER'),0),
   'shifts',coalesce((select jsonb_agg(jsonb_build_object('id',s.id,'owner',u.display_name,'status',s.status,'transferCounted',s.transfer_counted,'receiptCount',s.receipt_count,'expected',(select coalesce(sum(amount_signed),0) from public.win_ops_ledger l where l.shift_id=s.id and l.payment_method='TRANSFER'))) from public.win_cash_shifts s join win_auth.login_accounts u on u.id=s.opened_by where s.business_date=dt),'[]'),
   'control',(select to_jsonb(d) from public.win_ops_day_controls d where d.business_date=dt),
-  'provisional',coalesce((select sum(case when c.proposed_method='TRANSFER' then c.proposed_amount else 0 end-case when m.payment_method='TRANSFER' then m.amount_signed else 0 end) from public.win_ops_corrections c join public.win_cash_movements m on m.id=c.movement_id join public.win_cash_shifts s on s.id=m.shift_id where c.status='PENDING' and s.business_date=dt),0)) into data
+  'provisional',coalesce((select sum(case when c.proposed_method='TRANSFER' then c.proposed_amount else 0 end-case when cmov.payment_method='TRANSFER' then cmov.amount_signed else 0 end) from public.win_ops_corrections c join public.win_cash_movements cmov on cmov.id=c.movement_id join public.win_cash_shifts s on s.id=cmov.shift_id where c.status='PENDING' and s.business_date=dt),0)) into data
  from public.win_ops_ledger where business_date=dt;
  return data;
 end $$;

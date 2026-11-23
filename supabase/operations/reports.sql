@@ -75,6 +75,19 @@ begin
  when 'context' then return public.win_ops_context(p_token,coalesce((p_data->>'date')::date,public.win_config_today_()));
  when 'history' then return public.win_ops_history(p_token,p_data);
  when 'balance' then return public.win_ops_balance((p_data->>'teacherId')::uuid);
+ when 'status' then
+  select jsonb_build_object('found',true,'result',x.result) into result from public.win_ops_requests x where x.request_id=(p_data->>'requestId')::uuid and x.actor_id=a;
+  return coalesce(result,jsonb_build_object('found',false));
+ when 'detail' then
+  return jsonb_build_object('events',coalesce((select jsonb_agg(to_jsonb(x)) from(select au.id,au.occurred_at,au.action,au.detail,u.display_name author from public.win_cash_audit au left join win_auth.login_accounts u on u.id=au.actor_id where au.entity_id=split_part(p_data->>'id',':',2) order by au.occurred_at desc limit 100)x),'[]'));
+ when 'quote' then
+  select role into r from public.win_pin_session(p_token);
+  select jsonb_build_object('gross',pr.amount_cash,'winPct',rate.win_pct,'winNet',round(pr.amount_cash*rate.win_pct/100,2),'teacherPay',pr.amount_cash-round(pr.amount_cash*rate.win_pct/100,2)) into result
+  from public.win_coaches c
+  join lateral(select win_pct from public.win_ops_coach_rates x where teacher_id=c.id and valid_from<=(p_data->>'date')::date order by valid_from desc limit 1)rate on true
+  join lateral(select amount_cash from public.win_price_list where code='CLASS_'||(p_data->>'participants') and duration_min=(p_data->>'duration')::int and valid_from<=(p_data->>'date')::date order by valid_from desc limit 1)pr on true
+  where c.id=(p_data->>'teacherId')::uuid and c.active;
+  return coalesce(result,jsonb_build_object('error','No hay tarifa o porcentaje configurado para esa fecha y duración. Usá Excepción con importes reales y motivo.'));
  when 'save' then return public.win_ops_save(p_token,p_data);
  when 'control' then return public.win_ops_control(p_token,p_data);
  when 'day' then return public.win_ops_day(p_token,(p_data->>'date')::date);
