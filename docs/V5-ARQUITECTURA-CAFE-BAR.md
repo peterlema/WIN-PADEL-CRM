@@ -1,6 +1,13 @@
 # WIN Gestión V5 — arquitectura de caja + Café/Bar
 
-**Estado:** propuesta técnica en desarrollo, NO desplegada. **Base:** copia recibida de Code.gs, Index.html y ReportesActividad.gs, conservada en rama `backup/win-gestion-desarrollo-2026-11-23`.
+**Estado:** propuesta técnica en desarrollo, NO desplegada. **Decisión 23/11/2026:** no utilizar Supabase para WIN Gestión V5; mantener Google Apps Script + Google Sheets como ejecución y almacenamiento, con GitHub como repositorio del código. **Base:** copia recibida de Code.gs, Index.html y ReportesActividad.gs, conservada en rama `backup/win-gestion-desarrollo-2026-11-23`.
+
+## Plataforma elegida
+- **Código fuente:** GitHub, repositorio `peterlema/WIN-PADEL-CRM`, rama de trabajo `desarrollo/v5-cafe-bar`.
+- **Aplicación en ejecución:** Google Apps Script (`.gs` + `Index.html`).
+- **Almacenamiento operativo:** Google Sheets, con nuevas hojas de datos por módulo tras validar la copia de desarrollo.
+- **Seguridad:** autenticación y autorización del lado de Apps Script; secretos, PIN y referencias privadas en Script Properties, nunca en GitHub.
+- **Supabase:** descartado y eliminado el esquema experimental; no hay conexión ni dependencia prevista.
 
 ## Objetivo
 Conservar el funcionamiento de recepción de canchas, clases, rendiciones, eventos y tienda; incorporar venta gastronómica, compras, stock, costos y reportes separados por unidad de negocio, pero conciliados en una sola caja.
