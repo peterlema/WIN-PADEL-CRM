@@ -133,3 +133,6 @@ dialog.modal .cal-check input { width: auto; min-width: 0; min-height: 0; margin
 .bar-calendar-pay label{display:grid;gap:5px;font-size:12px}
 .bar-calendar-pay button{font-size:12px}
 @media(max-width:600px){.bar-calendar-item{grid-template-columns:1fr auto}.bar-calendar-item button{grid-column:2}.bar-calendar-pay{grid-template-columns:1fr}}
+
+
+.bar-calendar-badge{display:inline-block;align-self:flex-start;background:#fff1f4;border:1px solid #e3a4b5;border-radius:7px;color:#922a48!important;padding:3px 6px;font-size:11px!important;font-weight:700;white-space:nowrap;margin-top:4px}
