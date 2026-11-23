@@ -1,0 +1,73 @@
+/* WIN Recepción V5: faithful hierarchy to the legacy operations screen.
+   This is the real Supabase page; src/pages/Recepcion.jsx remains sandbox demo only. */
+.win-reception {max-width: 1000px; margin: 0 auto; padding: 10px 22px 70px; display: grid; gap: 15px;}
+.win-rec-panel {background: #fff; border:1px solid #e2e5ee; border-radius:17px; padding:23px; box-shadow:0 4px 18px rgba(35,35,68,.035);}
+.win-rec-panel h2 {margin:0 0 12px; font-size:19px; font-weight:750; letter-spacing:-.4px; color:#232344;}
+.win-rec-panel h3 {margin:0; font-size:17px; color:#232344;}
+.win-rec-panel p {line-height:1.5}
+.win-rec-muted {font-size:13px; color:#667085; margin:5px 0 12px;}
+.win-rec-shift {display:flex; align-items:center; justify-content:space-between; gap:16px;}
+.win-rec-shift h2 {margin:0;}
+.win-rec-shift p {margin:3px 0 0; font-size:13px; color:#667085;}
+.win-rec-shift .win-rec-assist {color:#9d4d13; font-weight:600}
+.win-rec-toolbar {display:flex; justify-content:flex-end; align-items:center; gap:8px; flex-wrap:wrap;}
+.win-rec-person {font-weight:650; font-size:13px; margin-right:5px; color:#475167;}
+.win-rec-light {background:#fff!important; border:1px solid #d7dbe4!important; color:#232344!important; min-height:40px; padding:9px 13px; border-radius:10px;}
+.win-rec-light:hover {border-color:#d44664!important; background:#fff7f9!important;}
+.win-rec-metrics {display:grid;grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px;}
+.win-rec-metric {min-width:0; background:#f7f8fb; border:1px solid #e9ebf2; border-radius:13px; padding:16px; min-height:114px; display:flex; flex-direction:column; justify-content:center; gap:4px; text-align:left; color:#232344; font-weight:400;}
+button.win-rec-metric:hover {background:#fff6f8; border-color:#d44664}
+.win-rec-metric>span {font-size:13px; color:#626a7b}
+.win-rec-metric strong {font-size:clamp(21px,3vw,30px); letter-spacing:-.9px; line-height:1.15;}
+.win-rec-metric strong.win-rec-novalue {font-size:20px; color:#757d90}
+.win-rec-metric small {color:#757d90; font-size:12px}
+.win-rec-line {display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;}
+.win-rec-line h2 {margin:0}
+.win-rec-counter {font-size:12px; border-radius:100px; padding:2px 8px; color:#965268; background:#fff0f3; vertical-align:middle}
+.win-rec-switch {display:flex; gap:8px; margin:12px 0 14px;}
+.win-rec-switch>span {flex:1; border:1px solid #d7dbe4; text-align:center; padding:10px; border-radius:9px; font-size:13px; font-weight:650;}
+.win-rec-switch .win-rec-active {border-color:#d44664; box-shadow:inset 0 -2px 0 #d44664;}
+.win-rec-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-top:13px}
+.win-rec-action {background:#f5f6f8!important; color:#232344!important; border:1px solid #dfe1e7!important; border-radius:9px!important; min-height:51px; padding:12px 14px; text-align:left; display:flex; justify-content:space-between; align-items:center; gap:8px;}
+.win-rec-action:hover {border-color:#d44664!important;background:#fff5f7!important}
+.win-rec-action[aria-pressed="true"] {background:#fff0f3!important;border-color:#d44664!important;box-shadow:inset 3px 0 0 #d44664;}
+.win-rec-queued {font-weight:550; color:#8b6670; font-size:11px; letter-spacing:0;}
+.win-rec-form-area {margin-top:14px; padding:18px; border:1px solid #f3c5d0; border-radius:12px; background:#fffafb;}
+.win-rec-form {display:grid; gap:13px; margin-top:14px; max-width:640px}
+.win-rec-form label,.win-rec-filters label {display:grid;gap:6px;color:#50596b;font-size:13px;font-weight:650}
+.win-rec-form input,.win-rec-form select,.win-rec-filters input,.win-rec-filters select {width:100%; min-height:44px; border:1px solid #d5dbe3; border-radius:9px; padding:10px 12px; background:white;color:#232344;font:inherit;}
+.win-rec-form button {justify-self:start; padding:12px 22px;background:#232344;color:white;}
+.win-rec-pending {background:#fff7e9;color:#755018; border:1px solid #f3dfb4; border-radius:9px; padding:12px; font-size:13px; margin-top:12px}
+.win-rec-filters {display:grid;grid-template-columns:1fr 1fr;gap:13px;margin:14px 0}
+.win-rec-filter-switch {display:grid; grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.win-rec-filter-switch button {background:white;color:#232344;border:1px solid #d5dbe4;min-height:40px;font-size:13px}
+.win-rec-filter-switch button[aria-pressed="true"] {background:#232344;color:white;border-color:#232344}
+.win-rec-empty {padding:22px 12px;text-align:center;background:#f7f8fa;border-radius:10px;color:#687387;font-size:14px;}
+.win-rec-movements {border-top:1px solid #edf0f5;margin-top:12px}
+.win-rec-movement {display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:white;color:#232344;border-radius:0;border-bottom:1px solid #edf0f5;text-align:left;padding:14px 4px;font-weight:400}
+.win-rec-movement:hover {background:#f8f9fb}
+.win-rec-movement strong {display:block;font-size:14px}
+.win-rec-movement small {display:block;color:#6f788c;margin-top:4px}
+.win-rec-movement b {white-space:nowrap;font-size:17px}
+.win-rec-movement .negative {color:#b42318}
+.win-rec-movement p {font-size:13px;color:#566173}
+.win-rec-collapse {width:100%;display:flex;justify-content:space-between;align-items:center;background:white;color:#232344;text-align:left;padding:0;min-height:24px;font-size:18px}
+.win-rec-collapse:hover {color:#d44664}
+.win-rec-notice {padding:13px 16px;border-radius:10px;margin-bottom:7px;font-size:14px}
+.win-rec-notice.error {background:#fff1f2;color:#a42d24}
+.win-rec-notice.warning {background:#fff8e7;color:#815820}
+.win-rec-notice.success {background:#eaf8ef;color:#177240}
+@media(max-width:680px){
+  .win-reception {padding:7px 12px 50px;gap:11px}
+  .win-rec-panel {padding:17px;border-radius:13px}
+  .win-rec-shift{flex-direction:column;align-items:flex-start}
+  .win-rec-toolbar{justify-content:flex-start;width:100%}
+  .win-rec-metric {min-height:110px;padding:12px}
+  .win-rec-metric strong {font-size:22px}
+  .win-rec-actions{grid-template-columns:1fr 1fr}
+  .win-rec-action{font-size:13px;padding:10px;min-height:55px}
+  .win-rec-queued{font-size:9px}
+  .win-rec-filters{grid-template-columns:1fr}
+  .win-rec-filter-switch{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:385px){.win-rec-metrics,.win-rec-actions{grid-template-columns:1fr}}
