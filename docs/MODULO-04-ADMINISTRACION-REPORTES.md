@@ -90,3 +90,18 @@ Conservar caja abiertas/cerradas, cierres, arqueos, conciliación por turno y jo
 7. Pruebas financieras/regresión antes de publicar para Recepción.
 
 **La especificación consolidada M01–M03** sigue siendo la referencia de Caja, Recepción y registro de movimientos. Este M04 define las **vistas analíticas y administrativas sobre las mismas fuentes**, no nuevos libros paralelos.
+
+
+## 12. Primer incremento de implementación — 23/11/2026
+Se agregó **Administración** como pestaña principal exclusiva del rol `ADMIN` en `src/main.jsx`, y la interfaz `src/pages/Administracion.jsx` con estilos `src/admin.css`.
+
+**Disponibles en backend:**
+- `win_admin_finance_report` expone resumen y detalle financiero por período, categorías, medios de pago, ingresos y gastos diarios, retiros separados, comparación con período equivalente anterior y hasta 100 filas de detalle. Se ejecuta sólo para cuenta ADMIN con sesión válida (Edge Function `win-api`, acción `admin.finance`).
+- `win_admin_cash_control` muestra turnos y arqueos registrados, efectivo esperado, contado y diferencias. Máximo 200 turnos por intervalo (Edge Function `win-api`, acción `admin.control`).
+- Ambas RPC se ejecutan sólo mediante `service_role` y validan el rol ADMIN; `anon` y `authenticated` sin EXECUTE.
+
+**Interfaz disponible:** pestañas Resumen General, Finanzas, Actividad, Academia, Control y herramientas; filtros Hoy, Semana, Mes y Personalizado (rango máximo 366 días); barras verticales, categorías, medios, listado de movimientos y estados de turnos.
+
+**No implementado y NO debe mostrarse como dato real:** neto WIN generado por actividad, rendiciones de profesores, ocupación física y económica, eventos multicancha, rendimiento de academia, las cuatro semanas completas agrupadas por categoría, comparación mes contra mes dedicada, exportaciones originales, conciliación bancaria, correcciones/aprobaciones y gasto administrativo integral.
+
+**Importante:** sólo se aplicaron vistas de lectura; no se migraron datos de Recepción ni se reemplazó el Apps Script. SQL y Edge Function desplegados, frontend guardado en main, pero prueba de compilación y verificación visual final de GitHub Pages pendientes. La contabilidad del reporte actual es **parcial**: `SALE` y `DEPOSIT` se suman como cobros, `EXPENSE` como gastos; `WITHDRAWAL` queda separado y otras clases de movimientos requieren tratamiento analítico específico.
