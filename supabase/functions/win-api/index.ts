@@ -4,7 +4,7 @@ const allowedOrigins = new Set(["https://peterlema.github.io", "http://localhost
 function reply(obj: unknown, status=200, origin="") {
   const headers: Record<string,string> = {"Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin"};
   if (allowedOrigins.has(origin)) { headers["Access-Control-Allow-Origin"]=origin; headers["Access-Control-Allow-Headers"]="authorization, content-type"; headers["Access-Control-Allow-Methods"]="POST, OPTIONS"; }
-  return new Response(JSON.stringify(obj),{status,headers});
+  return new Response(status === 204 ? null : JSON.stringify(obj), {status, headers});
 }
 function adminClient() {
   const url=Deno.env.get("SUPABASE_URL");
