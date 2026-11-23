@@ -1,0 +1,19 @@
+name: Validar recepción operativa
+on:
+  push:
+    branches: [implementation/reception-operativa]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: node supabase/tests/operations.test.mjs
+      - run: npm run test:db
+      - run: npm run build
