@@ -11,17 +11,19 @@ Pantallas: Recepción (`#/demo` en modo demo), Caja, Calendario. Versión visibl
 6. **Efectivo entregado:** registrar quién lo recibió. Definir horarios por día y por persona para sugerir/validar quién recibió el dinero.
 
 ## Estado
-| Regla | Pantalla (demo) | Base de datos (Supabase) |
+| Regla | Pantalla (v0.7.0) | Base de datos (Supabase) |
 |---|---|---|
-| Turnos de 90 min | Hecho en Recepción y Calendario | Pendiente: la función `win_courts_book` hoy acepta 60/90/120 para RESERVA |
-| Precio 100k/90k | Pendiente | Pendiente |
-| Nombre, WhatsApp, método | Pendiente | Pendiente |
-| Método de pago real tras el turno | Pendiente | Pendiente |
-| Abonos fijos + pagos | Pendiente | Pendiente |
-| Foto de comprobante | Pendiente | Pendiente (Storage privado + Edge Function) |
-| Quién recibió el efectivo + horarios por persona | Pendiente | Pendiente |
+| Turnos de 90 min | Hecho (Recepción y Calendario) | Escrito y probado; falta aplicar (ver `docs/prompts/01-reservas-v2-supabase.md`) |
+| Precio 100k/90k | Hecho (se muestra y se cobra) | Idem: tabla `win_price_list` con vigencia |
+| Nombre, WhatsApp, método previsto | Hecho (popup de reserva) | Idem |
+| Cobro real después del turno | Hecho (detalle de la reserva) | Idem: `win_court_payments`, un cobro por turno |
+| Abonos fijos + cobro por juego | Hecho (checkbox «Abono fijo», saltear día, dar de baja) | Idem: `win_court_abonos`, `win_court_abono_skips` |
+| Foto de comprobante | Hecho (subida con foto comprimida, ver comprobante) | Idem + función `win-courts` actualizada y bucket privado; la subida real aún no se probó contra Storage |
+| Quién recibió el efectivo + horarios por persona | Hecho (selector y ventana «Horarios de recepción» para Administración) | Idem: `win_receiver_schedule` |
+| Rol BAR sólo Bar | Hecho | Servidor: matriz de permisos de peterlema |
+
+Pendiente de etapas siguientes: rendición de profesores, Administración, conectar el cobro en efectivo con la caja del turno, y Recepción contra la base real (hoy sólo en modo demo).
 
 ## Por definir
-- Precio del abono: ¿el mismo (100k/90k) por cada turno jugado, o distinto?
-- Cobro del abono: ¿mensual anticipado o por cada juego?
-- Horarios por persona: ¿grilla semanal fija (día, desde, hasta) o cambia por semana?
+- Resuelto: el abono cobra el mismo precio y se cobra por cada juego.
+- Horarios por persona: se implementó una grilla semanal fija (día, desde, hasta), editable por Administración; sin horarios, el efectivo lo recibe quien registra el cobro.

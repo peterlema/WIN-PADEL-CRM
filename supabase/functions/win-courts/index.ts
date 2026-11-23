@@ -1,7 +1,6 @@
 // Edge Function win-courts: calendario de canchas y reservas.
 // Función aparte de win-api. Toda la autenticación y las reglas viven en PostgreSQL
 // (funciones win_courts_*, que validan el token de sesión con win_pin_session).
-// Despliegue: supabase functions deploy win-courts --no-verify-jwt --project-ref <ref>
 import { createClient } from "npm:@supabase/supabase-js@2.119.2";
 
 const allowedOrigins = new Set(["https://peterlema.github.io", "http://localhost:5173", "http://127.0.0.1:5173"]);
@@ -34,7 +33,19 @@ const errors: Record<string, [number, string]> = {
   BOOKING_IN_PAST: [409, "No se pueden cargar reservas que ya terminaron."],
   REASON_REQUIRED: [400, "Indicá el motivo de la cancelación."],
   BOOKING_NOT_FOUND: [404, "La reserva no existe o ya fue cancelada."],
+  CUSTOMER_REQUIRED: [400, "Completá nombre y apellido, WhatsApp y método de pago."],
+  PRICE_MISSING: [409, "No hay un precio de cancha vigente para esa fecha."],
+  PAY_TOO_EARLY: [409, "El cobro se registra después de que empieza el turno."],
+  ALREADY_PAID: [409, "Ese turno ya tiene el cobro registrado."],
+  PAYMENT_INVALID: [400, "Revisá los datos del cobro."],
+  RECEIVER_INVALID: [400, "La persona que recibió el efectivo no está habilitada."],
+  ABONO_CONFLICT: [409, "Ese horario ya lo ocupa otra reserva o abono en alguna fecha. Revisá el calendario."],
+  BOOKING_PAID: [409, "Ese turno ya tiene el cobro registrado y no se puede cancelar ni saltear."],
+  SCHEDULE_INVALID: [400, "Revisá el día y el horario."],
 };
+const MIME_EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+const RECEIPT_PATH = /^[0-9]{4}-[0-9]{2}\/[0-9a-f-]{36}\.(jpg|png|webp)$/;
+const BUCKET = "win-comprobantes";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -61,6 +72,7 @@ Deno.serve(async (req) => {
   let name = "";
   let params: Record<string, unknown> = { p_token: token };
 
+  const db0 = () => adminClient();
   if (action === "courts.day") {
     const date = String(data.date || "");
     if (!DATE.test(date)) return bad(origin);
@@ -79,12 +91,88 @@ Deno.serve(async (req) => {
       p_request_id: requestId, p_court: String(data.court || ""), p_date: date,
       p_start: String(data.start || ""), p_duration: duration, p_kind: String(data.kind || ""),
       p_holder: String(data.holder || ""), p_note: String(data.note || ""),
+      p_customer_name: String(data.customerName || ""), p_customer_whatsapp: String(data.whatsapp || ""),
+      p_method: String(data.method || ""),
     });
   } else if (action === "courts.cancel") {
     const bookingId = String(data.bookingId || "");
     if (!UUID.test(bookingId)) return bad(origin);
     name = "win_courts_cancel";
     Object.assign(params, { p_booking_id: bookingId, p_reason: String(data.reason || "") });
+  } else if (action === "courts.pay") {
+    const requestId = String(data.requestId || "");
+    const bookingId = data.bookingId ? String(data.bookingId) : null;
+    const abonoId = data.abonoId ? String(data.abonoId) : null;
+    const date = data.date ? String(data.date) : null;
+    const receivedBy = data.receivedBy ? String(data.receivedBy) : null;
+    const receiptPath = data.receiptPath ? String(data.receiptPath) : null;
+    if (!UUID.test(requestId) || (bookingId && !UUID.test(bookingId)) || (abonoId && !UUID.test(abonoId))
+      || (date && !DATE.test(date)) || (receivedBy && !UUID.test(receivedBy)) || (receiptPath && !RECEIPT_PATH.test(receiptPath))) return bad(origin);
+    name = "win_courts_pay";
+    Object.assign(params, { p_request_id: requestId, p_booking_id: bookingId, p_abono_id: abonoId, p_date: date,
+      p_method: String(data.method || ""), p_received_by: receivedBy, p_receipt_path: receiptPath });
+  } else if (action === "courts.abono.create") {
+    const requestId = String(data.requestId || "");
+    const date = String(data.date || "");
+    if (!UUID.test(requestId) || !DATE.test(date)) return bad(origin);
+    name = "win_courts_abono_create";
+    Object.assign(params, { p_request_id: requestId, p_court: String(data.court || ""), p_date: date, p_start: String(data.start || ""),
+      p_customer_name: String(data.customerName || ""), p_customer_whatsapp: String(data.whatsapp || ""),
+      p_method: String(data.method || ""), p_note: String(data.note || "") });
+  } else if (action === "courts.abono.end") {
+    const abonoId = String(data.abonoId || "");
+    const from = String(data.from || "");
+    if (!UUID.test(abonoId) || !DATE.test(from)) return bad(origin);
+    name = "win_courts_abono_end";
+    Object.assign(params, { p_abono_id: abonoId, p_from: from, p_reason: String(data.reason || "") });
+  } else if (action === "courts.abono.skip") {
+    const abonoId = String(data.abonoId || "");
+    const date = String(data.date || "");
+    if (!UUID.test(abonoId) || !DATE.test(date)) return bad(origin);
+    name = "win_courts_abono_skip";
+    Object.assign(params, { p_abono_id: abonoId, p_date: date, p_reason: String(data.reason || ""), p_undo: data.undo === true });
+  } else if (action === "courts.receivers") {
+    name = "win_courts_receivers";
+  } else if (action === "courts.schedule.list") {
+    name = "win_courts_schedule_list";
+  } else if (action === "courts.schedule.set") {
+    const accountId = String(data.accountId || "");
+    const weekday = Number(data.weekday);
+    if (!UUID.test(accountId) || !Number.isInteger(weekday)) return bad(origin);
+    name = "win_courts_schedule_set";
+    Object.assign(params, { p_account_id: accountId, p_weekday: weekday, p_from: String(data.from || ""), p_to: String(data.to || "") });
+  } else if (action === "courts.schedule.delete") {
+    const id = String(data.id || "");
+    if (!UUID.test(id)) return bad(origin);
+    name = "win_courts_schedule_delete"; params.p_id = id;
+  } else if (action === "courts.receipt.url" || action === "courts.receipt.view") {
+    // Comprobantes: el navegador nunca toca el bucket; recibe URLs firmadas de corta duración.
+    try {
+      const db = db0();
+      if (action === "courts.receipt.url") {
+        const ext = MIME_EXT[String(data.contentType || "")];
+        if (!ext) return bad(origin, "Subí una foto JPG, PNG o WEBP.");
+        const check = await db.rpc("win_courts_can_create", { p_token: token });
+        if (check.error) throw check.error;
+        const path = `${new Date().toISOString().slice(0, 7)}/${crypto.randomUUID()}.${ext}`;
+        const up = await db.storage.from(BUCKET).createSignedUploadUrl(path);
+        if (up.error) throw up.error;
+        return reply({ path, uploadUrl: up.data.signedUrl, token: up.data.token }, 200, origin);
+      }
+      const path = String(data.path || "");
+      if (!RECEIPT_PATH.test(path)) return bad(origin);
+      const check = await db.rpc("win_courts_receipt_check", { p_token: token, p_path: path });
+      if (check.error) throw check.error;
+      const signed = await db.storage.from(BUCKET).createSignedUrl(path, 120);
+      if (signed.error) throw signed.error;
+      return reply({ url: signed.data.signedUrl }, 200, origin);
+    } catch (e) {
+      const msg = e && typeof e === "object" && "message" in e ? String((e as { message: string }).message) : "";
+      const code = Object.keys(errors).find((k) => msg.includes(k));
+      if (code) return reply({ error: errors[code][1], code }, errors[code][0], origin);
+      console.error("win-courts receipt error:", msg);
+      return reply({ error: "No se pudo procesar el comprobante." }, 500, origin);
+    }
   } else {
     return reply({ error: "Operación desconocida" }, 404, origin);
   }
