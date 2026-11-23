@@ -9,6 +9,7 @@ import { callApi, clearToken, readToken } from './api.js'
 import './styles.css'
 import './calendario.css'
 import './recepcion.css'
+import './recepcion-v5.css'
 import './tema-win.css'
 
 // MODO DEMO (#/demo): pantallas de adentro con datos de ejemplo, sin iniciar sesión ni llamar al backend real.
@@ -83,7 +84,7 @@ function Raiz() {
       {token && (
         <nav className="subnav" aria-label="Secciones">
           {DEMO && <a href={RECEPCION} className={enRecepcion ? 'activa' : ''}>Recepción</a>}
-          <a href={RAIZ} className={enCalendario || enRecepcion ? '' : 'activa'}>Caja</a>
+          <a href={RAIZ} className={enCalendario || enRecepcion ? '' : 'activa'}>Recepción</a>
           <a href={CALENDARIO} className={enCalendario ? 'activa' : ''}>Calendario</a>
           {enCalendario && <button type="button" className="enlace" onClick={salir}>Salir</button>}
         </nav>
