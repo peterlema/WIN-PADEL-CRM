@@ -30,6 +30,13 @@ const fechaLarga = iso => new Intl.DateTimeFormat('es-AR', { weekday: 'long', da
 const mesLargo = ym => new Intl.DateTimeFormat('es-AR', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(ym + '-01T12:00:00Z'))
 const diaSemana = iso => { const d = new Date(iso + 'T12:00:00Z').getUTCDay(); return d === 0 ? 7 : d }
 
+// Momento en que termina el turno (horario de Argentina; de 00:00 a 06:00 pertenece a la jornada anterior).
+function terminaTurno(fecha, b) {
+  const inicio = new Date(`${fecha}T${b.inicio}:00-03:00`)
+  if (b.inicio < '06:00') inicio.setDate(inicio.getDate() + 1)
+  return new Date(inicio.getTime() + b.duracion * 60000)
+}
+
 // Achica la foto del comprobante (máx. 1600 px, JPEG) para subir rápido desde el celular.
 async function comprimir(file) {
   try {
@@ -65,7 +72,8 @@ export default function Calendario() {
 
   function falla(e) {
     if (e.status === 401) clearToken()
-    setError(e.message || 'No se pudo completar la operación.')
+    setError(e.code === 'CUSTOMER_REQUIRED' ? 'Completá nombre y apellido y WhatsApp.'
+      : e.code === 'PAY_TOO_EARLY' ? 'El cobro se marca cuando termina el turno.' : e.message || 'No se pudo completar la operación.')
   }
 
   useEffect(() => { callApi('me').then(r => setUser(r.user)).catch(falla) }, [])
@@ -117,7 +125,7 @@ export default function Calendario() {
 
   function abrirForm(court, minutos) {
     cerrarTodo(); setAviso(''); setError('')
-    setForm({ court, start: minToLabel(minutos), duration: 90, kind: 'RESERVA', holder: '', note: '', nombre: '', whatsapp: '', method: 'CASH', requestId: crypto.randomUUID() })
+    setForm({ court, start: minToLabel(minutos), duration: 90, kind: 'RESERVA', holder: '', note: '', nombre: '', whatsapp: '', requestId: crypto.randomUUID() })
   }
   function cambiarTipo(kind) {
     setForm(f => {
@@ -134,12 +142,12 @@ export default function Calendario() {
       // El mismo requestId se reutiliza si hay que reintentar: el servidor no duplica la reserva.
       if (form.kind === 'ABONO') {
         await callCourts('courts.abono.create', { requestId: form.requestId, court: form.court, date: fecha, start: form.start,
-          customerName: form.nombre, whatsapp: form.whatsapp, method: form.method, note: form.note })
+          customerName: form.nombre, whatsapp: form.whatsapp, note: form.note })
         setAviso(`Abono fijo creado: ${form.court} los ${DIAS_LARGOS[diaSemana(fecha)].toLowerCase()} a las ${form.start}, desde hoy hasta que se dé de baja.`)
       } else {
         await callCourts('courts.book', { requestId: form.requestId, court: form.court, date: fecha, start: form.start,
           duration: Number(form.duration), kind: form.kind, holder: form.holder, note: form.note,
-          customerName: form.nombre, whatsapp: form.whatsapp, method: form.method })
+          customerName: form.nombre, whatsapp: form.whatsapp })
         setAviso(`Reserva confirmada: ${form.court} a las ${form.start}.`)
       }
       setForm(null)
@@ -155,7 +163,7 @@ export default function Calendario() {
     cerrarTodo(); setAviso(''); setError('')
     setDetalle(b)
     if (['RESERVA', 'ABONO'].includes(b.tipo) && !b.pago && puedeReservar) {
-      setPago({ method: b.metodoPrevisto || 'CASH', receivedBy: '', file: null, preview: '', requestId: crypto.randomUUID() })
+      setPago({ method: '', receivedBy: '', file: null, preview: '', requestId: crypto.randomUUID() })
       try { const r = await callCourts('courts.receivers'); setReceptores(r); setPago(p => p && ({ ...p, receivedBy: (r.deTurno || [])[0] || user?.id || '' })) } catch { /* se puede cobrar igual */ }
     }
   }
@@ -170,7 +178,7 @@ export default function Calendario() {
 
   async function cobrar(e) {
     e.preventDefault()
-    if (ocupado) return
+    if (ocupado || !pago.method) return
     setOcupado(true); setError(''); setAviso('')
     try {
       let receiptPath = null
@@ -360,16 +368,7 @@ export default function Calendario() {
                 <label>WhatsApp
                   <input type="tel" inputMode="tel" value={form.whatsapp} maxLength={20} required placeholder="Ej. 11 5555 1234" onChange={e => setForm({ ...form, whatsapp: e.target.value })} />
                 </label>
-                <div className="cal-ancho">
-                  <span className="cal-etiqueta">Método de pago</span>
-                  <div className="rec-sel" role="group" aria-label="Método de pago">
-                    {Object.entries(METODOS).map(([k, v]) => (
-                      <button type="button" key={k} className="secundario" aria-pressed={form.method === k} onClick={() => setForm({ ...form, method: k })}>
-                        {v} · {money(k === 'CASH' ? precio.efectivo : precio.transferencia)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <p className="cal-ancho cal-resumen">El método de pago (efectivo {money(precio.efectivo)} o transferencia {money(precio.transferencia)}) se marca después, al cobrar el turno.</p>
                 {form.kind === 'ABONO' && <p className="cal-ancho cal-resumen">Abono fijo: se repite todos los {DIAS_LARGOS[diaSemana(fecha)].toLowerCase()} a esta hora, desde hoy hasta que se dé de baja. Cada juego se cobra aparte.</p>}
               </>
             ) : (
@@ -403,11 +402,14 @@ export default function Calendario() {
                 {detalle.pago
                   ? <>Cobrado en {METODOS[detalle.pago.metodo].toLowerCase()} · {money(detalle.pago.monto)}{detalle.pago.recibioNombre ? ` · recibió ${detalle.pago.recibioNombre}` : ''}
                     {detalle.pago.ruta && <> · <button type="button" className="enlace" onClick={() => verComprobante(detalle.pago.ruta)}>Ver comprobante</button></>}</>
-                  : <>Pendiente · previsto {METODOS[detalle.metodoPrevisto]} {money(detalle.montoPrevisto)}</>}
+                  : <>Pendiente · se marca al cobrar ({money(precio.efectivo)} efectivo · {money(precio.transferencia)} transferencia)</>}
               </p>
             )}
 
-            {pago && !detalle.pago && accion === '' && (
+            {pago && !detalle.pago && accion === '' && !esAdmin && terminaTurno(fecha, detalle) > new Date() && (
+              <p className="cal-ancho cal-resumen">El cobro se marca cuando termina el turno (a las {detalle.fin}).</p>
+            )}
+            {pago && !detalle.pago && accion === '' && (esAdmin || terminaTurno(fecha, detalle) <= new Date()) && (
               <form className="cal-ancho cal-pago" onSubmit={cobrar}>
                 <h3>Registrar cobro del turno</h3>
                 <div className="rec-sel" role="group" aria-label="Método de pago real">
@@ -432,7 +434,7 @@ export default function Calendario() {
                     {pago.preview && <img className="cal-foto" src={pago.preview} alt="Vista previa del comprobante" />}
                   </div>
                 )}
-                <button disabled={ocupado}>{ocupado ? 'Guardando…' : `Marcar cobrado ${money(pago.method === 'CASH' ? precio.efectivo : precio.transferencia)}`}</button>
+                <button disabled={ocupado || !pago.method}>{ocupado ? 'Guardando…' : !pago.method ? 'Elegí el método de pago' : `Marcar cobrado ${money(pago.method === 'CASH' ? precio.efectivo : precio.transferencia)}`}</button>
               </form>
             )}
 

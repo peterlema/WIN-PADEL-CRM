@@ -30,6 +30,9 @@ await db.exec(readFileSync(dir + '20261124_win_courts_v2_pricing_payments_abonos
 ok(true, 'migración v2 aplicada sobre v1')
 await db.exec(readFileSync(dir + '20261124_win_courts_v2_pricing_payments_abonos.sql', 'utf8'))
 ok(true, 'migración v2 es repetible (idempotente)')
+await db.exec(readFileSync(dir + '20261124_win_courts_v3_payment_method_at_collection.sql', 'utf8'))
+await db.exec(readFileSync(dir + '20261124_win_courts_v3_payment_method_at_collection.sql', 'utf8'))
+ok(true, 'migración v3 (método de pago al cobrar) aplicada y repetible')
 
 const hoy = (await one(`select (now() at time zone 'America/Argentina/Buenos_Aires')::date::text d`)).d
 const f = async n => (await one(`select ($1::date + $2::int)::text d`, [hoy, n])).d
@@ -48,16 +51,17 @@ ok(Number((await one(`select public.win_court_price_($1::date,'TRANSFER') p`, [h
 ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'18:00',90,'RESERVA','x','','','',null)`, [U(1), manana])).includes('CUSTOMER_REQUIRED'), 'reserva sin nombre/WhatsApp/método se rechaza')
 ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'18:00',90,'RESERVA','x','','Juan','1155551234','CASH')`, [U(1), manana])).includes('CUSTOMER_REQUIRED'), 'nombre de una sola palabra se rechaza')
 ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'18:00',90,'RESERVA','x','','Juan Pérez','12345','CASH')`, [U(1), manana])).includes('CUSTOMER_REQUIRED'), 'WhatsApp inválido se rechaza')
-ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'18:00',90,'RESERVA','x','','Juan Pérez','1155551234','PAYPAL')`, [U(1), manana])).includes('CUSTOMER_REQUIRED'), 'método inválido se rechaza')
+console.log('   (el método de pago ya no se pide al reservar)')
 ok((await err(`select public.win_courts_book('tok-recep',$1,'C1',$2::date,'18:00',60,'RESERVA','x','','Juan Pérez','1155551234','CASH')`, [U(1), manana])).includes('DURATION_INVALID'), 'reserva de 60 min se rechaza: los turnos son de 90')
 const r1 = await book('tok-recep', U(1), 'C1', manana, '18:00', 90)
-ok(r1.nombreCompleto === 'Juan Pérez' && r1.whatsapp === '5491155551234' && r1.metodoPrevisto === 'CASH' && Number(r1.montoPrevisto) === 90000, 'reserva guarda nombre, WhatsApp normalizado, método y $ 90.000')
+ok(r1.nombreCompleto === 'Juan Pérez' && r1.whatsapp === '5491155551234' && r1.metodoPrevisto === null && r1.montoPrevisto === null, 'reserva guarda nombre y WhatsApp normalizado, sin método ni importe (se definen al cobrar)')
 const r1t = await book('tok-recep', U(2), 'C2', manana, '18:00', 90, 'RESERVA', 'x', 'Ana Gómez', '1144443333', 'TRANSFER')
-ok(Number(r1t.montoPrevisto) === 100000, 'método transferencia cobra $ 100.000')
+ok(r1t.metodoPrevisto === null, 'aunque se mande un método al reservar, se ignora')
 ok((await book('tok-recep', U(1), 'C1', manana, '18:00', 90)).id === r1.id, 'mismo request_id devuelve la misma reserva')
 await db.query(`insert into public.win_price_list(code, amount_cash, amount_transfer, valid_from) values ('COURT_TURN', 95000, 105000, $1::date)`, [d30])
-const rf = await book('tok-recep', U(3), 'C3', d30, '10:00', 90)
-ok(Number(rf.montoPrevisto) === 95000 && Number((await one(`select expected_amount a from public.win_court_bookings where id = $1`, [r1.id])).a) === 90000, 'cambio de precio futuro no altera reservas anteriores')
+const rf = await book('tok-admin', U(3), 'C3', d30, '10:00', 90)
+const pf = await pay('tok-admin', U(5), rf.id, null, null, 'CASH')
+ok(Number(pf.monto) === 95000, 'el importe del cobro usa el precio vigente en la fecha del turno ($ 95.000 desde la nueva lista)')
 const cl = await book('tok-recep', U(4), 'C4', manana, '10:00', 60, 'CLASE', 'Clase Chino', null, null, null)
 ok(cl.tipo === 'CLASE' && cl.nombreCompleto === null, 'clase de 60 min no pide datos de cliente')
 
@@ -68,7 +72,13 @@ ok((await err(`select public.win_courts_day('tok-nadie',$1::date)`, [manana])).i
 
 // 4. Cobro del turno jugado
 const pasada = await book('tok-admin', U(10), 'C1', ayer, '18:00', 90, 'RESERVA', 'x', 'Pedro Díaz', '1166667777', 'CASH')
-ok((await err(`select public.win_courts_pay('tok-recep',$1,$2,null,null,'CASH')`, [U(20), r1.id])).includes('PAY_TOO_EARLY'), 'recepción no puede cobrar antes de que empiece el turno')
+ok((await err(`select public.win_courts_pay('tok-recep',$1,$2,null,null,'CASH')`, [U(20), r1.id])).includes('PAY_TOO_EARLY'), 'recepción no puede cobrar un turno futuro')
+// Turno en curso (empezó hace 30 min, termina en 60): todavía no se cobra
+await db.query(`insert into public.win_court_bookings (request_id, court, business_date, start_time, duration_min, starts_at, ends_at, kind, holder, created_by, customer_name, customer_whatsapp)
+  select $1, 'C4', $2::date, time '12:00', 90, now() - interval '30 minutes', now() + interval '60 minutes', 'RESERVA', 'En Curso', id, 'En Curso', '1100000000' from win_auth.login_accounts where username = 'admin'`, [U(15), hoy])
+const enCurso = (await one(`select id from public.win_court_bookings where request_id = $1`, [U(15)])).id
+ok((await err(`select public.win_courts_pay('tok-recep',$1,$2,null,null,'CASH')`, [U(16), enCurso])).includes('PAY_TOO_EARLY'), 'el cobro no se marca mientras el turno está en curso (sólo cuando termina)')
+ok((await q(`select public.win_courts_pay('tok-admin',$1,$2,null,null,'CASH') r`, [U(17), enCurso]))[0].r.metodo === 'CASH', 'Administración sí puede adelantar el cobro')
 const p1 = await pay('tok-recep', U(21), pasada.id, null, null, 'CASH')
 const rec1 = (await one(`select a.display_name n from public.win_court_payments py join win_auth.login_accounts a on a.id = py.received_by where py.booking_id = $1`, [pasada.id]))
 ok(Number(p1.monto) === 90000 && p1.metodo === 'CASH', 'cobro en efectivo registra $ 90.000')

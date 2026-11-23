@@ -15,8 +15,8 @@ Pantallas: Recepción (`#/demo` en modo demo), Caja, Calendario. Versión visibl
 |---|---|---|
 | Turnos de 90 min | Hecho (Recepción y Calendario) | Escrito y probado; falta aplicar (ver `docs/prompts/01-reservas-v2-supabase.md`) |
 | Precio 100k/90k | Hecho (se muestra y se cobra) | Idem: tabla `win_price_list` con vigencia |
-| Nombre, WhatsApp, método previsto | Hecho (popup de reserva) | Idem |
-| Cobro real después del turno | Hecho (detalle de la reserva) | Idem: `win_court_payments`, un cobro por turno |
+| Nombre y WhatsApp al reservar | Hecho (popup de reserva); el método de pago ya no se pide al reservar | v3: `20261124_win_courts_v3_payment_method_at_collection.sql` |
+| Cobro real cuando termina el turno | Hecho (detalle de la reserva; el método se elige al cobrar y la recepción sólo puede cobrar cuando el turno terminó) | v3: `win_court_payments`, un cobro por turno |
 | Abonos fijos + cobro por juego | Hecho (checkbox «Abono fijo», saltear día, dar de baja) | Idem: `win_court_abonos`, `win_court_abono_skips` |
 | Foto de comprobante | Hecho (subida con foto comprimida, ver comprobante) | Idem + función `win-courts` actualizada y bucket privado; la subida real aún no se probó contra Storage |
 | Quién recibió el efectivo + horarios por persona | Hecho (selector y ventana «Horarios de recepción» para Administración) | Idem: `win_receiver_schedule` |

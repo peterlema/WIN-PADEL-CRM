@@ -25,8 +25,8 @@ const nueva = (dias, cancha, inicio, duracion, tipo, titular, extra = {}) => ({
   id: 'demo-' + (++seq), cancha, fecha: sumarDias(hoy, dias), inicio, duracion, tipo, titular, nota: '', estado: 'CONFIRMED',
   creadoPor: 'Melu', creadoPorId: 'p-melu', nombreCompleto: null, whatsapp: null, metodoPrevisto: null, montoPrevisto: null, pago: null, ...extra,
 })
-const reserva = (dias, cancha, inicio, nombre, metodo, pago = null) =>
-  nueva(dias, cancha, inicio, 90, 'RESERVA', nombre, { nombreCompleto: nombre, whatsapp: '5491155550000', metodoPrevisto: metodo, montoPrevisto: PRECIO[metodo], pago })
+const reserva = (dias, cancha, inicio, nombre, _metodo, pago = null) =>
+  nueva(dias, cancha, inicio, 90, 'RESERVA', nombre, { nombreCompleto: nombre, whatsapp: '5491155550000', metodoPrevisto: null, montoPrevisto: null, pago })
 const pagado = (metodo, extra = {}) => ({ id: 'pg-' + (++seq), metodo, monto: PRECIO[metodo], recibio: metodo === 'CASH' ? 'p-melu' : null, comprobante: metodo === 'TRANSFER', ruta: null, fecha: new Date().toISOString(), ...extra })
 
 const reservas = [
@@ -39,8 +39,8 @@ const reservas = [
   reserva(-1, 'C1', '19:30', 'Ana López', 'CASH', pagado('CASH')), reserva(-1, 'C3', '21:00', 'Pablo Soto', 'TRANSFER'),
 ]
 const abonos = [
-  { id: 'ab-1', cancha: 'C3', diaSemana: isodow(hoy), inicio: '18:00', nombreCompleto: 'Laura Martínez', whatsapp: '5491166660000', metodoPrevisto: 'CASH', desde: sumarDias(hoy, -21), hasta: null },
-  { id: 'ab-2', cancha: 'C4', diaSemana: isodow(hoy), inicio: '19:30', nombreCompleto: 'Carlos Soto', whatsapp: '5491177770000', metodoPrevisto: 'TRANSFER', desde: sumarDias(hoy, -14), hasta: null },
+  { id: 'ab-1', cancha: 'C3', diaSemana: isodow(hoy), inicio: '18:00', nombreCompleto: 'Laura Martínez', whatsapp: '5491166660000', metodoPrevisto: null, desde: sumarDias(hoy, -21), hasta: null },
+  { id: 'ab-2', cancha: 'C4', diaSemana: isodow(hoy), inicio: '19:30', nombreCompleto: 'Carlos Soto', whatsapp: '5491177770000', metodoPrevisto: null, desde: sumarDias(hoy, -14), hasta: null },
 ]
 const saltos = []
 const pagosAbono = [{ abonoId: 'ab-1', fecha: sumarDias(hoy, -7), pago: pagado('CASH') }]
@@ -50,7 +50,7 @@ const abonoActivo = (a, fecha) => a.diaSemana === isodow(fecha) && a.desde <= fe
 const fin = (inicio, dur) => hora(minutos(inicio) + dur)
 const ocurrencia = a => fecha => ({
   id: a.id, abonoId: a.id, cancha: a.cancha, fecha, inicio: a.inicio, fin: fin(a.inicio, 90), duracion: 90, tipo: 'ABONO', titular: a.nombreCompleto,
-  nombreCompleto: a.nombreCompleto, whatsapp: a.whatsapp, metodoPrevisto: a.metodoPrevisto, montoPrevisto: PRECIO[a.metodoPrevisto], nota: '',
+  nombreCompleto: a.nombreCompleto, whatsapp: a.whatsapp, metodoPrevisto: a.metodoPrevisto, montoPrevisto: null, nota: '',
   estado: 'CONFIRMED', creadoPor: 'Melu', creadoPorId: 'p-melu', desde: a.desde,
   pago: pagosAbono.find(p => p.abonoId === a.id && p.fecha === fecha)?.pago || null,
 })
@@ -88,7 +88,7 @@ export function courts(body, usuario) {
       const kind = body.kind
       const nombre = String(body.customerName || '').trim().replace(/\s+/g, ' ')
       const wpp = String(body.whatsapp || '').replace(/\D/g, '')
-      if (kind === 'RESERVA' && (!/^\S+ \S+/.test(nombre) || !/^\d{8,15}$/.test(wpp) || !PRECIO[body.method])) throw fail('Completá nombre y apellido, WhatsApp y método de pago.', 400, 'CUSTOMER_REQUIRED')
+      if (kind === 'RESERVA' && (!/^\S+ \S+/.test(nombre) || !/^\d{8,15}$/.test(wpp))) throw fail('Completá nombre y apellido y WhatsApp.', 400, 'CUSTOMER_REQUIRED')
       if (!/^([01]\d|2[0-3]):(00|30)$/.test(body.start || '')) throw fail('Revisá los datos de la reserva.', 400, 'BOOKING_INVALID')
       const dur = Number(body.duration)
       if ((kind === 'RESERVA' && dur !== 90) || (kind === 'CLASE' && ![60, 90, 120].includes(dur))) throw fail('La duración no está permitida para ese tipo de reserva.', 400, 'DURATION_INVALID')
@@ -100,7 +100,7 @@ export function courts(body, usuario) {
         || abonos.some(a => a.cancha === body.court && abonoActivo(a, body.date) && solapa(a.inicio, 90, body.start, dur))
       if (choca) throw fail('Esa cancha ya está ocupada en ese horario. Actualizá el calendario.', 409, 'COURT_TAKEN')
       const r = nueva(0, body.court, body.start, dur, kind, titular, kind === 'RESERVA'
-        ? { nombreCompleto: nombre, whatsapp: wpp, metodoPrevisto: body.method, montoPrevisto: PRECIO[body.method] } : {})
+        ? { nombreCompleto: nombre, whatsapp: wpp } : {})
       Object.assign(r, { fecha: body.date, requestId: body.requestId, creadoPor: 'Vos (demo)', creadoPorId: 'demo', nota: body.note || '' })
       reservas.push(r)
       return r
@@ -122,13 +122,13 @@ export function courts(body, usuario) {
         const r = reservas.find(x => x.id === body.bookingId && x.estado === 'CONFIRMED' && x.tipo === 'RESERVA')
         if (!r) throw fail('La reserva no existe o ya fue cancelada.', 404, 'BOOKING_NOT_FOUND')
         if (r.pago) throw fail('Ese turno ya tiene el cobro registrado.', 409, 'ALREADY_PAID')
-        if (!esAdmin && new Date(`${r.fecha}T${r.inicio}:00-03:00`) > new Date()) throw fail('El cobro se registra después de que empieza el turno.', 409, 'PAY_TOO_EARLY')
+        if (!esAdmin && new Date(new Date(`${r.fecha}T${r.inicio}:00-03:00`).getTime() + r.duracion * 60000) > new Date()) throw fail('El cobro se marca cuando termina el turno.', 409, 'PAY_TOO_EARLY')
         r.pago = nuevoPago
       } else {
         const a = abonos.find(x => x.id === body.abonoId)
         if (!a || !abonoActivo(a, body.date)) throw fail('La reserva no existe o ya fue cancelada.', 404, 'BOOKING_NOT_FOUND')
         if (pagosAbono.some(p => p.abonoId === a.id && p.fecha === body.date)) throw fail('Ese turno ya tiene el cobro registrado.', 409, 'ALREADY_PAID')
-        if (!esAdmin && new Date(`${body.date}T${a.inicio}:00-03:00`) > new Date()) throw fail('El cobro se registra después de que empieza el turno.', 409, 'PAY_TOO_EARLY')
+        if (!esAdmin && new Date(new Date(`${body.date}T${a.inicio}:00-03:00`).getTime() + 90 * 60000) > new Date()) throw fail('El cobro se marca cuando termina el turno.', 409, 'PAY_TOO_EARLY')
         pagosAbono.push({ abonoId: a.id, fecha: body.date, pago: nuevoPago })
       }
       return nuevoPago
@@ -136,12 +136,12 @@ export function courts(body, usuario) {
     case 'courts.abono.create': {
       const nombre = String(body.customerName || '').trim().replace(/\s+/g, ' ')
       const wpp = String(body.whatsapp || '').replace(/\D/g, '')
-      if (!/^\S+ \S+/.test(nombre) || !/^\d{8,15}$/.test(wpp) || !PRECIO[body.method]) throw fail('Completá nombre y apellido, WhatsApp y método de pago.', 400, 'CUSTOMER_REQUIRED')
+      if (!/^\S+ \S+/.test(nombre) || !/^\d{8,15}$/.test(wpp)) throw fail('Completá nombre y apellido y WhatsApp.', 400, 'CUSTOMER_REQUIRED')
       const dow = isodow(body.date)
       const choca = abonos.some(a => a.cancha === body.court && a.diaSemana === dow && !a.hasta && solapa(a.inicio, 90, body.start, 90))
         || reservas.some(r => r.estado === 'CONFIRMED' && r.cancha === body.court && r.fecha >= body.date && isodow(r.fecha) === dow && solapa(r.inicio, r.duracion, body.start, 90))
       if (choca) throw fail('Ese horario ya lo ocupa otra reserva o abono en alguna fecha. Revisá el calendario.', 409, 'ABONO_CONFLICT')
-      const a = { id: 'ab-' + (++seq), cancha: body.court, diaSemana: dow, inicio: body.start, nombreCompleto: nombre, whatsapp: wpp, metodoPrevisto: body.method, desde: body.date, hasta: null }
+      const a = { id: 'ab-' + (++seq), cancha: body.court, diaSemana: dow, inicio: body.start, nombreCompleto: nombre, whatsapp: wpp, metodoPrevisto: null, desde: body.date, hasta: null }
       abonos.push(a)
       return { id: a.id, cancha: a.cancha, diaSemana: dow, inicio: a.inicio, desde: a.desde }
     }
