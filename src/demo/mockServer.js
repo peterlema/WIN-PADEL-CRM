@@ -1,3 +1,5 @@
+import { recepcion } from './mockRecepcion.js'
+
 // MODO DEMO: servidor simulado en el navegador, con datos de ejemplo.
 // Se activa sólo con la dirección #/demo. No llama a Supabase ni guarda nada: al recargar vuelve a empezar.
 // Sirve para ver las pantallas de adentro sin iniciar sesión y sin abrir el backend real.
@@ -18,13 +20,13 @@ const nueva = (dias, cancha, inicio, duracion, tipo, titular, nota = '') => ({
 const reservas = [
   nueva(0, 'C1', '18:00', 90, 'RESERVA', 'Juan Pérez'), nueva(0, 'C2', '19:00', 60, 'CLASE', 'Clase · prof. Chino'),
   nueva(0, 'C3', '20:00', 120, 'EVENTO', 'Torneo del viernes'), nueva(0, 'C4', '23:30', 90, 'BLOQUEO', 'Mantenimiento'),
-  nueva(0, 'C1', '10:00', 60, 'RESERVA', 'Lucía Fernández'),
+  nueva(0, 'C1', '10:00', 90, 'RESERVA', 'Lucía Fernández'),
   nueva(1, 'C1', '18:00', 90, 'RESERVA', 'Martín Gómez'), nueva(1, 'C2', '18:00', 90, 'RESERVA', 'Sofía Díaz'),
-  nueva(2, 'C1', '09:00', 60, 'CLASE', 'Clase · prof. Chino'), nueva(2, 'C2', '10:00', 60, 'RESERVA', 'Carlos Ruiz'),
+  nueva(2, 'C1', '09:00', 60, 'CLASE', 'Clase · prof. Chino'), nueva(2, 'C2', '10:30', 90, 'RESERVA', 'Carlos Ruiz'),
   nueva(2, 'C3', '18:00', 120, 'EVENTO', 'Cancha abierta'), nueva(2, 'C4', '18:00', 120, 'EVENTO', 'Cancha abierta'),
   nueva(-1, 'C1', '19:00', 90, 'RESERVA', 'Ana López'), nueva(-1, 'C3', '20:30', 90, 'RESERVA', 'Pablo Soto'),
 ]
-for (let h = 8; h < 24; h += 2) { reservas.push(nueva(3, 'C1', `${pad(h)}:00`, 120, 'RESERVA', 'Abono lunes')); reservas.push(nueva(3, 'C2', `${pad(h)}:00`, 120, 'RESERVA', 'Abono martes')) }
+for (let h = 8; h < 24; h += 2) { reservas.push(nueva(3, 'C1', `${pad(h)}:00`, 90, 'RESERVA', 'Abono lunes')); reservas.push(nueva(3, 'C2', `${pad(h)}:00`, 90, 'RESERVA', 'Abono martes')) }
 
 const caja = { id: 'demo-turno', business_date: hoy, opened_by: 'demo', opening_cash: 50000, expected_cash: 85000 }
 let turno = { ...caja }
@@ -46,6 +48,7 @@ function courts(body) {
   }
   if (body.action === 'courts.book') {
     if (!/^([01]\d|2[0-3]):(00|30)$/.test(body.start || '') || !body.holder?.trim()) throw fail('Revisá los datos de la reserva.', 400, 'BOOKING_INVALID')
+    if (body.kind === 'RESERVA' && Number(body.duration) !== 90) throw fail('La duración no está permitida para ese tipo de reserva.', 400, 'DURATION_INVALID')
     const ini = aMin(body.start), fin = ini + Number(body.duration)
     const existente = reservas.find(r => r.requestId === body.requestId)
     if (existente) return existente
@@ -85,7 +88,7 @@ function api(body) {
       return { ok: true }
     }
     case 'cash.close': turno = null; return { ok: true }
-    default: return courts(body)
+    default: return String(body.action).startsWith('rec.') ? recepcion(body) : courts(body)
   }
 }
 
@@ -93,7 +96,7 @@ export function installDemoServer() {
   const real = window.fetch.bind(window)
   window.fetch = async (input, init = {}) => {
     const url = typeof input === 'string' ? input : input.url
-    if (!/\/functions\/v1\/win-(api|courts)$/.test(url)) return real(input, init)
+    if (!/\/functions\/v1\/win-(api|courts|recepcion)$/.test(url)) return real(input, init)
     await new Promise(r => setTimeout(r, 120))
     const headers = { 'Content-Type': 'application/json' }
     try { return new Response(JSON.stringify(api(JSON.parse(init.body || '{}'))), { status: 200, headers }) }

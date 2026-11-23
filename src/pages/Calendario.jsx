@@ -9,9 +9,9 @@ const LAST = 25 * 60
 const STEP = 30
 const SLOTS = Array.from({ length: (LAST - FIRST) / STEP }, (_, i) => FIRST + i * STEP)
 const CAPACITY = COURTS.length * (LAST - FIRST)
-const KINDS = { RESERVA: 'Reserva', CLASE: 'Clase', EVENTO: 'Evento', BLOQUEO: 'Bloqueo' }
-const DURATIONS_FIXED = [60, 90, 120]
 const DURATIONS_FREE = Array.from({ length: 16 }, (_, i) => (i + 1) * STEP)
+const KINDS = { RESERVA: 'Reserva', CLASE: 'Clase', EVENTO: 'Evento', BLOQUEO: 'Bloqueo' }
+const duracionesPara = kind => (kind === 'RESERVA' ? [90] : kind === 'CLASE' ? [60, 90, 120] : DURATIONS_FREE)
 const DIAS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']
 
 const pad = n => String(n).padStart(2, '0')
@@ -92,12 +92,12 @@ export default function Calendario() {
 
   function abrirForm(court, minutos) {
     setDetalle(null); setAviso(''); setError('')
-    setForm({ court, start: minToLabel(minutos), duration: 60, kind: 'RESERVA', holder: '', note: '', requestId: crypto.randomUUID() })
+    setForm({ court, start: minToLabel(minutos), duration: 90, kind: 'RESERVA', holder: '', note: '', requestId: crypto.randomUUID() })
   }
   function cambiarTipo(kind) {
     setForm(f => {
-      const permitidas = ['RESERVA', 'CLASE'].includes(kind) ? DURATIONS_FIXED : DURATIONS_FREE
-      return { ...f, kind, duration: permitidas.includes(Number(f.duration)) ? f.duration : 60 }
+      const permitidas = duracionesPara(kind)
+      return { ...f, kind, duration: permitidas.includes(Number(f.duration)) ? f.duration : permitidas[0] }
     })
   }
 
@@ -245,7 +245,7 @@ export default function Calendario() {
               </label>
               <label>Duración
                 <select value={form.duration} onChange={e => setForm({ ...form, duration: e.target.value })}>
-                  {(['RESERVA', 'CLASE'].includes(form.kind) ? DURATIONS_FIXED : DURATIONS_FREE).map(d => <option key={d} value={d}>{d} min</option>)}
+                  {duracionesPara(form.kind).map(d => <option key={d} value={d}>{d} min</option>)}
                 </select>
               </label>
               <label>Titular
