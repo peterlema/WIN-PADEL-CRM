@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { callApi } from '../api.js'
+import StockCatalog from '../components/StockCatalog.jsx'
 
 const money = n => '$ ' + Math.round(Number(n) || 0).toLocaleString('es-AR')
 const parseAmount = v => {
@@ -103,7 +104,7 @@ export default function Bar() {
         <p className="win-bar-muted">Este listado es temporal y no reemplaza el historial de Supabase.</p>
         {!sales.length?<p className="win-bar-empty">Todavía no registraste ventas desde esta pantalla.</p>:sales.map(s=><div className="win-bar-sale" key={s.id}><div><strong>{paymentMethods[s.method]}</strong><small>{s.hour}{s.note?' · '+s.note:''}</small></div><b>{money(s.value)}</b></div>)}
       </section>
-    </> : <section className="win-bar-card">
+    </> : tab==='stock' ? <StockCatalog /> : <section className="win-bar-card">
       <div className="win-bar-row"><h3>{pending.title}</h3><span className="win-bar-status">En desarrollo</span></div>
       <p>{pending.description}</p>
       <div className="win-bar-feature-grid">{pending.features.map(x=><div className="win-bar-feature" key={x}><span aria-hidden="true">○</span>{x}</div>)}</div>
