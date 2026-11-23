@@ -50,6 +50,7 @@ Deno.serve(async req=>{
     if(action==="admin.finance"){name="win_admin_finance_report";params.p_start=data.start;params.p_end=data.end;}
     else if(action==="reception.overview") name="win_reception_overview";
     else if(action==="cash.state") name="win_cash_state";
+    else if(action==="imported.snapshot") name="win_imported_snapshot";
     else if(action==="cash.open"){name="win_cash_open";params.p_amount=data.amount;}
     else if(action==="cash.entry"){
       name="win_cash_entry";
