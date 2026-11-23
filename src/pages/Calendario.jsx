@@ -18,7 +18,7 @@ const apiKind = k => (k.startsWith('CLASE') ? 'CLASE' : k)
 const conCliente = k => ['RESERVA', 'ABONO'].includes(k)
 const duracionesPara = kind => (conCliente(kind) ? [60, 90, 120] : kind === 'CLASE_PARTICULAR' ? [60] : kind === 'CLASE_PARTIDO' ? [90] : DURATIONS_FREE)
 const etiquetaTipo = b => (b.tipo === 'CLASE' ? (b.duracion === 60 ? 'Clase particular' : b.duracion === 90 ? 'Clase partido' : 'Clase') : KINDS[b.tipo])
-const METODOS = { CASH: 'Efectivo', TRANSFER: 'Transferencia' }
+const METODOS = { CASH: 'Efectivo', TRANSFER: 'Transferencia', MIXTO: 'Efectivo y transferencia' }
 const DIAS = ['Lu', 'Ma', 'Mi', 'Ju', 'Vi', 'Sá', 'Do']
 const DIAS_LARGOS = ['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
@@ -472,7 +472,7 @@ export default function Calendario() {
               <form className="cal-ancho cal-pago" onSubmit={cobrar}>
                 <h3>Registrar cobro del turno</h3>
                 <div className="rec-sel" role="group" aria-label="Método de pago real">
-                  {Object.entries(METODOS).map(([k, v]) => (
+                  {Object.entries(METODOS).filter(([key])=>key!=='MIXTO').map(([k, v]) => (
                     <button type="button" key={k} className="secundario" aria-pressed={pago.method === k} onClick={() => setPago({ ...pago, method: k })}>
                       {v} · {precioDe(detalle.duracion).efectivo == null ? 'sin precio' : money(k === 'CASH' ? precioDe(detalle.duracion).efectivo : precioDe(detalle.duracion).transferencia)}
                     </button>

@@ -5,7 +5,8 @@ begin
  return jsonb_build_object('today',public.win_config_today_(),
   'coaches',coalesce((select jsonb_agg(jsonb_build_object('id',c.id,'name',c.name,'winPct',r.win_pct,'active',c.active) order by c.name) from public.win_coaches c left join lateral(select win_pct from public.win_ops_coach_rates x where x.teacher_id=c.id and x.valid_from<=p_date order by valid_from desc limit 1) r on true),'[]'),
   'prices',coalesce((select jsonb_agg(to_jsonb(x)) from (select distinct on(code,duration_min) code,duration_min,amount_cash,amount_transfer from public.win_price_list where valid_from<=p_date order by code,duration_min,valid_from desc)x),'[]'),
-  'agenda',coalesce((select jsonb_agg(jsonb_build_object('id',b.id,'court',b.court,'start',to_char(b.start_time,'HH24:MI'),'duration',b.duration_min,'type',b.kind,'name',b.holder,'paid',coalesce((select sum(amount) from public.win_court_payments where booking_id=b.id),0))) from public.win_court_bookings b where b.business_date=p_date and b.status='CONFIRMED' and not exists(select 1 from public.win_ops_records o where o.booking_id=b.id and o.status='ACTIVE' and o.played)),'[]'));
+  'agenda',coalesce((select jsonb_agg(jsonb_build_object('id',b->>'id','abonoId',b->>'abonoId','court',b->>'cancha','start',b->>'inicio','duration',(b->>'duracion')::int,'type',b->>'tipo','name',b->>'titular','paid',coalesce((b->'pago'->>'monto')::numeric,0))) from jsonb_array_elements(public.win_courts_day(p_token,p_date)->'reservas') b where b->>'tipo' in ('RESERVA','ABONO','CLASE','EVENTO') and not exists(select 1 from public.win_ops_records o where o.status='ACTIVE' and o.played and (o.booking_id=(b->>'id')::uuid or (o.abono_id=(b->>'abonoId')::uuid and o.activity_date=p_date)))),'[]'));
+
 end $$;
 
 create or replace function public.win_ops_history(p_token text,p jsonb) returns jsonb language plpgsql stable set search_path='' as $$
@@ -19,7 +20,7 @@ begin
    coalesce(c.name,'') teacher,a.display_name author,owner.display_name responsible,o.shift_id,sh.status shift_status,o.actor_id,
    o.updated_at is not null modified,o.review_note,
    case when o.type in ('GASTO','RETIRO') then -o.cash else o.cash+o.transfer-o.refund_cash end amount,
-   (select coalesce(jsonb_agg(jsonb_build_object('id',cmov.id,'amount',cmov.amount_signed,'method',cmov.payment_method)), '[]') from public.win_cash_movements cmov where cmov.reference_type='OPERATION' and cmov.reference_id=o.id::text and cmov.reversal_of is null) payments
+   (select coalesce(jsonb_agg(jsonb_build_object('id',m.id,'amount',m.amount_signed,'method',m.payment_method)), '[]') from public.win_cash_movements m where m.reference_type='OPERATION' and m.reference_id=o.id::text and m.reversal_of is null) payments
   from public.win_ops_records o join public.win_cash_shifts sh on sh.id=o.shift_id join win_auth.login_accounts a on a.id=o.actor_id join win_auth.login_accounts owner on owner.id=sh.opened_by left join public.win_coaches c on c.id=o.teacher_id
   where (o.created_at at time zone 'America/Argentina/Buenos_Aires')::date between start_day and end_day
   union all
@@ -27,7 +28,7 @@ begin
    case when m.payment_method='CASH' then m.amount_signed else 0 end,
    case when m.payment_method='TRANSFER' then m.amount_signed else 0 end,0,null,null,null,'{}',null,'',a.display_name,owner.display_name,m.shift_id,sh.status,m.recorded_by,false,'',m.amount_signed,
    jsonb_build_array(jsonb_build_object('id',m.id,'amount',m.amount_signed,'method',m.payment_method))
-  from public.win_cash_movements cmov join public.win_cash_shifts sh on sh.id=cmov.shift_id join win_auth.login_accounts a on a.id=cmov.recorded_by join win_auth.login_accounts owner on owner.id=sh.opened_by
+  from public.win_cash_movements m join public.win_cash_shifts sh on sh.id=m.shift_id join win_auth.login_accounts a on a.id=m.recorded_by join win_auth.login_accounts owner on owner.id=sh.opened_by
   where m.reference_type is distinct from 'OPERATION' and m.reversal_of is null and (m.occurred_at at time zone 'America/Argentina/Buenos_Aires')::date between start_day and end_day
  ), filtered as (
  select * from rows where (coalesce(p->>'type','ALL')='ALL' or type=p->>'type')
@@ -212,10 +213,11 @@ end $$;
 create or replace function public.win_ops_court_payment_trigger() returns trigger language plpgsql set search_path='' as $$
 declare sh public.win_cash_shifts; mid uuid;
 begin
+ if not public.win_can_access(new.recorded_by,'CASH','CREATE') then raise exception 'NOT_AUTHORIZED';end if;
  select * into sh from public.win_cash_shifts where status='OPEN' for update;
  if not found then raise exception 'SHIFT_NOT_OPEN';end if;
  if exists(select 1 from public.win_ops_records o where o.status='ACTIVE' and o.cash+o.transfer>0 and
-  ((new.booking_id is not null and o.booking_id=new.booking_id) or (new.abono_id is not null and o.abono_id=new.abono_id and o.activity_date=new.occurrence_date))) then raise exception 'BOOKING_ALREADY_PAID';end if;
+  ((new.booking_id is not null and o.booking_id=new.booking_id) or (new.abono_id is not null and o.abono_id=new.abono_id and o.payment_date=new.occurrence_date))) then raise exception 'BOOKING_ALREADY_PAID';end if;
  insert into public.win_cash_movements(request_id,shift_id,recorded_by,kind,business_unit,payment_method,amount_signed,reference_type,reference_id,note)
  values(new.request_id,sh.id,new.recorded_by,'SALE','COURTS',new.method,new.amount,'COURT_PAYMENT',new.id::text,case when new.abono_id is null then 'Cobro de reserva desde Calendario' else 'Cobro de abono desde Calendario' end) returning id into mid;
  if new.method='TRANSFER' then

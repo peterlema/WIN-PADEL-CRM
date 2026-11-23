@@ -15,7 +15,7 @@ create table if not exists public.win_ops_records (
  gross numeric(14,2), teacher_pay numeric(14,2), win_net numeric(14,2) not null default 0, win_pct numeric(5,2),
  cash numeric(14,2) not null default 0, transfer numeric(14,2) not null default 0, refund_cash numeric(14,2) not null default 0,
  category text, note text not null default '', exception_reason text not null default '', review_note text not null default '',
- booking_id uuid references public.win_court_bookings(id), abono_id uuid references public.win_court_abonos(id),
+ booking_id uuid references public.win_court_bookings(id), abono_id uuid references public.win_court_abonos(id), payment_date date,
  constraint win_ops_money check(cash>=0 and transfer>=0 and refund_cash>=0 and cash<=1000000000 and transfer<=1000000000),
  constraint win_ops_note_length check(length(note)<=400 and length(exception_reason)<=400 and length(review_note)<=400),
  constraint win_ops_participants check(participants is null or participants between 0 and 1000)
@@ -157,7 +157,7 @@ begin
  note=btrim(coalesce(p->>'note',''));reason=btrim(coalesce(p->>'exceptionReason',''));review=btrim(coalesce(p->>'reviewNote',''));cat=p->>'category';
  dt=coalesce(nullif(p->>'date','')::date,sh.business_date);played=coalesce((p->>'played')::boolean,true);
  if typ not in ('RESERVA','ABONO','CLASE','RENDICION','EVENTO','TIENDA','GASTO','RETIRO','OTRO') or typ is null then raise exception 'CATEGORY_INVALID';end if;
- if dt>sh.business_date and typ not in ('ABONO') then raise exception 'ACTIVITY_DATE_INVALID';end if;
+ if dt>sh.business_date and (typ<>'ABONO' or played) then raise exception 'ACTIVITY_DATE_INVALID';end if;
  if typ in ('GASTO','RETIRO') then
   if cash<=0 or tr<>0 or refund<>0 or length(note)<3 then raise exception 'CASH_EXPENSE_INVALID';end if;
   if typ='GASTO' and (cat is null or cat not in ('Artículos de limpieza','Bar / Compras','Inversión / Equipamiento pádel','Inversión / Equipamiento club','Mantenimiento y reparaciones / Gastos menores','Otros gastos')) then raise exception 'CATEGORY_INVALID';end if;
@@ -184,9 +184,12 @@ begin
   if priorpaid>0 and cash+tr>0 then raise exception 'BOOKING_ALREADY_PAID';end if;
  end if;
  if abid is not null then
-  if typ<>'ABONO' or not exists(select 1 from public.win_court_abonos ab where ab.id=abid and ab.court=any(ct) and ab.start_time=tm and ab.duration_min=dur and dt>=ab.starts_on and (ab.ends_on is null or dt<=ab.ends_on) and extract(isodow from dt)::int=ab.weekday) then raise exception 'BOOKING_LINK_INVALID';end if;
+  if typ<>'ABONO' or not exists(select 1 from public.win_court_abonos ab where ab.id=abid and (not played or (ab.court=any(ct) and ab.start_time=tm and ab.duration_min=dur)) and dt>=ab.starts_on and (ab.ends_on is null or dt<=ab.ends_on) and extract(isodow from dt)::int=ab.weekday) then raise exception 'BOOKING_LINK_INVALID';end if;
   select coalesce(sum(amount),0) into priorpaid from public.win_court_payments where abono_id=abid and occurrence_date=dt;
+  if cash+tr>0 and exists(select 1 from public.win_court_payments where abono_id=abid and occurrence_date=coalesce(nullif(p->>'paymentDate','')::date,dt)) then raise exception 'BOOKING_ALREADY_PAID';end if;
+  if cash+tr>0 and exists(select 1 from public.win_ops_records where status='ACTIVE' and abono_id=abid and payment_date=coalesce(nullif(p->>'paymentDate','')::date,dt) and win_ops_records.cash+win_ops_records.transfer>0) then raise exception 'BOOKING_ALREADY_PAID';end if;
  end if;
+ if played and exists(select 1 from public.win_court_abonos ab where ab.id is distinct from abid and ab.court=any(ct) and ab.weekday=extract(isodow from dt)::int and ab.starts_on<=dt and (ab.ends_on is null or dt<=ab.ends_on) and not exists(select 1 from public.win_court_abono_skips sk where sk.abono_id=ab.id and sk.skip_date=dt) and public.win_courts_starts_at_(dt,ab.start_time)<en and public.win_courts_starts_at_(dt,ab.start_time)+make_interval(mins=>ab.duration_min)>st) then raise exception 'AGENDA_LINK_REQUIRED';end if;
  if played and exists(select 1 from public.win_court_bookings b where b.status='CONFIRMED' and b.court=any(ct) and tstzrange(b.starts_at,b.ends_at,'[)')&&tstzrange(st,en,'[)') and b.id is distinct from bid and not (b.kind='EVENTO' and typ='EVENTO' and b.starts_at=st and b.ends_at=en)) then raise exception 'AGENDA_LINK_REQUIRED';end if;
  net=0;
  if typ='RESERVA' then
@@ -240,6 +243,7 @@ begin
  end if;
  insert into public.win_ops_records(request_id,shift_id,actor_id,type,activity_date,start_time,duration_min,courts,played,teacher_id,participants,class_kind,gross,teacher_pay,win_net,win_pct,cash,transfer,refund_cash,category,note,exception_reason,review_note,booking_id,abono_id)
  values(req,sh.id,a,typ,dt,tm,dur,ct,played,teacher,pax,classkind,gross,remuneration,net,pct,cash,tr,refund,cat,note,reason,review,bid,abid) returning * into o;
+ if typ='ABONO' and cash+tr>0 then update public.win_ops_records set payment_date=coalesce(nullif(p->>'paymentDate','')::date,dt) where id=o.id returning * into o;end if;
  if played then insert into public.win_ops_resources(operation_id,court,starts_at,ends_at) select o.id,unnest(ct),st,en;end if;
  if typ='RENDICION' then
   insert into public.win_ops_allocations(settlement_id,teacher_id,activity_date,amount)
