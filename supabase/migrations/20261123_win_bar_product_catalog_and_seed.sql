@@ -44,7 +44,7 @@ insert into public.win_products(business_unit,name,variant,category) values
  ('CAFE_BAR','Gatorade','Roja','Isotónicas'),
  ('CAFE_BAR','Powerade','','Isotónicas'),
  ('CAFE_BAR','Coca común','','Gaseosas'),
- ('CAFE_BAR','Coca 0','','Gaseosas'),
+ ('CAFE_BAR','Coca Zero','','Gaseosas'),
  ('CAFE_BAR','Stella','','Cervezas'),
  ('CAFE_BAR','Patagonia','IPA','Cervezas'),
  ('CAFE_BAR','Patagonia','Amber','Cervezas'),
