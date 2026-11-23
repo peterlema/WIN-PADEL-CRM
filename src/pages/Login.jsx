@@ -16,11 +16,12 @@ export default function Login({ onLogin }) {
     finally { setPin(''); setBusy(false) }
   }
 
-  return <main className="centro"><form className="tarjeta" onSubmit={submit}>
-    <h1>WIN Gestión</h1>
+  return <main className="centro win-login"><form className="tarjeta win-login-card" onSubmit={submit}>
+    <div className="win-login-heading"><h1>Bienvenido a WIN</h1><p>Ingresá a la gestión del club.</p></div>
     <label>Nombre de usuario<input value={username} onChange={e=>setUsername(e.target.value)} required autoComplete="username" /></label>
-    <label>PIN<input type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,'').slice(0,6))} required autoComplete="off" /></label>
+    <label>PIN personal<input type="password" inputMode="numeric" maxLength={6} value={pin} onChange={e=>setPin(e.target.value.replace(/\D/g,'').slice(0,6))} required autoComplete="off" /></label>
     {error && <p className="error" role="alert">{error}</p>}
     <button type="submit" disabled={busy}>{busy ? 'Ingresando…' : 'Ingresar'}</button>
+  <p className="win-login-note">WIN PADEL CLUB · Gestión</p>
   </form></main>
 }
