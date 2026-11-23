@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import Login from './pages/Login.jsx'
-import Panel from './pages/Panel.jsx'
+import RecepcionV5 from './pages/RecepcionV5.jsx'
 import { callApi, readToken, saveToken, clearToken } from './api.js'
 
 export default function App() {
@@ -22,5 +22,5 @@ export default function App() {
     setUser(null)
   }
   if (loading) return <main className="centro"><p>Verificando sesión…</p></main>
-  return user ? <Panel user={user} onLogout={onLogout} /> : <Login onLogin={onLogin} />
+  return user ? (['ADMIN','MANAGER','RECEPTION'].includes(user.role) ? <RecepcionV5 user={user} onLogout={onLogout} /> : <main className="win-reception"><section className="win-rec-panel"><h2>Hola, {user.name}</h2><p>Tu módulo todavía no está habilitado en esta versión. No tenés acceso a la caja general.</p><button onClick={onLogout}>Salir</button></section></main>) : <Login onLogin={onLogin} />
 }
