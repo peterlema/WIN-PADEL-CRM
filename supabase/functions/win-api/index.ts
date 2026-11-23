@@ -47,7 +47,8 @@ Deno.serve(async req=>{
     if(action==="me") return reply({user:{id:identity.account_id,name:identity.display_name,role:identity.role},expiresAt:identity.expires_at},200,origin);
     if(action==="logout") { await db.rpc("win_pin_logout",{p_token:token});return reply({ok:true},200,origin); }
     let name="", params:Record<string,unknown>={p_token:token};
-    if(action==="cash.state") name="win_cash_state";
+    if(action==="reception.overview") name="win_reception_overview";
+    else if(action==="cash.state") name="win_cash_state";
     else if(action==="cash.open"){name="win_cash_open";params.p_amount=data.amount;}
     else if(action==="cash.entry"){
       name="win_cash_entry";
