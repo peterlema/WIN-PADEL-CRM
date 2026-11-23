@@ -1,0 +1,87 @@
+/* Calendario de canchas, navegación entre secciones y versión visible. */
+body { padding-bottom: 30px; }
+
+.version {
+  position: fixed; right: 0; bottom: 0; z-index: 20;
+  padding: 4px 10px; font-size: 0.75rem; color: var(--suave);
+  background: rgba(255, 255, 255, 0.92); border: 1px solid var(--borde); border-right: 0; border-bottom: 0;
+  border-top-left-radius: 6px; white-space: nowrap;
+}
+
+.subnav {
+  display: flex; align-items: center; gap: 16px; padding: 8px 16px;
+  background: var(--tarjeta); border-bottom: 1px solid var(--borde); font-size: 0.95rem;
+}
+.subnav a { color: var(--suave); text-decoration: none; padding: 4px 0; border-bottom: 2px solid transparent; }
+.subnav a.activa { color: var(--texto); font-weight: 600; border-bottom-color: var(--acento); }
+.subnav .enlace { margin-left: auto; background: none; color: var(--acento); padding: 4px 0; }
+
+.cal { max-width: 1280px; margin: 0 auto; padding: 16px; }
+.cal h1 { margin: 0 0 12px; font-size: 1.4rem; }
+.cal .aviso { margin: 0 0 10px; color: var(--acento); font-size: 0.9rem; }
+.cal-layout { display: grid; grid-template-columns: minmax(280px, 340px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .cal-layout { grid-template-columns: 1fr; } }
+
+.cal .tarjeta { padding: 16px; gap: 12px; }
+.cal-nav { display: flex; align-items: center; gap: 8px; }
+.cal-nav button { padding: 6px 12px; }
+.cal-titulo { flex: 1; text-align: center; text-transform: capitalize; }
+.secundario { background: #fff; color: var(--texto); border: 1px solid var(--borde); }
+.peligro { background: var(--error); }
+.cal-resumen { margin: 0; color: var(--suave); font-size: 0.9rem; }
+.cal-fuera { margin: 0; color: var(--suave); font-size: 0.85rem; }
+
+/* Mes */
+.cal-grilla-mes { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-dow { text-align: center; font-size: 0.75rem; color: var(--suave); }
+.cal-dia-mes {
+  display: grid; gap: 0; justify-items: center; padding: 6px 2px; min-height: 48px;
+  color: var(--texto); border: 1px solid var(--borde); border-radius: 6px; background: #fff;
+}
+.cal-dia-mes small { font-size: 0.65rem; white-space: nowrap; }
+.cal-dia-mes.nivel1 { background: #dff3ef; }
+.cal-dia-mes.nivel2 { background: #a8dbd2; }
+.cal-dia-mes.nivel3 { background: #5fb5a8; color: #04201d; }
+.cal-dia-mes.hoy { box-shadow: inset 0 -3px 0 var(--acento); }
+.cal-dia-mes.sel { outline: 2px solid var(--texto); outline-offset: 1px; }
+.cal-leyenda { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.75rem; color: var(--suave); }
+.cal-leyenda i { display: inline-block; width: 12px; height: 12px; margin-right: 4px; border: 1px solid var(--borde); border-radius: 3px; vertical-align: -2px; background: #fff; }
+.cal-leyenda i.nivel1 { background: #dff3ef; } .cal-leyenda i.nivel2 { background: #a8dbd2; } .cal-leyenda i.nivel3 { background: #5fb5a8; }
+
+/* Día: columnas ajustadas al contenido (hora angosta, canchas parejas) */
+.cal-scroll { overflow-x: auto; }
+.cal-dia { width: 100%; border-collapse: collapse; table-layout: auto; font-size: 0.85rem; }
+.cal-dia col.col-hora { width: 1%; }
+.cal-dia col.col-cancha { width: 24.75%; }
+.cal-dia th, .cal-dia td { border: 1px solid var(--borde); padding: 0; height: 28px; }
+.cal-dia thead th { background: #f0f2f5; padding: 6px 8px; position: sticky; top: 0; }
+.cal-dia th.hora { width: 1%; white-space: nowrap; padding: 0 8px; font-weight: 400; color: var(--suave); background: #fafbfc; text-align: right; }
+.cal-dia tr.hora-entera th, .cal-dia tr.hora-entera td { border-top: 2px solid #b9c0ca; }
+.cal-dia td.libre { background: #f6fbfa; min-width: 72px; }
+.cal-dia .slot { width: 100%; height: 100%; min-height: 26px; padding: 0; background: transparent; color: var(--acento); opacity: 0; }
+.cal-dia .slot:hover, .cal-dia .slot:focus-visible { opacity: 1; background: #e3f3f0; }
+.cal-dia td.ocupada { position: relative; min-width: 72px; }
+.cal-dia .reserva {
+  position: absolute; inset: 0; display: grid; align-content: center; gap: 0; padding: 2px 6px;
+  text-align: left; border-radius: 0; background: transparent; color: inherit; overflow: hidden;
+}
+.cal-dia .reserva strong, .cal-dia .reserva span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-dia .reserva span { font-size: 0.72rem; }
+.cal-dia td.RESERVA { background: #cfe9e5; color: #0b4f49; border-left: 4px solid var(--acento); }
+.cal-dia td.CLASE { background: #dbe7fb; color: #17366b; border-left: 4px solid #3b6fd0; }
+.cal-dia td.EVENTO { background: #fde9c4; color: #6b4400; border-left: 4px solid #d98a00; }
+.cal-dia td.BLOQUEO { background: #e5e7eb; color: #374151; border-left: 4px solid #6b7280; }
+
+/* Formularios del día */
+.cal-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; padding-top: 12px; border-top: 1px solid var(--borde); }
+.cal-form h2, .cal-form p, .cal-acciones { grid-column: 1 / -1; margin: 0; }
+.cal-form h2 { font-size: 1.05rem; text-transform: capitalize; }
+.cal-form select { font: inherit; padding: 9px 10px; border: 1px solid var(--borde); border-radius: 6px; background: #fff; color: var(--texto); }
+.cal-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Modo demo */
+.demo-banner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px;
+  padding: 6px 12px; background: #fde9c4; color: #6b4400; font-size: 0.85rem; font-weight: 600;
+}
+.demo-banner .enlace { background: none; color: #6b4400; text-decoration: underline; padding: 0; font-size: inherit; }

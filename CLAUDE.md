@@ -25,3 +25,5 @@
 `React/GitHub Pages` → `Edge Function win-api (login, sesiones y operaciones de caja)` → `PostgreSQL (win_auth, caja, auditoría)`.
 
 El frontend puede conocer la URL pública de la API, pero no debe recibir claves secretas ni ejecutar reglas financieras. **La clave secreta sólo en el entorno del backend**. Ningún secreto se publica en GitHub Pages.
+
+- **Versión visible:** cada cambio de código sube la versión en `package.json`; la web la muestra al pie (`WIN Gestión vX.Y.Z · commit`) para comprobar qué versión se está viendo.

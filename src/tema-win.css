@@ -1,0 +1,83 @@
+/* Tema WIN PADEL CLUB: misma identidad visual que el Apps Script (Index.html V4).
+   Se carga al final y sólo redefine colores, bordes y espacios de los estilos existentes. */
+:root {
+  --fondo: #f3f4f7;
+  --tarjeta: #ffffff;
+  --texto: #232344;
+  --suave: #667085;
+  --borde: #d7dbe4;
+  --acento: #232344;
+  --rosa: #d44664;
+  --rosa-suave: #fff0f3;
+  --error: #a32;
+  font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+}
+body { background: var(--fondo); color: var(--texto); }
+
+/* Encabezado de marca */
+.marca { max-width: 1120px; margin: 0 auto; padding: 22px 22px 6px; }
+.marca h1 { margin: 0; font-size: 28px; letter-spacing: -1.2px; }
+.marca h1 span { color: var(--rosa); }
+.marca small { color: var(--suave); letter-spacing: 0.04em; }
+@media (max-width: 700px) { .marca { padding: 14px 12px 4px; } .marca h1 { font-size: 22px; } }
+
+/* Tarjetas, campos y botones */
+.tarjeta {
+  border: 1px solid #e7e9ef; border-radius: 18px; padding: 24px;
+  box-shadow: 0 3px 18px rgba(21, 26, 44, 0.045);
+}
+.tarjeta h1, .tarjeta h2 { font-size: 18px; letter-spacing: -0.35px; margin: 0; }
+label { color: #505767; font-weight: 600; letter-spacing: 0.01em; }
+input, select, textarea {
+  border: 1px solid var(--borde); border-radius: 11px; min-height: 43px;
+  font: inherit; color: var(--texto); background: #fff; transition: border-color 0.15s, box-shadow 0.15s;
+}
+input:focus, select:focus, textarea:focus {
+  outline: 0; border-color: var(--rosa); box-shadow: 0 0 0 3px rgba(237, 113, 139, 0.13);
+}
+button { border-radius: 11px; min-height: 42px; font-weight: 650; background: var(--texto); color: #fff; transition: transform 0.12s, background 0.12s; }
+button:not(:disabled):active { transform: scale(0.98); }
+button:focus-visible { outline: 3px solid #f8a6b6; outline-offset: 2px; }
+button.secundario, .cal-nav button:not(.activa) { background: #fff; color: var(--texto); border: 1px solid #ccc; }
+button.secundario:hover, .cal-nav button:hover { border-color: var(--rosa); background: #fff5f7; }
+.error { color: var(--error); background: #fff1f2; border: 1px solid #ffd7df; border-radius: 10px; padding: 12px 14px; }
+.cal .aviso { background: #eefaf3; border: 1px solid #d0efdf; border-radius: 10px; padding: 12px 14px; color: #16703c; }
+select { font: inherit; }
+
+/* Barra de usuario de la Caja y navegación */
+.barra { max-width: 1120px; margin: 8px auto 0; border: 1px solid #e7e9ef; border-radius: 14px; background: #fff; }
+.barra strong { display: none; }
+.barra .usuario { margin-left: 0; font-weight: 600; color: var(--texto); }
+.barra button { margin-left: auto; background: #fff; color: var(--texto); border: 1px solid #ccc; }
+.contenido { max-width: 1120px; margin: 0 auto; padding: 14px 22px 40px; }
+.contenido > h1 { margin: 6px 0 10px; font-size: 22px; letter-spacing: -0.6px; }
+.centro { min-height: calc(100vh - 160px); }
+.subnav { max-width: 1120px; margin: 8px auto 0; border: 1px solid #e7e9ef; border-radius: 14px; }
+.subnav a.activa { border-bottom-color: var(--rosa); }
+.subnav .enlace { color: var(--rosa); }
+.version { color: var(--suave); }
+
+/* Calendario con los colores de la marca */
+.cal { padding-top: 10px; }
+.cal h1 { font-size: 22px; letter-spacing: -0.6px; }
+.cal-dia-mes { border-radius: 10px; border-color: #e8e9ed; }
+.cal-dia-mes.nivel1 { background: #fdeef1; }
+.cal-dia-mes.nivel2 { background: #f7c1cd; }
+.cal-dia-mes.nivel3 { background: #e5778f; color: #2a0a13; }
+.cal-dia-mes.hoy { box-shadow: inset 0 -3px 0 var(--rosa); }
+.cal-leyenda i.nivel1 { background: #fdeef1; } .cal-leyenda i.nivel2 { background: #f7c1cd; } .cal-leyenda i.nivel3 { background: #e5778f; }
+.cal-dia td.libre { background: #fafbfc; }
+.cal-dia .slot { color: var(--rosa); }
+.cal-dia .slot:hover, .cal-dia .slot:focus-visible { background: var(--rosa-suave); }
+.cal-dia td.RESERVA { background: #fde4ea; color: #892740; border-left-color: var(--rosa); }
+.cal-dia thead th { background: #f7f8fb; color: var(--texto); }
+.peligro { background: #fff3f3; color: #a32; border: 1px solid #edcccc; }
+.demo-banner { border-radius: 0; }
+
+/* Ancho igual al resto de las pantallas y títulos sin mayúsculas en cada palabra */
+.cal { max-width: 1120px; padding-left: 22px; padding-right: 22px; }
+.cal-titulo, .cal-form h2 { text-transform: none; }
+.cal-titulo::first-letter, .cal-form h2::first-letter { text-transform: uppercase; }
+@media (max-width: 700px) { .cal { padding-left: 12px; padding-right: 12px; } }
