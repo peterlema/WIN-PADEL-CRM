@@ -66,6 +66,7 @@ export default function Calendario() {
   const [form, setForm] = useState(null)
   const [detalle, setDetalle] = useState(null)
   const [barPending, setBarPending] = useState(null)
+  const [barDay, setBarDay] = useState([])
   const [barError, setBarError] = useState('')
   const [barPayment, setBarPayment] = useState(null)
   const [motivo, setMotivo] = useState('')
@@ -84,6 +85,13 @@ export default function Calendario() {
   }
 
   useEffect(() => { callApi('me').then(r => setUser(r.user)).catch(falla) }, [])
+  useEffect(()=>{
+    if(!user||!['ADMIN','MANAGER','RECEPTION'].includes(user.role))return
+    let alive=true
+    callApi('bar.court.day',{date:fecha}).then(r=>{if(alive)setBarDay(r.slots||[])}).catch(()=>{if(alive)setBarDay([])})
+    return ()=>{alive=false}
+  },[user?.role,fecha,refresco])
+
 
   useEffect(() => {
     let vivo = true
@@ -194,6 +202,7 @@ export default function Calendario() {
       await callApi('bar.order.pay',{requestId:barPayment.requestId,orderId:barPayment.id,amount:n,method:barPayment.method})
       const response=await callApi('bar.court.pending',{court:detalle.cancha,date:fecha,start:detalle.inicio})
       setBarPending(response.orders||[]);setBarPayment(null)
+      setRefresco(v=>v+1)
       setAviso('Consumo del Bar cobrado. La deuda se actualizó sin generar otra venta ni descontar stock nuevamente.')
     }catch(err){setBarError((err.message||'No se pudo confirmar el cobro.')+' Verificá la caja antes de volver a intentar.')}
     finally{setOcupado(false)}
@@ -351,6 +360,7 @@ export default function Calendario() {
                             <button type="button" className="reserva" onClick={() => abrirDetalle(b)}>
                               <strong>{b.pago ? '✓ ' : ''}{b.titular}</strong>
                               <span>{etiquetaTipo(b)} · {b.inicio}–{b.fin}</span>
+                              {barDay.some(p=>p.court===b.cancha&&p.start===b.inicio&&Number(p.balance)>0)&&<span className="bar-calendar-badge">Bar pendiente</span>}
                             </button>
                           </td>
                         )
