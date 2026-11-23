@@ -19,6 +19,7 @@ const DEMO_BAR = window.location.hash.startsWith('#/demo/bar')
 if (DEMO) installDemoServer(DEMO_BAR ? { rol: 'BAR', nombre: 'Gerson (demo)' } : {})
 const RAIZ = DEMO ? '#/demo/caja' : '#/'
 const CALENDARIO = DEMO ? '#/demo/calendario' : '#/calendario'
+const BAR = DEMO ? '#/demo/bar' : '#/bar'
 const RECEPCION = '#/demo'
 const rutaDe = hash => (DEMO ? hash.replace(/^#\/demo\/?/, '') : hash.replace(/^#\/?/, ''))
 
@@ -49,6 +50,7 @@ function Raiz() {
   }, [token])
   const ruta = rutaDe(hash)
   const enCalendario = ruta === 'calendario'
+  const enBar = ruta === 'bar'
   const enRecepcion = DEMO && (ruta === '' || ruta === 'recepcion')
   async function salir() {
     try { await callApi('logout') } catch { /* la sesión local se cierra igual */ }
@@ -63,7 +65,7 @@ function Raiz() {
       <>
         {DEMO && <div className="demo-banner" role="status">MODO DEMO · vista del empleado de Bar<button type="button" className="enlace" onClick={salirDelDemo}>Salir del demo</button></div>}
         <header className="marca"><div><h1>WIN <span>PADEL CLUB</span></h1><small>GESTIÓN · BAR</small></div><span className="pill">Bar</span></header>
-        <nav className="subnav" aria-label="Secciones"><a href={DEMO ? '#/demo/bar' : '#/'} className="activa">Bar</a><button type="button" className="enlace" onClick={DEMO ? salirDelDemo : salir}>Salir</button></nav>
+        <nav className="subnav" aria-label="Secciones"><a href={BAR} className="activa">Bar / Buffet</a><button type="button" className="enlace" onClick={DEMO ? salirDelDemo : salir}>Salir</button></nav>
         <Bar />
         <Version />
       </>
@@ -84,13 +86,16 @@ function Raiz() {
       {token && (
         <nav className="subnav" aria-label="Secciones">
           {DEMO && <a href={RECEPCION} className={enRecepcion ? 'activa' : ''}>Recepción (borrador)</a>}
-          <a href={RAIZ} className={enCalendario || enRecepcion ? '' : 'activa'}>Recepción</a>
+          <a href={RAIZ} className={enCalendario || enBar || enRecepcion ? '' : 'activa'}>Recepción</a>
           <a href={CALENDARIO} className={enCalendario ? 'activa' : ''}>Calendario</a>
-          {enCalendario && <button type="button" className="enlace" onClick={salir}>Salir</button>}
+          {['ADMIN','MANAGER'].includes(rol) && <a href={BAR} className={enBar ? 'activa' : ''}>Bar / Buffet</a>}
+          {(enCalendario || enBar) && <button type="button" className="enlace" onClick={salir}>Salir</button>}
         </nav>
       )}
-      {enCalendario
-        ? (token ? <Calendario /> : <main className="centro"><p>Ingresá primero desde <a href={RAIZ}>Caja</a> para ver el calendario.</p></main>)
+      {enBar
+        ? (token && ['ADMIN','MANAGER'].includes(rol) ? <Bar /> : <main className="centro"><p>No tenés permiso para ingresar al Bar.</p></main>)
+        : enCalendario
+          ? (token ? <Calendario /> : <main className="centro"><p>Ingresá primero desde <a href={RAIZ}>Recepción</a> para ver el calendario.</p></main>)
         : enRecepcion
           ? (token ? <RecepcionConUsuario onSalir={DEMO ? salirDelDemo : salir} /> : null)
           : <App />}
