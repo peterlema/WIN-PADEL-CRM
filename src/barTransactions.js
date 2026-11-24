@@ -7,7 +7,7 @@ export function readBarTransaction(storage,owner){
  catch{throw new Error('El registro local de recuperación no se pudo leer. No vuelvas a cobrar hasta revisar esta pestaña.')}
 }
 const uncertain=(state,cause)=>Object.assign(new Error(state==='NOT_FOUND'?'El servidor todavía no registra esta operación. Podés reintentar la misma solicitud sin duplicarla.':state==='IN_PROGRESS'?'La operación sigue procesándose. Consultá nuevamente su resultado.':state==='INCONSISTENT'?'La operación requiere revisión del administrador; no la repitas.':'No se pudo consultar el resultado. Conservamos la solicitud para verificarla.'),{uncertain:true,recoveryStatus:state,cause})
-const rejected=e=>e.outcome==='REJECTED'||(e.status>=400&&e.status<500&&![408,429].includes(e.status))
+const rejected=e=>e.code!=='REQUEST_ID_REUSED'&&(e.outcome==='REJECTED'||(e.status>=400&&e.status<500&&![408,429].includes(e.status)))
 function confirmed(action,r){return action==='bar.order.place'?typeof r?.id==='string'&&Number.isFinite(Number(r.total)):typeof r?.orderId==='string'&&Number.isFinite(Number(r.remaining))}
 async function query(call,j){
  return call('bar.request.status',{requestId:j.payload.requestId,kind:j.action==='bar.order.place'?'PLACE':'PAY',payload:j.payload})

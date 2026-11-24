@@ -38,6 +38,9 @@ storage=new Storage();storage.setItem(journalKey(owner),JSON.stringify({owner,ac
 assert.equal(readBarTransaction(storage,'other-user'),null)
 r=await recoverBarTransaction({storage,owner,call:async(a,p)=>{assert.equal(p.kind,'PAY');return {state:'FOUND',result:{orderId:'old-order',remaining:1500}}}})
 assert.equal(r.result.remaining,1500);assert.equal(readBarTransaction(storage,owner),null)
+storage=new Storage()
+await assert.rejects(()=>submitBarTransaction(options(async()=>{throw Object.assign(new Error('Solicitud con otros datos'),{status:409,outcome:'REJECTED',code:'REQUEST_ID_REUSED'})},storage)),e=>e.uncertain)
+assert.ok(readBarTransaction(storage,owner))
 const vite=await createServer({server:{middlewareMode:true},appType:'custom'})
 try{
  const {barFailure}=await vite.ssrLoadModule('/supabase/functions/win-api/barErrors.ts')
