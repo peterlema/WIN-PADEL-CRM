@@ -69,6 +69,33 @@ drop trigger if exists win_calendar_correction_guard on public.win_ops_correctio
 create trigger win_calendar_correction_guard after update on public.win_ops_corrections for each row execute function public.win_calendar_correction_guard();
 
 -- Mantener Bar compatible con los homónimos: no elegir una cuenta arbitraria.
+create or replace function public.win_calendar_payment_guard() returns trigger language plpgsql set search_path='' as $$
+declare b public.win_court_bookings;paid numeric;begin
+ perform pg_catalog.pg_advisory_xact_lock(438011,2);
+ if new.booking_id is not null then select * into b from public.win_court_bookings where id=new.booking_id for update;
+ else b=public.win_calendar_resolve(new.recorded_by,'a:'||new.abono_id||':'||new.occurrence_date);end if;
+ if b.status<>'CONFIRMED' then raise exception 'BOOKING_NOT_FOUND';end if;
+ if b.calendar_managed then
+  paid=public.win_calendar_paid(b.id)+coalesce((select sum(cp.amount) from public.win_court_payments cp where cp.booking_id=b.id and not exists(select 1 from public.win_calendar_allocations al where al.payment_id=cp.id)),0);
+  if b.expected_amount is null then raise exception 'PRICE_MISSING';end if;
+  if paid>=b.expected_amount then raise exception 'ALREADY_PAID';end if;
+  if paid+new.amount>b.expected_amount then raise exception 'PAYMENT_EXCEEDS_BALANCE';end if;
+ end if;
+ return new;
+end $$;
+drop trigger if exists win_calendar_payment_guard on public.win_court_payments;
+create trigger win_calendar_payment_guard before insert on public.win_court_payments for each row execute function public.win_calendar_payment_guard();
+create or replace function public.win_calendar_payment_allocate() returns trigger language plpgsql set search_path='' as $$
+declare b public.win_court_bookings;begin
+ if new.booking_id is not null then select * into b from public.win_court_bookings where id=new.booking_id;
+ else b=public.win_calendar_resolve(new.recorded_by,'a:'||new.abono_id||':'||new.occurrence_date);end if;
+ insert into public.win_calendar_allocations values(new.id,b.id,new.amount) on conflict do nothing;
+ return new;
+end $$;
+-- Orden alfabético: primero el asiento único de caja existente; después su aplicación.
+drop trigger if exists win_z_calendar_payment_allocate on public.win_court_payments;
+create trigger win_z_calendar_payment_allocate after insert on public.win_court_payments for each row execute function public.win_calendar_payment_allocate();
+
 create or replace function public.win_bar_customer_create(p_token text,p_name text) returns jsonb language plpgsql set search_path='' as $$
 declare a uuid;cid uuid;n int;cleaned text:=btrim(coalesce(p_name,''));begin
  select account_id into a from public.win_pin_session(p_token);if a is null then raise exception 'SESSION_INVALID';end if;

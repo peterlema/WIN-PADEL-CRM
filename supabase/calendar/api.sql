@@ -217,7 +217,7 @@ begin
     if row_.amount>0 then
      insert into public.win_court_payments(request_id,booking_id,method,amount,received_by,recorded_by,note)
      values(gen_random_uuid(),b.id,row_.method,row_.amount,case when row_.method='CASH' then a end,a,notes) returning id into pid;
-     insert into public.win_calendar_allocations values(pid,b.id,row_.amount);
+     insert into public.win_calendar_allocations values(pid,b.id,row_.amount) on conflict do nothing;
      if row_.method='TRANSFER' and length(btrim(coalesce(p->>'receiptReference','')))>0 then
       select id into mid from public.win_cash_movements where reference_type='COURT_PAYMENT' and reference_id=pid::text;
       update public.win_ops_receipts set reference=btrim(p->>'receiptReference'),verified=true where movement_id=mid;

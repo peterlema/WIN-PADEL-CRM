@@ -115,6 +115,7 @@ create or replace function public.win_calendar_booking_guard() returns trigger l
 declare series public.win_court_abonos;begin
  perform pg_catalog.pg_advisory_xact_lock(438011,2);
  if new.status<>'CONFIRMED' then return new;end if;
+ if new.calendar_managed and new.performed_at is null and exists(select 1 from public.win_ops_availability v where v.business_date=new.business_date and v.court=new.court and (new.starts_at<v.starts_at or new.ends_at>v.ends_at)) then raise exception 'OUTSIDE_HOURS';end if;
  if exists(select 1 from public.win_court_abonos a where a.id is distinct from new.source_abono_id and a.court=new.court and a.weekday=extract(isodow from new.business_date)::int and a.starts_on<=new.business_date and (a.ends_on is null or a.ends_on>=new.business_date)
   and not exists(select 1 from public.win_court_abono_skips sk where sk.abono_id=a.id and sk.skip_date=new.business_date)
   and tstzrange(public.win_courts_starts_at_(new.business_date,a.start_time),public.win_courts_starts_at_(new.business_date,a.start_time)+make_interval(mins=>a.duration_min),'[)')&&tstzrange(new.starts_at,new.ends_at,'[)')) then raise exception 'ABONO_CONFLICT';end if;
