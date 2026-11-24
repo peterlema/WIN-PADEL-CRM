@@ -1,15 +1,17 @@
+import MoneyInput from './MoneyInput.jsx'
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import { useCallback, useEffect, useState } from 'react'
 import BarInventory from './BarInventory.jsx'
 import { callApi } from '../api.js'
 
-const money = value => value == null ? 'Sin definir' : '$ ' + Number(value).toLocaleString('es-AR',{minimumFractionDigits:0,maximumFractionDigits:2})
+const money = value => formatMoney(value,'Sin definir')
 const empty = () => ({id:null,name:'',variant:'',category:'Bebidas',salePrice:'',unitCost:'',barcode:'',active:true})
-const toInput = value => value == null ? '' : String(value).replace('.',',')
+const toInput = moneyInputValue
 function decimalOrNull(raw) {
   const v=String(raw).trim()
   if(!v) return null
-  const n=Number(v.replace(/\./g,'').replace(',','.'))
-  if(!Number.isFinite(n)||n<0||Math.round(n*100)!==n*100) throw new Error('El precio y el costo deben ser importes positivos, con hasta dos decimales.')
+  const n=parseMoneyInput(v)
+  if(!Number.isFinite(n)||n<0||Math.abs(Math.round(n*100)-n*100)>1e-7) throw new Error('El precio y el costo deben ser importes positivos, con hasta dos decimales.')
   return n
 }
 export default function StockCatalog() {
@@ -74,7 +76,7 @@ export default function StockCatalog() {
         <label>Producto<input required maxLength={120} value={form.name} onChange={e=>setForm({...form,name:e.target.value})} placeholder="Ej. Gatorade" /></label>
         <label>Variante / sabor<input maxLength={90} value={form.variant} onChange={e=>setForm({...form,variant:e.target.value})} placeholder="Ej. Azul (opcional)" /></label>
         <label>Categoría<input required maxLength={80} value={form.category} onChange={e=>setForm({...form,category:e.target.value})} placeholder="Bebidas" /></label>
-        <label>Precio de venta ($)<input inputMode="decimal" value={form.salePrice} onChange={e=>setForm({...form,salePrice:e.target.value})} placeholder="A definir" /></label>
+        <label>Precio de venta ($)<MoneyInput inputMode="decimal" value={form.salePrice} onChange={e=>setForm({...form,salePrice:e.target.value})} placeholder="A definir" /></label>
         <label>Costo promedio ponderado<span>{money(products.find(p=>p.id===form.id)?.unitCost)}</span><small>Se calcula desde compras recibidas. No se edita como un precio.</small></label>
         <label>Código de barras<input maxLength={60} value={form.barcode} onChange={e=>setForm({...form,barcode:e.target.value})} placeholder="Opcional" /></label>
       </div>

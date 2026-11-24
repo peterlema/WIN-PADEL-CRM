@@ -1,7 +1,7 @@
 import {useEffect,useId,useRef,useState} from 'react'
 import {createPortal} from 'react-dom'
 
-const validationMessage=el=>el.validity.valueMissing?'Completá este campo.':el.validity.rangeUnderflow?'El valor mínimo es '+el.min+'.':el.validity.rangeOverflow?'El valor máximo es '+el.max+'.':el.validity.stepMismatch?'Usá incrementos de '+el.step+'.':el.validity.tooShort?'Escribí al menos '+el.minLength+' caracteres.':el.validity.typeMismatch?'Revisá el formato de este campo.':'Revisá el valor ingresado.'
+const validationMessage=el=>el.validity.customError?el.validationMessage:el.validity.valueMissing?'Completá este campo.':el.validity.rangeUnderflow?'El valor mínimo es '+el.min+'.':el.validity.rangeOverflow?'El valor máximo es '+el.max+'.':el.validity.stepMismatch?'Usá incrementos de '+el.step+'.':el.validity.tooShort?'Escribí al menos '+el.minLength+' caracteres.':el.validity.typeMismatch?'Revisá el formato de este campo.':'Revisá el valor ingresado.'
 const targets=[[/horario|hora|franja|ventana|disponib|solapa|ocupad/i,'start'],[/duraci/i,'duration'],[/cancha/i,'court'],[/profesor|docente/i,'teacher'],[/tel[eé]fono|whatsapp/i,'phone'],[/cliente|nombre|referente/i,'customer'],[/precio|tarifa|importe/i,'price']]
 
 export default function ValidatedForm({children,onSubmit,error='',className='',...props}) {

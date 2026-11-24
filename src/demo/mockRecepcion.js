@@ -1,3 +1,4 @@
+import {formatMoney} from '../money.js'
 // Servidor simulado de Recepción (modo demo). Replica las reglas del Apps Script de recepción
 // (WIN Anotaciones): validaciones, superposición de canchas, economía de clases y totales de caja.
 // En producción estas reglas viven en la base y en la Edge Function; la pantalla sólo las muestra.
@@ -163,7 +164,7 @@ function guardar(body) {
     if (!concepto) throw fail(a.tipo === 'Retiro' ? 'Indicá el motivo del retiro.' : 'Indicá concepto.', 400)
     const importe = dinero(a.importe, 'importe', true)
     const disponible = totales().totales.esperado
-    if (importe > disponible) throw fail('El importe supera el efectivo disponible en la caja (' + disponible.toLocaleString('es-AR') + ').')
+    if (importe > disponible) throw fail('El importe supera el efectivo disponible en la caja (' + formatMoney(disponible) + ').')
     if (a.tipo === 'Gasto') {
       const categoria = a.categoria || OPCIONES.sinCategoria
       if (categoria !== OPCIONES.sinCategoria && !(categoria in OPCIONES.gastos)) throw fail('Categoría de gasto inválida.', 400)

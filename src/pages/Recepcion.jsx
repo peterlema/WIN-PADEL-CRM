@@ -1,9 +1,11 @@
+import MoneyInput from '../components/MoneyInput.jsx'
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import { useEffect, useMemo, useState } from 'react'
 import { callRecepcion } from '../recepcionApi.js'
 
 const pad = n => String(n).padStart(2, '0')
-const money = n => '$ ' + Math.round(Number(n) || 0).toLocaleString('es-AR')
-const num = v => { const n = Number(String(v ?? '').trim().replace(/\./g, '').replace(',', '.')); return Number.isFinite(n) ? n : 0 }
+const money = value => formatMoney(value,'Sin definir')
+const num=value=>parseMoneyInput(value,{empty:0})
 const hoyAR = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date())
 const HORAS = Array.from({ length: 24 }, (_, i) => pad(i))
 const MINUTOS = Array.from({ length: 60 }, (_, i) => pad(i))
@@ -84,8 +86,8 @@ function Horario({ f, set, evento }) {
 
 const Dinero = ({ f, set, campos = ['efectivo', 'transferencia'] }) => (
   <div className="rec-grid">
-    {campos.includes('efectivo') && <label>Efectivo ($)<input inputMode="decimal" placeholder="0" value={f.efectivo} onChange={e => set({ efectivo: e.target.value })} /></label>}
-    {campos.includes('transferencia') && <label>Transferencia ($)<input inputMode="decimal" placeholder="0" value={f.transferencia} onChange={e => set({ transferencia: e.target.value })} /></label>}
+    {campos.includes('efectivo') && <label>Efectivo ($)<MoneyInput inputMode="decimal" placeholder="0" value={f.efectivo} onChange={e => set({ efectivo: e.target.value })} /></label>}
+    {campos.includes('transferencia') && <label>Transferencia ($)<MoneyInput inputMode="decimal" placeholder="0" value={f.transferencia} onChange={e => set({ transferencia: e.target.value })} /></label>}
   </div>
 )
 
@@ -230,7 +232,7 @@ export default function Recepcion({ user, onSalir }) {
           <h2>Abrir caja</h2>
           {st.cierreAnterior && <p className="rec-suave">Efectivo contado en el último cierre: <b>{money(st.cierreAnterior.contado)}</b>. Contá el efectivo que recibís y, si no coincide, explicá la diferencia.</p>}
           <form onSubmit={abrir} className="rec-form">
-            <label>Efectivo contado al abrir ($)<input inputMode="decimal" value={apertura.saldo} onChange={e => setApertura({ ...apertura, saldo: e.target.value })} required /></label>
+            <label>Efectivo contado al abrir ($)<MoneyInput inputMode="decimal" value={apertura.saldo} onChange={e => setApertura({ ...apertura, saldo: e.target.value })} required /></label>
             <label>Motivo de la diferencia (si corresponde)<input value={apertura.motivo} maxLength={400} onChange={e => setApertura({ ...apertura, motivo: e.target.value })} /></label>
             <button disabled={ocupado}>Abrir caja</button>
           </form>
@@ -330,21 +332,21 @@ export default function Recepcion({ user, onSalir }) {
                   {f.tipoClase === 'Tradicional' ? (
                     <>
                       <div className="rec-grid">
-                        <label>Tarifa habitual ($)<input readOnly value={tarifa.toLocaleString('es-AR')} /></label>
+                        <label>Tarifa habitual ($)<input readOnly value={money(tarifa)} /></label>
                         <label>Porcentaje de WIN (%)<input readOnly value={pct} /></label>
                       </div>
                       <p className="rec-calculo">Profesor {money(remuneracion)} · WIN {money(winClase)}</p>
                       <details className="rec-desplegable" open={f.excepcion} onToggle={e => { if (e.currentTarget.open !== f.excepcion) set({ excepcion: e.currentTarget.open }) }}>
                         <summary>Excepción / Descuento</summary>
                         <div className="rec-grid">
-                          <label>Importe real cobrado ($)<input inputMode="decimal" value={f.cobrado} onChange={e => set({ cobrado: e.target.value })} /></label>
-                          <label>Remuneración acordada (opcional)<input inputMode="decimal" value={f.remuneracion} onChange={e => set({ remuneracion: e.target.value })} /></label>
+                          <label>Importe real cobrado ($)<MoneyInput inputMode="decimal" value={f.cobrado} onChange={e => set({ cobrado: e.target.value })} /></label>
+                          <label>Remuneración acordada (opcional)<MoneyInput inputMode="decimal" value={f.remuneracion} onChange={e => set({ remuneracion: e.target.value })} /></label>
                         </div>
                         <label>Motivo<input maxLength={300} value={f.motivoExcepcion} onChange={e => set({ motivoExcepcion: e.target.value })} /></label>
                       </details>
                     </>
                   ) : (
-                    <label>Importe para WIN ($)<input inputMode="decimal" value={f.importeWIN} onChange={e => set({ importeWIN: e.target.value })} /></label>
+                    <label>Importe para WIN ($)<MoneyInput inputMode="decimal" value={f.importeWIN} onChange={e => set({ importeWIN: e.target.value })} /></label>
                   )}
                   <label>Pendiente de revisión (opcional)<input maxLength={300} placeholder="Qué falta verificar" value={f.incidencia} onChange={e => set({ incidencia: e.target.value })} /></label>
                   <p className="rec-suave">La clase no pide medio de pago: el cobro entra por Rendición.</p>
@@ -383,7 +385,7 @@ export default function Recepcion({ user, onSalir }) {
                   </div>
                   <p className="rec-suave">Elegí categoría y, si corresponde, subcategoría. El concepto sigue siendo libre. El gasto sale de efectivo.</p>
                   <div className="rec-grid">
-                    <label>Importe ($)<input inputMode="decimal" value={f.importe} onChange={e => set({ importe: e.target.value })} required /></label>
+                    <label>Importe ($)<MoneyInput inputMode="decimal" value={f.importe} onChange={e => set({ importe: e.target.value })} required /></label>
                     <label>Concepto<input maxLength={400} placeholder="Ej. Productos de limpieza" value={f.concepto} onChange={e => set({ concepto: e.target.value })} required /></label>
                   </div>
                 </>
@@ -392,7 +394,7 @@ export default function Recepcion({ user, onSalir }) {
               {elegido.k === 'retiro' && (
                 <>
                   <div className="rec-grid">
-                    <label>Importe ($)<input inputMode="decimal" value={f.importe} onChange={e => set({ importe: e.target.value })} required /></label>
+                    <label>Importe ($)<MoneyInput inputMode="decimal" value={f.importe} onChange={e => set({ importe: e.target.value })} required /></label>
                     <label>Motivo del retiro<input maxLength={400} placeholder="Ej. Traslado a Administración" value={f.concepto} onChange={e => set({ concepto: e.target.value })} required /></label>
                   </div>
                   <label>Destinatario del efectivo<input maxLength={120} value={f.destinatario} onChange={e => set({ destinatario: e.target.value })} required /></label>
@@ -446,9 +448,9 @@ export default function Recepcion({ user, onSalir }) {
               <div className="rec-stat"><small>Efectivo esperado</small><b>{money(t.esperado)}</b></div>
               <div className="rec-stat"><small>Transferencias esperadas</small><b>{money(t.transferencia)}</b></div>
             </div>
-            <label>Efectivo contado ($)<input inputMode="decimal" placeholder="Contar billetes y monedas" value={cierre.contado} onChange={e => setCierre({ ...cierre, contado: e.target.value })} required /></label>
+            <label>Efectivo contado ($)<MoneyInput inputMode="decimal" placeholder="Contar billetes y monedas" value={cierre.contado} onChange={e => setCierre({ ...cierre, contado: e.target.value })} required /></label>
             <div className="rec-grid">
-              <label>Monto de comprobantes ($)<input inputMode="decimal" value={cierre.comprobado} onChange={e => setCierre({ ...cierre, comprobado: e.target.value })} /></label>
+              <label>Monto de comprobantes ($)<MoneyInput inputMode="decimal" value={cierre.comprobado} onChange={e => setCierre({ ...cierre, comprobado: e.target.value })} /></label>
               <label>Cantidad de comprobantes<input type="number" min="0" step="1" inputMode="numeric" value={cierre.cantidad} onChange={e => setCierre({ ...cierre, cantidad: e.target.value })} /></label>
             </div>
             <p className="rec-suave">Un mismo comprobante puede cubrir varios movimientos. Contalo una sola vez. Efectivo: ingresá el importe. · Transferencias: ingresá el importe.</p>

@@ -1,7 +1,8 @@
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import { useEffect, useMemo, useState } from 'react'
 import { callApi } from '../api.js'
 
-const money = n => '$ ' + Math.round(Number(n)||0).toLocaleString('es-AR')
+const money = value => formatMoney(value,'Sin definir')
 const fmtDate = iso => new Intl.DateTimeFormat('es-AR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}).format(new Date(iso+'T12:00:00Z'))
 const today = () => new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
 const addDays = (iso,n) => {const d=new Date(iso+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
