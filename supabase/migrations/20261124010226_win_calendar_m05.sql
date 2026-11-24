@@ -129,7 +129,7 @@ create trigger win_calendar_booking_guard before insert or update on public.win_
 create or replace function public.win_calendar_allocation_guard() returns trigger language plpgsql set search_path='' as $$
 declare total_ numeric;budget numeric;begin
  perform pg_catalog.pg_advisory_xact_lock(438011,2);
- select coalesce((select l.amount_signed from public.win_ops_ledger l where l.reference_type='COURT_PAYMENT' and l.reference_id=p.id::text limit 1),p.amount) into budget from public.win_court_payments p where p.id=new.payment_id for update;
+ select coalesce((select l.amount_signed from public.win_ops_ledger l where l.reference_type='COURT_PAYMENT' and l.reference_id=p.id::text limit 1),p.amount) into budget from public.win_court_payments p where p.id=new.payment_id;
  select coalesce(sum(amount),0) into total_ from public.win_calendar_allocations where payment_id=new.payment_id and booking_id<>new.booking_id;
  if new.amount+total_>budget then raise exception 'ALLOCATION_EXCEEDS_PAYMENT';end if;return new;
 end $$;
@@ -239,12 +239,12 @@ begin
  if p_action='range' then
   d1=(p->>'start')::date;d2=coalesce((p->>'end')::date,d1);
   if d1 is null or d2<d1 or d2>d1+31 then raise exception 'PERIOD_INVALID';end if;
-  return jsonb_build_object('rows',public.win_calendar_rows(d1,d2),'settings',public.win_settings_get(p_token),'context',public.win_ops_context(p_token,d1));
+  return jsonb_build_object('rows',public.win_calendar_rows(d1,d2),'settings',public.win_settings_get(p_token),'context',jsonb_build_object('coaches',coalesce((select jsonb_agg(jsonb_build_object('id',c.id,'name',c.name,'active',c.active) order by c.name) from public.win_coaches c),'[]')));
  elsif p_action='quote' then
   dt=(p->>'date')::date;dur=(p->>'duration')::int;
   if dt is null or dur is null then raise exception 'BOOKING_INVALID';end if;
   if p->>'kind'='CLASE' then
-   b.business_date=dt;b.duration_min=dur;b.teacher_id=nullif(p->>'teacherId','')::uuid;b.lesson=coalesce(p->'lesson','{}');
+   b.business_date=dt;b.duration_min=dur;b.teacher_id=nullif(p->>'teacherId','')::uuid;b.lesson=coalesce(p->'lesson','{}')-'configuredPct';
    return public.win_calendar_economics(b);
   end if;
   return jsonb_build_object('cash',public.win_court_price_(dt,'CASH',dur),'transfer',public.win_court_price_(dt,'TRANSFER',dur));
@@ -255,12 +255,12 @@ begin
   return jsonb_build_object('rows',coalesce((select jsonb_agg(to_jsonb(x)) from(select id,name,first_name,last_name,phone,note from public.win_customers where coalesce(p->>'search','')='' or name ilike '%'||(p->>'search')||'%' or public.win_calendar_phone(phone) like '%'||regexp_replace(p->>'search','[^0-9]','','g')||'%' and regexp_replace(p->>'search','[^0-9]','','g')<>'' order by name,id limit 50 offset greatest(coalesce((p->>'offset')::int,0),0))x),'[]'));
  elsif p_action='customer.detail' then
   cid=(p->>'id')::uuid;
-  return jsonb_build_object('customer',(select to_jsonb(c) from public.win_customers c where id=cid),'bookings',coalesce((select jsonb_agg(public.win_calendar_json(b) order by business_date desc) from public.win_court_bookings b where b.customer_id=cid or exists(select 1 from public.win_calendar_participants x where x.booking_id=b.id and x.customer_id=cid)),'[]'),'abonos',coalesce((select jsonb_agg(to_jsonb(s)) from public.win_court_abonos s where customer_id=cid),'[]'));
+  return jsonb_build_object('customer',(select to_jsonb(c) from public.win_customers c where id=cid),'bookings',coalesce((select jsonb_agg(public.win_calendar_json(cb) order by business_date desc) from public.win_court_bookings cb where cb.customer_id=cid or exists(select 1 from public.win_calendar_participants x where x.booking_id=cb.id and x.customer_id=cid)),'[]'),'abonos',coalesce((select jsonb_agg(to_jsonb(ca)) from public.win_court_abonos ca where customer_id=cid),'[]'));
  elsif p_action='waitlist' then
   return jsonb_build_object('rows',coalesce((select jsonb_agg(to_jsonb(w)||jsonb_build_object('name',c.name,'phone',c.phone) order by w.created_at) from public.win_calendar_waitlist w join public.win_customers c on c.id=w.customer_id),'[]'),
-   'opportunities',coalesce((select jsonb_agg(to_jsonb(o)||jsonb_build_object('name',c.name,'phone',c.phone,'court',s.court,'weekday',s.weekday,'start',s.start_time,'duration',s.duration_min)) from public.win_calendar_opportunities o join public.win_calendar_waitlist w on w.id=o.waitlist_id and w.status in('PENDING','CONTACTED') join public.win_customers c on c.id=w.customer_id join public.win_court_abonos s on s.id=o.abono_id),'[]'));
+   'opportunities',coalesce((select jsonb_agg(to_jsonb(o)||jsonb_build_object('name',c.name,'phone',c.phone,'court',ca.court,'weekday',ca.weekday,'start',ca.start_time,'duration',ca.duration_min)) from public.win_calendar_opportunities o join public.win_calendar_waitlist w on w.id=o.waitlist_id and w.status in('PENDING','CONTACTED') join public.win_customers c on c.id=w.customer_id join public.win_court_abonos ca on ca.id=o.abono_id),'[]'));
  elsif p_action='abonos' then
-  return jsonb_build_object('rows',coalesce((select jsonb_agg(to_jsonb(s) order by weekday,start_time,court) from public.win_court_abonos s),'[]'));
+  return jsonb_build_object('rows',coalesce((select jsonb_agg(to_jsonb(ca) order by weekday,start_time,court) from public.win_court_abonos ca),'[]'));
  elsif p_action='audit' then
   return jsonb_build_object('rows',coalesce((select jsonb_agg(to_jsonb(x) order by occurred_at desc) from(select u.display_name author,au.* from public.win_cash_audit au join win_auth.login_accounts u on u.id=au.actor_id where au.entity_type='CALENDAR' and (coalesce(p->>'id','')='' or au.entity_id=p->>'id' or au.detail->>'bookingId'=p->>'id') order by au.occurred_at desc limit 200)x),'[]'));
  elsif p_action='request' then
@@ -299,7 +299,7 @@ begin
   if public.win_abono_minutes_(st)<coalesce((select value from public.win_settings where key='GRID_OPEN_MIN'),480) or public.win_abono_minutes_(st)+dur>coalesce((select value from public.win_settings where key='GRID_CLOSE_MIN'),1500) then raise exception 'OUTSIDE_HOURS';end if;
   if p_action<>'update' and public.win_courts_starts_at_(dt,st)+make_interval(mins=>dur)<now() and role_<>'ADMIN' then raise exception 'BOOKING_IN_PAST';end if;
   if kind_='RESERVA' then cid=public.win_calendar_customer(a,p);select * into customer from public.win_customers where id=cid;end if;
-  lesson_=coalesce(p->'lesson','{}');teacher=nullif(p->>'teacherId','')::uuid;
+  lesson_=coalesce(p->'lesson','{}')-'configuredPct';teacher=nullif(p->>'teacherId','')::uuid;
   if kind_='CLASE' and (teacher is null or not exists(select 1 from public.win_coaches where id=teacher and active) or coalesce((lesson_->>'participants')::int,0) not between 1 and 4 or coalesce(lesson_->>'classKind','TRADICIONAL') not in('TRADICIONAL','PARTIDO')) then raise exception 'COACH_INVALID';end if;
   if kind_='CLASE' then lesson_=lesson_||jsonb_build_object('classKind',coalesce(lesson_->>'classKind','TRADICIONAL'));end if;
   price=nullif(p->>'price','')::numeric;
@@ -464,7 +464,11 @@ begin
   and (coalesce(p->>'search','')='' or concat_ws(' ',note,teacher,author,responsible,type) ilike '%'||(p->>'search')||'%')
   and (coalesce(p->>'shiftId','')='' or shift_id::text=p->>'shiftId')
  ), paged as(select * from filtered order by registered_at desc,id desc limit 100 offset offset_rows)
- select jsonb_build_object('rows',coalesce((select jsonb_agg(to_jsonb(x) order by registered_at desc,id desc) from paged x),'[]'), 'total',(select count(*) from filtered),'offset',offset_rows,'limit',100) into data;
+ select jsonb_build_object('rows',coalesce((select jsonb_agg(to_jsonb(x)||jsonb_build_object('calendarId',origin.id,'calendarDate',origin.business_date) order by registered_at desc,x.id desc)
+  from paged x left join lateral(select cb.id,cb.business_date from public.win_court_bookings cb where cb.id::text=case
+   when x.id like 'op:%' then (select oo.booking_id::text from public.win_ops_records oo where oo.id::text=substr(x.id,4))
+   when x.id like 'cash:%' then (select cp.booking_id::text from public.win_cash_movements mm join public.win_court_payments cp on cp.id::text=mm.reference_id where mm.id::text=substr(x.id,6) and mm.reference_type='COURT_PAYMENT')
+   when x.id like 'calendar:%' then (select aa.entity_id from public.win_cash_audit aa where aa.id::text=substr(x.id,10)) end) origin on true),'[]'), 'total',(select count(*) from filtered),'offset',offset_rows,'limit',100) into data;
  return data;
 end $$;
 

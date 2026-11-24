@@ -16,4 +16,11 @@ jobs:
       - run: cat supabase/calendar/schema.sql supabase/calendar/api.sql supabase/calendar/integration.sql supabase/calendar/compatibility.sql | cmp - supabase/migrations/20261124010226_win_calendar_m05.sql
       - run: npm ci
       - run: npm run test:db
+      - run: node scripts/calendar-utils.test.mjs
       - run: npm run build
+      - name: Preparar revisión local sin datos de producción
+        run: |
+          tar -czf /tmp/m05-build.tgz dist
+          echo WIN_BUILD_START
+          base64 -w 76 /tmp/m05-build.tgz
+          echo WIN_BUILD_END

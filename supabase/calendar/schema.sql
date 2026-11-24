@@ -129,7 +129,7 @@ create trigger win_calendar_booking_guard before insert or update on public.win_
 create or replace function public.win_calendar_allocation_guard() returns trigger language plpgsql set search_path='' as $$
 declare total_ numeric;budget numeric;begin
  perform pg_catalog.pg_advisory_xact_lock(438011,2);
- select coalesce((select l.amount_signed from public.win_ops_ledger l where l.reference_type='COURT_PAYMENT' and l.reference_id=p.id::text limit 1),p.amount) into budget from public.win_court_payments p where p.id=new.payment_id for update;
+ select coalesce((select l.amount_signed from public.win_ops_ledger l where l.reference_type='COURT_PAYMENT' and l.reference_id=p.id::text limit 1),p.amount) into budget from public.win_court_payments p where p.id=new.payment_id;
  select coalesce(sum(amount),0) into total_ from public.win_calendar_allocations where payment_id=new.payment_id and booking_id<>new.booking_id;
  if new.amount+total_>budget then raise exception 'ALLOCATION_EXCEEDS_PAYMENT';end if;return new;
 end $$;

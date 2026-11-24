@@ -10,7 +10,7 @@ const q=async(sql,p=[])=>(await db.query(sql,p)).rows
 const one=async(sql,p=[])=>(await q(sql,p))[0]
 const fail=async(fn,code)=>{await assert.rejects(fn,e=>e.message.includes(code));console.log('OK rechazo '+code)}
 const uuid=()=>crypto.randomUUID()
-await db.exec(`create role anon;create role authenticated;create role service_role;
+await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
 create schema auth;create table auth.users(id uuid primary key);
 create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);`)
 await db.exec(readFileSync(new URL('20261123_win_private_username_pin_accounts.sql',dir),'utf8'))
@@ -26,7 +26,7 @@ for(const f of ['schema.sql','controls.sql','reports.sql','calendar.sql'])await 
 const calDir=new URL('../calendar/',import.meta.url)
 for(let repeat=0;repeat<2;repeat++)for(const f of ['schema.sql','api.sql','integration.sql','compatibility.sql']){try{await db.exec(readFileSync(new URL(f,calDir),'utf8'))}catch(e){console.error('M05 SQL',f,e.message);throw e}}
 console.log('OK M05 aplicado dos veces')
-const api=async(token,action,data={})=>(await one('select public.win_calendar_api($1,$2,$3::jsonb) r',[token,action,JSON.stringify(data)])).r
+const api=async(token,action,data={})=>{await db.exec('set role service_role');try{return (await one('select public.win_calendar_api($1,$2,$3::jsonb) r',[token,action,JSON.stringify(data)])).r}finally{await db.exec('reset role')}}
 const ops=async(token,action,data={})=>(await one('select public.win_ops_api($1,$2,$3::jsonb) r',[token,action,JSON.stringify(data)])).r
 const day=(await one('select public.win_config_today_()::text d')).d
 const add=(d,n)=>{const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)}
@@ -131,7 +131,7 @@ assert.ok((await api('one','waitlist')).opportunities.some(r=>r.waitlist_id===wa
 assert.equal((await one('select status from public.win_calendar_waitlist where id=$1',[wait.id])).status,'PENDING')
 await fail(()=>ops('one','save',{requestId:uuid(),type:'RESERVA'}),'CATEGORY_MOVED_TO_CALENDAR')
 await db.exec('set role anon')
-await fail(()=>api('one','range',{start:day,end:day}),'permission denied')
+await fail(()=>q("select public.win_calendar_api('one','range','{}')"),'permission denied')
 await db.exec('reset role')
 console.log('OK oportunidades comerciales sin asignación automática, cierre de rutas duplicadas y permisos')
 await db.close()

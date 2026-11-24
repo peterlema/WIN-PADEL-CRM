@@ -2,6 +2,7 @@ import { recepcion } from './mockRecepcion.js'
 import { courts } from './mockCourts.js'
 import { configDemo } from './mockConfig.js'
 import { operationsDemo } from './mockOperations.js'
+import { calendarDemo } from './mockCalendar.js'
 
 // MODO DEMO: servidor simulado en el navegador, con datos de ejemplo.
 // Se activa sólo con la dirección #/demo. No llama a Supabase ni guarda nada: al recargar vuelve a empezar.
@@ -15,6 +16,7 @@ let turno = { ...caja }
 let usuario = { id: 'demo', name: 'Usuario demo', role: 'ADMIN' }
 
 function api(body) {
+  if(String(body.action).startsWith('calendar.')) return calendarDemo(body)
   if(String(body.action).startsWith('ops.')) return operationsDemo(body)
   switch (body.action) {
     case 'login': return { token: 'd'.repeat(64), user: usuario, expiresAt: new Date(Date.now() + 8 * 3600e3).toISOString() }

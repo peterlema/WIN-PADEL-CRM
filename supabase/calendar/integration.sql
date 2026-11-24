@@ -31,7 +31,11 @@ begin
   and (coalesce(p->>'search','')='' or concat_ws(' ',note,teacher,author,responsible,type) ilike '%'||(p->>'search')||'%')
   and (coalesce(p->>'shiftId','')='' or shift_id::text=p->>'shiftId')
  ), paged as(select * from filtered order by registered_at desc,id desc limit 100 offset offset_rows)
- select jsonb_build_object('rows',coalesce((select jsonb_agg(to_jsonb(x) order by registered_at desc,id desc) from paged x),'[]'), 'total',(select count(*) from filtered),'offset',offset_rows,'limit',100) into data;
+ select jsonb_build_object('rows',coalesce((select jsonb_agg(to_jsonb(x)||jsonb_build_object('calendarId',origin.id,'calendarDate',origin.business_date) order by registered_at desc,x.id desc)
+  from paged x left join lateral(select cb.id,cb.business_date from public.win_court_bookings cb where cb.id::text=case
+   when x.id like 'op:%' then (select oo.booking_id::text from public.win_ops_records oo where oo.id::text=substr(x.id,4))
+   when x.id like 'cash:%' then (select cp.booking_id::text from public.win_cash_movements mm join public.win_court_payments cp on cp.id::text=mm.reference_id where mm.id::text=substr(x.id,6) and mm.reference_type='COURT_PAYMENT')
+   when x.id like 'calendar:%' then (select aa.entity_id from public.win_cash_audit aa where aa.id::text=substr(x.id,10)) end) origin on true),'[]'), 'total',(select count(*) from filtered),'offset',offset_rows,'limit',100) into data;
  return data;
 end $$;
 
