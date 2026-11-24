@@ -41,7 +41,7 @@ test('compras: formulario único, total argentino y recepción sin pago automát
  await page.getByLabel('Cantidad recibida',{exact:true}).fill('24')
  const input=page.getByLabel('Costo total del producto',{exact:true})
  await input.fill('36.000');await input.press('Tab');await expect(input).toHaveValue('$36.000')
- await expect(page.getByText(/Unitario: \\$1\\.500/)).toBeVisible()
+ await expect(page.getByText('Unitario: $1.500',{exact:false})).toBeVisible()
  const request=page.waitForRequest(r=>r.method()==='POST'&&r.postDataJSON()?.action==='bar.inventory.purchase.save')
  await page.getByRole('button',{name:'Guardar compra',exact:true}).click()
  const p=(await request).postDataJSON()
