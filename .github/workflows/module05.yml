@@ -1,0 +1,22 @@
+name: Validar Módulo 05
+on:
+  push:
+    branches: [implementation/modulo-05]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Crear migración incremental con CLI
+        run: |
+          npx --yes supabase@2.81.3 --help > /dev/null
+          npx --yes supabase@2.81.3 migration new win_calendar_m05
+      - run: npm ci
+      - run: npm run test:db
+      - run: npm run build
