@@ -4,11 +4,14 @@ on:
     branches: [main, bar-compras-simples]
   pull_request:
     paths: ['src/components/Bar*', 'src/components/StockCatalog.jsx', 'supabase/**']
+concurrency:
+  group: bar-costs-${{ github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   costs:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
