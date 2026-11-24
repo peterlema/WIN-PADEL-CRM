@@ -16,7 +16,23 @@ let turno = { ...caja }
 
 let usuario = { id: 'demo', name: 'Usuario demo', role: 'ADMIN' }
 
+// Employee policies start empty and disabled, including in demo.
+const employeeDrafts=new Map()
+function employeeDemo(body){
+ const action=body.action.slice(13)
+ if(action==='status'||action==='employees')return {enabled:false,pendingApproval:true,employees:[]}
+ if(usuario.role!=='ADMIN')throw fail('Sólo Administración puede configurar estos precios.',403)
+ if(action==='report')return {enabled:false,sales:[],accounts:[]}
+ if(action==='admin.list')return {enabled:false,pendingApproval:true,employees:[],products:configDemo.list().productos.filter(p=>p.unidad==='CAFE_BAR').map(p=>({id:p.id,name:p.nombre,variant:'',active:p.activo,publicPrice:p.precio,averageCost:null,mode:null,value:null,revision:0,...employeeDrafts.get(p.id)}))}
+ if(action==='policy.save'){
+  if((employeeDrafts.get(body.productId)?.revision||0)!==body.revision)throw fail('Actualizá el borrador antes de guardar.',409)
+  employeeDrafts.set(body.productId,{mode:body.mode,value:body.value,revision:body.revision+1});return {draftOnly:true}
+ }
+ throw fail('Beneficio desactivado, pendiente de aprobación.',409,'EMPLOYEE_PRICING_DISABLED')
+}
+
 function api(body) {
+  if(String(body.action).startsWith('bar.employee.')) return employeeDemo(body)
   if(String(body.action).startsWith('users.')) return usersDemo(body,usuario)
   if(String(body.action).startsWith('calendar.')) return calendarDemo(body)
   if(String(body.action).startsWith('ops.')) return operationsDemo(body)
