@@ -27,6 +27,7 @@ jobs:
       - run: npm run test:ui
       - run: npm run test:history
       - run: npm run test:users
+      - run: npm run test:calendar-move
       - run: npm run test:db
       - run: npm run build
         env:

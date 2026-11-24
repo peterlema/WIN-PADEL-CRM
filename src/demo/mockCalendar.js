@@ -1,6 +1,11 @@
-// Ejemplos explícitos para inspeccionar la interfaz. Ninguna escritura simulada se confirma.
+import {validateMove,slotTime} from '../calendarMove.js'
+import {activityEnd} from '../activityTime.js'
+// Datos de demostración: los movimientos sólo viven en memoria y se descartan al recargar.
 import {today,addDays,monday} from '../calendarUtils.js'
 const day=today(),name='Cliente de ejemplo',teacher={id:'demo-leo',name:'Leo',active:true,winPct:60}
+const requests=new Map(),audits=[]
+const settings={GRID_OPEN_MIN:480,GRID_CLOSE_MIN:1500,BOOKING_DEFAULT_DURATION:90}
+const fail=(code,message)=>{throw Object.assign(new Error(message),{code,status:409})}
 const rows=[
  {id:'demo-reservation',date:day,court:'C4',start:'18:30',end:'20:00',duration:90,kind:'RESERVA',name,phone:'',price:90000,paid:30000,balance:60000,paymentStatus:'PARTIAL',status:'SCHEDULED',revision:1,participants:[],payments:[],startsAt:day+'T18:30:00-03:00',endsAt:day+'T20:00:00-03:00'},
  {id:'demo-lesson',date:day,court:'C3',start:'16:00',end:'17:00',duration:60,kind:'CLASE',name:'Clase de ejemplo',teacherId:teacher.id,lesson:{participants:2,classKind:'TRADICIONAL'},status:'SCHEDULED',revision:1,participants:[],payments:[],economics:{gross:70000,teacherPay:28000,winNet:42000},startsAt:day+'T16:00:00-03:00',endsAt:day+'T17:00:00-03:00'},
@@ -8,14 +13,26 @@ const rows=[
 ]
 export function calendarDemo(body){
  const action=body.action.replace('calendar.','')
- if(action==='range')return {rows:rows.filter(r=>r.date>=body.start&&r.date<=body.end),settings:{GRID_OPEN_MIN:480,GRID_CLOSE_MIN:1500,BOOKING_DEFAULT_DURATION:90},context:{coaches:[teacher],prices:[]}}
+ if(action==='move'){
+  if(requests.has(body.requestId))return structuredClone(requests.get(body.requestId))
+  const row=rows.find(r=>r.id===body.id);if(!row)fail('BOOKING_NOT_FOUND','La actividad ya no existe.')
+  if(body.revision!==row.revision||body.from?.date!==row.date||body.from?.court!==row.court||body.from?.start!==row.start)fail('STALE_REVISION','Otra persona modificó la actividad. Actualizá la agenda.')
+  if(row.kind==='ABONO'&&body.scope!=='occurrence')fail('ABONO_MOVE_SCOPE','Se mueve sólo esta fecha del abono.')
+  const error=validateMove(row,body,rows,settings)
+  if(error)fail('MOVE_REJECTED',error)
+  const before=structuredClone(row),end=activityEnd(body.date,body.start,row.duration)
+  Object.assign(row,{date:body.date,court:body.court,start:body.start,end:end.time,startsAt:new Date(slotTime(body.date,body.start)).toISOString(),endsAt:end.date+'T'+end.time+':00-03:00',revision:row.revision+1})
+  audits.push({id:crypto.randomUUID(),action:'CALENDAR_MOVE',author:'Usuario demo',occurred_at:new Date().toISOString(),detail:{bookingId:row.id,before,after:structuredClone(row),note:row.kind==='ABONO'?'Se movió sólo esta fecha; las otras semanas no cambian.':'Actividad reubicada en la demostración.'}})
+  requests.set(body.requestId,structuredClone(row));return structuredClone(row)
+ }
+ if(action==='range')return {rows:rows.filter(r=>r.date>=body.start&&r.date<=body.end),settings,context:{coaches:[teacher],prices:[]}}
  if(action==='pending')return {rows:rows.filter(r=>Date.parse(r.endsAt)<=Date.now()&&r.kind!=='ABONO')}
  if(action==='quote'){if(body.kind!=='CLASE')return {cash:90000,transfer:100000};const gross=[0,60000,70000,90000,100000][Number(body.lesson?.participants)]||0;return {gross,teacherPay:gross*.4,winNet:gross*.6}}
  if(action==='customers')return {rows:[{id:'demo-customer',name,first_name:'Cliente',last_name:'de ejemplo',phone:'',note:'Ejemplo visual'}]}
  if(action==='customer.detail')return {customer:{id:'demo-customer',name,phone:'',note:'Ejemplo visual'},bookings:rows.slice(0,1),abonos:[]}
  if(action==='waitlist')return {rows:[],opportunities:[]}
  if(action==='abonos')return {rows:[{id:'demo-series',court:'C2',start_time:'20:00:00',duration_min:90,customer_name:'Abono de ejemplo',starts_on:day,ends_on:null}]}
- if(action==='audit')return {rows:[]}
- if(action==='request')return {found:false}
+ if(action==='audit')return {rows:audits.filter(a=>!body.id||a.detail.bookingId===body.id).slice().reverse()}
+ if(action==='request')return {found:requests.has(body.requestId),result:requests.get(body.requestId)}
  throw new Error('La demo permite revisar la interfaz. Las operaciones se guardan sólo con tu usuario en la aplicación conectada.')
 }
