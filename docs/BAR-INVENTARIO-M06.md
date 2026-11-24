@@ -5,7 +5,7 @@ La pantalla existente Bar → Stock y precios usa `win_products` y el único lib
 ## Publicación
 
 1. Ejecutar las comprobaciones de GitHub Actions de la rama `implementation/bar-inventory` y `npm run test:bar`.
-2. Aplicar una sola vez `20261124140000_win_bar_inventory_cash_isolation.sql`. No modifica turnos cerrados ni genera movimientos de dinero. Mantiene los enlaces financieros anteriores como antecedentes.
+2. Aplicar una sola vez `20261124124633_win_bar_inventory_cash_isolation.sql`. No modifica turnos cerrados ni genera movimientos de dinero. Mantiene los enlaces financieros anteriores como antecedentes.
 3. Ejecutar en una transacción `supabase/operations/bar-opening-20261124.sql`. Exige la cuenta ADMIN de Pedro y aborta si encuentra movimientos/compras ajenos al documento. Su clave de origen evita repetir la compra o el conteo. No se debe volver a recibir la compra histórica.
 4. Publicar `win-api`, conservando su autenticación por sesión PIN y sus tres archivos relativos actuales. Verificar que `main` no cambió antes de integrar la rama. Cloudflare despliega `main` por el procedimiento existente.
 5. Verificar 11 productos, 393 unidades físicas, una compra histórica de 540 unidades por $822.800, diferencia 147 y potencial $568.000. Caja Bar debe seguir sin turno ni movimientos; Caja Recepción debe permanecer idéntica.

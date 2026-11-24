@@ -38,6 +38,7 @@ jobs:
       - run: npm run test:db
       - run: npm run test:users
       - run: npm run test:bar
+      - run: cmp supabase/operations/bar-stock.sql supabase/migrations/20261124124633_win_bar_inventory_cash_isolation.sql
       - run: python3 scripts/calendar-concurrency.py
         env:
           PGHOST: 127.0.0.1
