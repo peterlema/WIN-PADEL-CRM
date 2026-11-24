@@ -178,6 +178,7 @@ await fail(()=>q("select public.win_calendar_api('one','range','{}')"),'permissi
 await db.exec('reset role')
 console.log('OK oportunidades comerciales sin asignación automática, cierre de rutas duplicadas y permisos')
 
+{
 // Integration regression: imported history survives M05 and never changes live cash or teacher debt.
 const legacyDay=add(day,-100),legacyPaidDay=add(day,-99)
 const movementCount=(await one('select count(*)::int n from public.win_cash_movements')).n
@@ -204,4 +205,5 @@ assert.deepEqual(await ops('one','balance',{teacherId:coach.id}),balanceBeforeHi
 await fail(()=>ops('one','admin',{start:legacyDay,end:legacyPaidDay}),'NOT_AUTHORIZED')
 console.log('OK integración M05 + histórico: reportes, dos fechas, importación única, precio desconocido y saldo operativo intacto')
 
+}
 await db.close()
