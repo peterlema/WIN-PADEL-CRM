@@ -1,0 +1,209 @@
+import { PGlite } from '@electric-sql/pglite'
+import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist'
+import { readFileSync } from 'node:fs'
+import assert from 'node:assert/strict'
+
+const db=new PGlite({extensions:{btree_gist}})
+const dir=new URL('../migrations/',import.meta.url)
+const source=new URL('../operations/',import.meta.url)
+const q=async(sql,p=[])=>(await db.query(sql,p)).rows
+const one=async(sql,p=[])=>(await q(sql,p))[0]
+const fail=async(fn,code)=>{await assert.rejects(fn,e=>e.message.includes(code));console.log('OK rechazo '+code)}
+const uuid=()=>crypto.randomUUID()
+await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
+create schema auth;create table auth.users(id uuid primary key);
+create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);`)
+await db.exec(readFileSync(new URL('20261123_win_private_username_pin_accounts.sql',dir),'utf8'))
+await db.exec(`create function public.win_pin_session(t text) returns table(account_id uuid,display_name text,role text,expires_at timestamptz) language sql as $$select id,display_name,role,now()+interval '1 hour' from win_auth.login_accounts where username='test-'||t and enabled$$;
+create function public.win_can_access(a uuid,m text,act text) returns boolean language sql stable as $$select exists(select 1 from win_auth.login_accounts where id=a and enabled and (role='ADMIN' or(role in ('RECEPTION','MANAGER') and m in ('CASH','COURTS'))))$$;
+insert into win_auth.login_accounts(username,pin_hash,display_name,role,enabled)values('test-admin','x','Admin prueba','ADMIN',true),('test-one','x','Recepción uno','RECEPTION',true),('test-two','x','Recepción dos','RECEPTION',true),('test-bar','x','Bar prueba','BAR',true);`)
+await db.exec(readFileSync(new URL('20261123_win_foundation_users_cash.sql',dir),'utf8'))
+await db.exec(`alter table public.win_staff drop constraint win_staff_user_id_fkey;alter table public.win_staff add foreign key(user_id) references win_auth.login_accounts(id);insert into public.win_staff(user_id,display_name,role)select id,display_name,role from win_auth.login_accounts;`)
+for(const f of ['20261124_win_court_bookings.sql','20261124_win_courts_v2_pricing_payments_abonos.sql','20261124_win_courts_v3_payment_method_at_collection.sql','20261124_win_courts_v4_prices_60_120.sql','20261125_win_config_catalog_coaches_prices.sql'])await db.exec(readFileSync(new URL(f,dir),'utf8'))
+
+for(const f of ['20261123_win_bar_product_catalog_and_seed.sql','20261123_win_bar_pos_orders_pending_and_court.sql','20261125_win_config_bar_uses_products.sql','20261126_win_settings.sql'])await db.exec(readFileSync(new URL(f,dir),'utf8'))
+for(const f of ['schema.sql','controls.sql','reports.sql','calendar.sql'])await db.exec(readFileSync(new URL(f,source),'utf8'))
+const calDir=new URL('../calendar/',import.meta.url)
+for(let repeat=0;repeat<2;repeat++)for(const f of ['schema.sql','api.sql','integration.sql','compatibility.sql']){try{await db.exec(readFileSync(new URL(f,calDir),'utf8'))}catch(e){console.error('M05 SQL',f,e.message);throw e}}
+console.log('OK M05 aplicado dos veces')
+const api=async(token,action,data={})=>{await db.exec('set role service_role');try{return (await one('select public.win_calendar_api($1,$2,$3::jsonb) r',[token,action,JSON.stringify(data)])).r}finally{await db.exec('reset role')}}
+const ops=async(token,action,data={})=>(await one('select public.win_ops_api($1,$2,$3::jsonb) r',[token,action,JSON.stringify(data)])).r
+const day=(await one('select public.win_config_today_()::text d')).d
+const add=(d,n)=>{const x=new Date(d+'T12:00:00Z');x.setUTCDate(x.getUTCDate()+n);return x.toISOString().slice(0,10)}
+const yesterday=add(day,-1),future=add(day,3)
+const adminId=(await one("select id from win_auth.login_accounts where username='test-admin'")).id
+await db.exec(`update public.win_ops_coach_rates set valid_from='2020-01-01';`)
+const coaches=(await ops('admin','context',{date:day})).coaches
+const coach=coaches[0]
+const opened=await ops('one','control',{requestId:uuid(),operation:'open',date:day,cash:0})
+const write=(token,action,p)=>api(token,action,{requestId:uuid(),...p})
+const book=(extra={})=>({kind:'RESERVA',date:future,court:'C4',start:'10:00',duration:90,customerName:'Cliente de prueba',phone:'11 5555 0101',price:100000,...extra})
+await fail(()=>api('bar','range',{start:day,end:day}),'NOT_AUTHORIZED')
+await fail(()=>api('invalid','range',{start:day,end:day}),'SESSION_INVALID')
+const b=await write('one','create',book())
+assert.equal((await ops('one','overview')).totals.cashExpected,0)
+const cashRequest={requestId:uuid(),id:b.id,shiftId:opened.id,cash:20000,transfer:15000}
+let paid=await api('one','pay',cashRequest)
+assert.equal(Number(paid.paid),35000);assert.equal(paid.paymentStatus,'PARTIAL')
+await api('one','pay',cashRequest)
+assert.equal((await one('select count(*)::int n from public.win_cash_movements')).n,2)
+await fail(()=>api('one','pay',{...cashRequest,cash:25000}),'REQUEST_ID_REUSED')
+await fail(()=>write('two','pay',{id:b.id,shiftId:opened.id,cash:90000}),'PAYMENT_EXCEEDS_BALANCE')
+await fail(()=>write('two','confirm',{id:b.id}),'ACTIVITY_NOT_FINISHED')
+assert.equal((await one('select count(*)::int n from public.win_ops_records')).n,0)
+paid=await write('two','pay',{id:b.id,shiftId:opened.id,cash:65000})
+assert.equal(paid.paymentStatus,'PAID')
+await fail(()=>write('one','pay',{id:b.id,shiftId:opened.id,cash:1000}),'ALREADY_PAID')
+assert.equal(Number((await ops('one','overview')).totals.cashExpected),85000)
+console.log('OK pagos anticipados, parciales, mixtos, caja real única e idempotencia')
+const canceled=await write('one','cancel',{id:b.id,note:'Cliente canceló con anticipación'})
+assert.equal(canceled.status,'CANCELLED');assert.equal(Number(canceled.paid),100000)
+assert.equal((await one('select count(*)::int n from public.win_cash_movements')).n,3)
+const same=await write('one','create',book({start:'12:00',phone:'+54 11 5555-0101'}))
+assert.equal(same.customerId,b.customerId)
+assert.equal((await one("select public.win_calendar_phone('011 15 5555 0101') p")).p,'5491155550101')
+assert.equal((await api('one','customer.detail',{id:b.customerId})).bookings.length,2)
+const homonym=await write('one','create',book({start:'14:00',phone:'11 5555 0102'}))
+assert.notEqual(homonym.customerId,b.customerId)
+await fail(()=>write('one','create',book({start:'12:30',phone:'11 5555 0103'})),'COURT_TAKEN')
+const before=await one('select count(*)::int n from public.win_customers')
+await fail(()=>write('one','create',book({start:'12:30',phone:'11 5555 0104'})),'COURT_TAKEN')
+assert.deepEqual(await one('select count(*)::int n from public.win_customers'),before)
+await fail(()=>write('two','update',{...book({start:'12:00'}),id:same.id,revision:0}),'STALE_REVISION')
+let changed=await write('two','update',{...book({start:'12:00',price:80000,priceReason:'Acuerdo por promoción del club'}),id:same.id,revision:same.revision})
+assert.equal(Number(changed.price),80000)
+const special=await write('one','create',book({start:'16:15',duration:75,price:78000,phone:'11 5555 0105'}))
+assert.equal(special.end,'17:30')
+const withoutPhone=await one("insert into public.win_customers(name,created_by)values('Cliente anterior sin teléfono',$1)returning id",[adminId])
+const enriched=await write('one','create',book({customerId:withoutPhone.id,customerName:'Cliente anterior sin teléfono',phone:'11 5555 0199',start:'17:30',duration:30,price:20000}))
+assert.equal(enriched.customerId,withoutPhone.id)
+assert.equal((await one('select phone from public.win_customers where id=$1',[withoutPhone.id])).phone,'5491155550199')
+
+console.log('OK clientes normalizados, homónimos, reversión completa por error, revisión concurrente y duración excepcional')
+const abono=await write('one','abono.create',book({court:'C3',start:'20:00',phone:'11 5555 0201'}))
+const a1=abono.id,a2='a:'+abono.abonoId+':'+add(future,7)
+await write('one','pay',{id:a1,shiftId:opened.id,transfer:100000,receiptReference:'ref-anticipo'})
+await write('one','pay',{id:a2,shiftId:opened.id,cash:100000})
+const movementCount=(await one('select count(*)::int n from public.win_cash_movements')).n
+const skip=await write('one','skip',{id:a1,note:'Avisó que no podrá asistir'})
+assert.equal(skip.transferred[0].date,add(future,14))
+assert.equal((await one('select count(*)::int n from public.win_cash_movements')).n,movementCount)
+assert.equal((await one('select count(*)::int n from public.win_court_abono_skips')).n,1)
+assert.equal(Number((await api('one','range',{start:add(future,14),end:add(future,14)})).rows.find(r=>r.abonoId===abono.abonoId).paid),100000)
+await fail(()=>write('one','create',book({court:'C3',start:'20:00',date:add(future,21)})),'ABONO_CONFLICT')
+const late=await write('admin','abono.create',book({date:add(day,1),court:'C2',start:'06:00',phone:'11 5555 0202'})).catch(()=>null)
+// Ventana de 24 h determinista: una ocurrencia futura dentro del horario configurado.
+const lateDate=add(day,1)
+await db.exec(`update public.win_settings set value=360 where key='GRID_OPEN_MIN';`)
+const lateSeries=late||await write('admin','abono.create',book({date:lateDate,court:'C2',start:'06:00',phone:'11 5555 0202'}))
+await write('one','pay',{id:lateSeries.id,shiftId:opened.id,cash:100000})
+const lateStart=Date.parse(lateSeries.startsAt)
+if(lateStart-Date.now()<86400000){
+ await fail(()=>write('one','skip',{id:lateSeries.id,note:'Solicitud fuera del plazo'}),'ADMIN_LATE_SKIP_REQUIRED')
+ await write('admin','skip',{id:lateSeries.id,note:'Administración autoriza conservar el pago'})
+}
+console.log('OK abonos recurrentes, semana paga posterior, traslado sin ingreso y política de aviso')
+const splitSeries=await write('one','abono.create',book({court:'C1',start:'18:00',phone:'11 5555 0204'}))
+await write('one','pay',{id:splitSeries.id,shiftId:opened.id,cash:100000})
+await write('one','pay',{id:'a:'+splitSeries.abonoId+':'+add(future,7),shiftId:opened.id,cash:20000})
+const originalPayments=await q('select id,amount,paid_at,booking_id,recorded_by from public.win_court_payments order by id')
+const cashBeforeSplit=(await one('select count(*)::int n from public.win_cash_movements')).n
+const split=await write('one','skip',{id:splitSeries.id,note:'El referente avisa con anticipación'})
+assert.deepEqual(split.transferred.map(x=>Number(x.amount)),[80000,20000])
+assert.deepEqual(await q('select id,amount,paid_at,booking_id,recorded_by from public.win_court_payments order by id'),originalPayments)
+assert.equal((await one('select count(*)::int n from public.win_cash_movements')).n,cashBeforeSplit)
+const lastSeries=await write('one','abono.create',book({court:'C1',start:'20:00',phone:'11 5555 0205'}))
+await write('one','pay',{id:lastSeries.id,shiftId:opened.id,cash:100000})
+await q('update public.win_court_abonos set ends_on=$2 where id=$1',[lastSeries.abonoId,future])
+await fail(()=>write('one','skip',{id:lastSeries.id,note:'No hay otra fecha vigente'}),'NO_VALID_DESTINATION')
+assert.equal((await one('select status from public.win_court_bookings where id=$1',[lastSeries.id])).status,'CONFIRMED')
+assert.equal(Number((await one('select public.win_calendar_paid($1) n',[lastSeries.id])).n),100000)
+console.log('OK aplicaciones parciales, cobro original inmutable y rechazo sin destino con reversión completa')
+const legacy=await write('one','abono.create',book({court:'C2',start:'16:00',phone:'11 5555 0206'}))
+await q('select public.win_calendar_legacy_ops_save($1,$2::jsonb)', ['one',JSON.stringify({requestId:uuid(),shiftId:opened.id,type:'ABONO',abonoId:legacy.abonoId,date:future,played:false,cash:100000,note:'Anticipo anterior al M05'})])
+const legacyRow=(await api('one','range',{start:future,end:future})).rows.find(x=>x.id===legacy.id)
+assert.equal(legacyRow.paymentStatus,'PAID')
+await fail(()=>write('one','pay',{id:legacy.id,shiftId:opened.id,cash:1000}),'ALREADY_PAID')
+await fail(()=>write('one','skip',{id:legacy.id,note:'Revisar anticipo histórico de Recepción'}),'LEGACY_PAYMENT_REVIEW')
+console.log('OK anticipo anterior de Recepción se reconoce y no se vuelve a cobrar')
+
+
+const lesson=await write('admin','create',{kind:'CLASE',date:yesterday,court:'C4',start:'09:00',duration:60,teacherId:coach.id,lesson:{participants:2,classKind:'TRADICIONAL'},participants:[]})
+await fail(()=>write('admin','create',{kind:'CLASE',date:yesterday,court:'C1',start:'09:30',duration:60,teacherId:coach.id,lesson:{participants:1}}),'COACH_OVERLAP')
+let confirmed=await write('one','confirm',{id:lesson.id})
+const balanceBefore=Number((await ops('one','balance',{teacherId:coach.id})).balance)
+assert.ok(balanceBefore>0)
+await q('update public.win_ops_coach_rates set win_pct=1 where teacher_id=$1',[coach.id])
+const frozenQuote=await api('one','quote',{id:lesson.id,kind:'CLASE',date:yesterday,duration:60,teacherId:coach.id,lesson:{participants:3,classKind:'TRADICIONAL',configuredPct:1}})
+assert.equal(Number(frozenQuote.winPct),Number(coach.winPct))
+const moneyBefore=(await one('select count(*)::int n from public.win_cash_movements')).n
+changed=await write('one','update',{id:lesson.id,revision:confirmed.revision,kind:'CLASE',date:yesterday,court:'C4',start:'09:00',duration:60,teacherId:coach.id,lesson:{participants:3,classKind:'TRADICIONAL'},note:'Asistieron tres alumnos'})
+assert.equal((await one('select participants from public.win_ops_records where booking_id=$1',[lesson.id])).participants,3)
+assert.equal(Number((await one('select win_net from public.win_ops_records where booking_id=$1',[lesson.id])).win_net),90000*Number(coach.winPct)/100)
+assert.equal((await one('select count(*)::int n from public.win_cash_movements')).n,moneyBefore)
+await write('one','confirm',{id:lesson.id})
+assert.equal((await one('select count(*)::int n from public.win_ops_records where booking_id=$1',[lesson.id])).n,1)
+assert.equal((await api('one','customer.detail',{id:b.customerId})).customer.id,b.customerId)
+const ar=await ops('admin','admin',{start:yesterday,end:yesterday})
+assert.equal(ar.activity.find(r=>r.type==='CLASE').count,1)
+assert.equal(Number(ar.totals.collected),0)
+assert.equal(Number(ar.occupancy.occupiedHours),1)
+assert.equal(ar.academy.find(r=>r.id===coach.id).triple,1)
+await fail(()=>write('one','pay',{id:lesson.id,shiftId:opened.id,cash:10}),'CLASS_IS_NOT_CASH')
+const due=Number((await ops('one','balance',{teacherId:coach.id})).balance)
+await ops('one','save',{requestId:uuid(),shiftId:opened.id,type:'RENDICION',teacherId:coach.id,date:day,cash:due,transfer:0,allocations:[{date:yesterday,amount:due}],note:'Rendición de clases'})
+assert.equal(Number((await ops('one','balance',{teacherId:coach.id})).balance),0)
+await ops('one','control',{requestId:uuid(),operation:'close',shiftId:opened.id,cash:Number((await ops('one','overview')).totals.cashExpected),transfer:115000,count:2})
+const closedMovement=await one("select m.id from public.win_cash_movements m join public.win_court_payments cp on cp.id::text=m.reference_id where cp.booking_id=$1 and m.payment_method='CASH' and m.amount_signed=20000",[b.id])
+const adjustment=await ops('one','control',{requestId:uuid(),operation:'correction',id:closedMovement.id,amount:15000,method:'CASH',note:'Corrección real del importe contado'})
+await ops('admin','control',{requestId:uuid(),operation:'decide',id:adjustment.id,approve:true,note:'Control de Administración finalizado'})
+assert.equal(Number((await one('select public.win_calendar_paid($1) n',[b.id])).n),95000)
+assert.equal(Number((await one('select expected_amount from public.win_court_bookings where id=$1',[b.id])).expected_amount),100000)
+console.log('OK corrección financiera cerrada actualiza aplicación y conserva precio acordado')
+const noShift=await write('admin','create',{kind:'CLASE',date:yesterday,court:'C4',start:'11:00',duration:60,teacherId:coach.id,lesson:{participants:1,classKind:'TRADICIONAL'}})
+await write('one','confirm',{id:noShift.id})
+assert.equal((await one('select shift_id from public.win_ops_records where booking_id=$1',[noShift.id])).shift_id,null)
+const history=await ops('one','history',{start:day,end:day})
+assert.ok(history.rows.some(r=>r.type==='ACTIVITY_EVENT'))
+assert.ok(history.rows.some(r=>r.type==='CLASE'))
+console.log('OK confirmación sin dinero, alumnos reales, rendición sin duplicación, reportes por fechas y actividad sin caja abierta')
+const wait=await write('one','waitlist.save',{customerName:'Interesado de prueba',phone:'11 5555 0301',weekdays:[new Date(future+'T12:00:00Z').getUTCDay()||7],windows:[{from:'19:00',to:'23:00'}],duration:90,note:'Cualquier cancha'})
+const end=(await api('one','range',{start:add(future,21),end:add(future,21)})).rows.find(r=>r.abonoId===abono.abonoId)
+await write('one','abono.end',{id:end.id,note:'Baja definitiva solicitada por el referente'})
+assert.ok((await api('one','waitlist')).opportunities.some(r=>r.waitlist_id===wait.id))
+assert.equal((await one('select status from public.win_calendar_waitlist where id=$1',[wait.id])).status,'PENDING')
+await fail(()=>ops('one','save',{requestId:uuid(),type:'RESERVA'}),'CATEGORY_MOVED_TO_CALENDAR')
+await db.exec('set role anon')
+await fail(()=>q("select public.win_calendar_api('one','range','{}')"),'permission denied')
+await db.exec('reset role')
+console.log('OK oportunidades comerciales sin asignación automática, cierre de rutas duplicadas y permisos')
+
+{
+// Integration regression: imported history survives M05 and never changes live cash or teacher debt.
+const legacyDay=add(day,-100),legacyPaidDay=add(day,-99)
+const movementCount=(await one('select count(*)::int n from public.win_cash_movements')).n
+const balanceBeforeHistory=await ops('one','balance',{teacherId:coach.id})
+const historicalFacts=[
+ ['entry','reserve',{type:'RESERVA',status:'ACTIVE',activity_date:legacyDay,payment_date:legacyDay,occurred_at:legacyDay+'T12:00:00-03:00',author:'Origen de prueba',quantity:2,cash:1000,transfer:0,win_net:1000,gross:1000,courts:[],unknown_price:false,tiny_price:false}],
+ ['entry','class',{type:'CLASE',status:'ACTIVE',teacher:coach.name,activity_date:legacyDay,payment_date:legacyDay,occurred_at:legacyDay+'T12:00:00-03:00',author:'Origen de prueba',quantity:1,participants:2,cash:0,transfer:0,courts:[],unknown_price:true,tiny_price:false}],
+ ['allocation','receipt',{type:'RENDICION',status:'ACTIVE',teacher:coach.name,activity_date:legacyDay,payment_date:legacyPaidDay,occurred_at:legacyPaidDay+'T12:00:00-03:00',author:'Origen de prueba',method:'Transferencia',amount:600}]
+]
+for(let pass=0;pass<2;pass++)for(const [entity,origin,facts] of historicalFacts)await q("insert into public.win_history_rows(source_id,entity,origin_id,source_row,raw,facts,content_hash)values('calendar-history-integration',$1,$2,2,'[]',$3,'fixture')on conflict(source_id,entity,origin_id)do nothing",[entity,origin,JSON.stringify(facts)])
+assert.equal((await one("select count(*)::int n from public.win_history_rows where source_id='calendar-history-integration'")).n,3)
+const importedActivity=await ops('admin','admin',{start:legacyDay,end:legacyDay})
+assert.equal(Number(importedActivity.totals.collected),1000)
+assert.equal(Number(importedActivity.totals.activityNet),1000)
+assert.equal(Number(importedActivity.activity.find(x=>x.type==='RESERVA').count),2)
+assert.equal(Number(importedActivity.academy.find(x=>x.id===coach.id).unknown_price),1)
+assert.equal(importedActivity.occupancy.historyIncomplete,true)
+assert.equal(importedActivity.occupancy.netPerHour,null)
+const importedPayment=await ops('admin','admin',{start:legacyPaidDay,end:legacyPaidDay})
+assert.equal(Number(importedPayment.totals.collected),600)
+assert.equal(Number(importedPayment.totals.activityNet),0)
+assert.equal((await one('select count(*)::int n from public.win_cash_movements')).n,movementCount)
+assert.deepEqual(await ops('one','balance',{teacherId:coach.id}),balanceBeforeHistory)
+await fail(()=>ops('one','admin',{start:legacyDay,end:legacyPaidDay}),'NOT_AUTHORIZED')
+console.log('OK integración M05 + histórico: reportes, dos fechas, importación única, precio desconocido y saldo operativo intacto')
+
+}
+await db.close()

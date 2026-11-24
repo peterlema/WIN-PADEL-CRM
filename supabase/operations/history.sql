@@ -16,10 +16,12 @@ grant select on public.win_history_rows to service_role;
 -- Reporting-only union. Operational balances continue to use win_ops_ledger.
 create or replace view public.win_admin_ledger with(security_invoker=true) as
  select l.id::text id,l.shift_id::text shift_id,l.recorded_by,l.occurred_at,l.kind,l.business_unit,
-  l.payment_method,l.amount_signed,l.note,l.business_date,l.operation_type,
+  l.payment_method,l.amount_signed,l.note,l.business_date,coalesce(l.operation_type,case when l.reference_type='COURT_PAYMENT' then case when cp.abono_id is not null or to_jsonb(cb)->>'source_abono_id' is not null then 'ABONO' else cb.kind end when l.reference_type='BAR_ORDER' then 'CAFE_BAR' end) operation_type,
   a.display_name author,'LIVE'::text source,null::text origin_id,o.teacher_id::text teacher_id,o.activity_date
  from public.win_ops_ledger l left join win_auth.login_accounts a on a.id=l.recorded_by
  left join public.win_ops_records o on l.reference_type='OPERATION' and l.reference_id=o.id::text
+ left join public.win_court_payments cp on l.reference_type='COURT_PAYMENT' and l.reference_id=cp.id::text
+ left join public.win_court_bookings cb on cb.id=cp.booking_id
  union all
  select 'history:'||h.entity||':'||h.origin_id||':'||m.method,
   h.facts->>'shift_id',null::uuid,(h.facts->>'occurred_at')::timestamptz,
