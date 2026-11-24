@@ -11,6 +11,6 @@ export default defineConfig({
   plugins: [react()],
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
-    __APP_COMMIT__: JSON.stringify((process.env.GITHUB_SHA || 'local').slice(0, 7)),
+    __APP_COMMIT__: JSON.stringify((process.env.GITHUB_SHA || process.env.WORKERS_CI_COMMIT_SHA || 'local').slice(0, 7)),
   },
 })
