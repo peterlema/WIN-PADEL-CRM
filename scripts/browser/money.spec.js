@@ -18,7 +18,7 @@ test('precio: miles, coma, error sin borrar y payload numérico',async({page})=>
  await page.getByRole('button',{name:'Editar precio / producto',exact:true}).click()
  const input=page.getByLabel('Precio de venta ($)',{exact:true})
  expect(await input.getAttribute('type')).toBe('text')
- for(const [raw,formatted] of [['150000','$150.000'],['1250,50','$1.250,50'],['1.500','$1.500'],['0','$0']]){
+ for(const [raw,formatted] of [['150000','$150.000'],['1250,50','$1.250,50'],['1.500','$1.500'],['-1250,50','-$1.250,50'],['0','$0']]){
   await input.fill(raw);await input.press('Tab');await expect(input).toHaveValue(formatted)
  }
  await input.fill('1.50');await input.press('Tab');await expect(input).toHaveValue('1.50')
