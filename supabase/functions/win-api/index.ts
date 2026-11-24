@@ -67,6 +67,15 @@ Deno.serve(async req=>{
       if(error){const failure=calendarError(error);return reply({error:failure.message,code:failure.code},failure.status,origin);}
       return reply(result,200,origin);
     }
+    if(action.startsWith("bar.employee.")) {
+      const {data:result,error}=await db.rpc("win_bar_employee_api",{p_token:token,p_action:action.slice(13),p:data});
+      if(error){
+        const messages:Record<string,string>={...errors,EMPLOYEE_PRICING_DISABLED:"Los precios para empleados están desactivados, pendientes de aprobación administrativa.",EMPLOYEE_NOT_AUTHORIZED:"El empleado debe estar identificado, activo y autorizado.",EMPLOYEE_PRICE_INVALID:"Revisá el precio fijo o porcentaje del producto.",EMPLOYEE_REASON_REQUIRED:"Ingresá un motivo de entre 5 y 400 caracteres.",EMPLOYEE_EXCEPTION_REQUIRED:"El precio requiere una autorización administrativa por estar debajo del costo o no tener costo confirmado.",EMPLOYEE_EXCEPTION_INVALID:"La autorización ya se utilizó, venció o cambió el precio o costo. Solicitá una nueva.",STALE_REVISION:"Otro administrador cambió este borrador. Actualizá antes de guardar.",PERIOD_INVALID:"Elegí un período de hasta un año.",BAR_REQUEST_REQUIRED:"Actualizá la pantalla antes de guardar."};
+        const code=Object.keys(messages).find(k=>error.message.includes(k));
+        return reply({error:code?messages[code]:"No se pudo completar la operación. Actualizá antes de reintentar.",code:code||"EMPLOYEE_ERROR"},code==="NOT_AUTHORIZED"?403:409,origin);
+      }
+      return reply(result,200,origin);
+    }
     if(action.startsWith("bar.inventory.")) {
       const {data:result,error}=await db.rpc("win_bar_inventory_api",{p_token:token,p_action:action.slice(14),p:data});
       if(error){
