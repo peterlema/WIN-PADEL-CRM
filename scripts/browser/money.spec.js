@@ -6,7 +6,7 @@ test.beforeEach(async({page})=>{
   const request=route.request(),headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
   if(request.method()==='OPTIONS')return route.fulfill({status:204,headers})
   const {action}=request.postDataJSON()
-  const responses={me:{user:{id:'test-admin',name:'Prueba aislada',role:'ADMIN'}},'bar.inventory.access':{allowed:true},'bar.products':{products:[product],canEdit:true,stockConfigured:true},'bar.inventory.snapshot':{canEdit:true,counts:[],reconciliation:[],purchases:[],movements:[],sales:null},'bar.pending':{orders:[]},'bar.customers':{customers:[]},'bar.courts':{bookings:[]},'bar.inventory.cash.state':{shift:null,cashExpected:0,bankConfigured:false,movements:[],shifts:[]}}
+  const responses={me:{user:{id:'test-admin',name:'Prueba aislada',role:'ADMIN'}},'bar.inventory.access':{allowed:true},'bar.products':{products:[product],canEdit:true,stockConfigured:true},'bar.inventory.snapshot':{canEdit:true,counts:[],reconciliation:[],purchases:[],movements:[],sales:null},'bar.employee.admin.list':{products:[{...product,averageCost:null,publicPrice:2000,mode:'FIXED_PRICE',value:1500.5,revision:0}],employees:[]},'bar.employee.report':{sales:[],accounts:[],enabled:false},'bar.pending':{orders:[]},'bar.customers':{customers:[]},'bar.courts':{bookings:[]},'bar.inventory.cash.state':{shift:null,cashExpected:0,bankConfigured:false,movements:[],shifts:[]}}
   const response=responses[action]
   await route.fulfill({status:response?200:409,headers,contentType:'application/json',body:JSON.stringify(response||{error:'Prueba aislada: no se guarda ninguna transacción.'})})
  })
@@ -49,4 +49,17 @@ test('Caja Bar: entero grande y decimales se envían como números',async({page}
  await page.getByRole('button',{name:'Abrir Caja Bar',exact:true}).click()
  expect((await request).postDataJSON().openingCash).toBe(150000)
  await expect(input).toHaveValue('$150.000')
+})
+
+test('empleados: borrador desactivado con moneda compartida',async({page})=>{
+ await page.getByRole('button',{name:'Precios empleados',exact:true}).click()
+ await page.getByRole('button',{name:'Preparar borrador',exact:true}).click()
+ const input=page.getByLabel('Precio final ($)',{exact:true})
+ await expect(input).toHaveValue('$1.500,50')
+ await input.fill('1250,50');await input.press('Tab');await expect(input).toHaveValue('$1.250,50')
+ await page.getByLabel('Motivo del borrador',{exact:true}).fill('Prueba de formato aislada')
+ const request=page.waitForRequest(r=>r.method()==='POST'&&r.postDataJSON()?.action==='bar.employee.policy.save')
+ await page.getByRole('button',{name:'Guardar borrador desactivado',exact:true}).click()
+ expect((await request).postDataJSON().value).toBe(1250.5)
+ await expect(input).toHaveValue('$1.250,50')
 })

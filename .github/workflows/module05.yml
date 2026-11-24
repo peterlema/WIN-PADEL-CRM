@@ -1,7 +1,7 @@
 name: Validar Módulo 05
 on:
   push:
-    branches: [implementation/modulo-05, integration/calendario-historico, improvement/calendar-usability, implementation/bar-inventory, improvement/argentine-money]
+    branches: [implementation/modulo-05, integration/calendario-historico, improvement/calendar-usability, implementation/bar-inventory, improvement/argentine-money, implementation/bar-employee-pricing]
 permissions:
   contents: read
 jobs:
@@ -39,6 +39,7 @@ jobs:
       - run: npm run test:db
       - run: npm run test:users
       - run: npm run test:bar
+      - run: cmp supabase/operations/bar-employee-pricing.sql supabase/migrations/20261124160231_win_bar_employee_pricing_preparation.sql
       - run: cmp supabase/operations/bar-stock.sql supabase/migrations/20261124124633_win_bar_inventory_cash_isolation.sql
       - run: python3 scripts/calendar-concurrency.py
         env:
