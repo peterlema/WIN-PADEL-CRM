@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 
 // Ventana emergente accesible (elemento <dialog>): Esc y clic afuera la cierran.
-export default function Modal({ titulo, onCerrar, children }) {
+export default function Modal({ titulo, onCerrar, children, footer }) {
   const ref = useRef(null)
   useEffect(() => {
     const d = ref.current
@@ -17,8 +17,10 @@ export default function Modal({ titulo, onCerrar, children }) {
           <h2>{titulo}</h2>
           <button type="button" className="secundario modal-x" aria-label="Cerrar ventana" onClick={onCerrar}>✕</button>
         </div>
-        {children}
+        <div className="modal-body">{children}</div>
+        {footer&&<div className="modal-footer">{footer}</div>}
       </div>
     </dialog>
   )
 }
+

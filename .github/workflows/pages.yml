@@ -24,6 +24,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run test:ui
       - run: npm run test:history
       - run: npm run test:db
       - run: npm run build
@@ -45,3 +46,4 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+

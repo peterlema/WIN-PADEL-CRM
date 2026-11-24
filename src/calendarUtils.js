@@ -7,7 +7,7 @@ export const label=n=>`${String(Math.floor(n/60)%24).padStart(2,'0')}:${String(n
 export const addDays=(date,n)=>{const d=new Date(date+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)}
 export const monday=date=>addDays(date,-(new Date(date+'T12:00:00Z').getUTCDay()+6)%7)
 export const longDate=date=>new Intl.DateTimeFormat('es-AR',{timeZone:'UTC',weekday:'long',day:'numeric',month:'short'}).format(new Date(date+'T12:00:00Z'))
-export const timestamp=date=>new Intl.DateTimeFormat('es-AR',{timeZone:ZONE,dateStyle:'short',timeStyle:'short',hour12:false}).format(new Date(date))
+export const timestamp=date=>new Intl.DateTimeFormat('es-AR',{timeZone:ZONE,dateStyle:'short',timeStyle:'short',hourCycle:'h23'}).format(new Date(date))
 export const number=value=>{const s=String(value??'').trim();return !s?0:s.includes(',')?Number(s.replace(/\./g,'').replace(',','.')):/^-?\d{1,3}(\.\d{3})+$/.test(s)?Number(s.replace(/\./g,'')):Number(s)}
 export const kindLabel={RESERVA:'Reserva regular',ABONO:'Abono fijo',CLASE:'Clase',EVENTO:'Evento',BLOQUEO:'Bloqueo'}
 export const stateLabel=row=>row.status==='CANCELLED'?'Cancelada':row.status==='PERFORMED'?(row.kind==='CLASE'?'Dictada':'Jugada'):'Programada'
@@ -19,3 +19,4 @@ export function currentPosition(date,now=new Date()){
  const businessDate=minute<360?addDays(calendarDate,-1):calendarDate
  return businessDate===date?minute+(minute<360?1440:0):null
 }
+

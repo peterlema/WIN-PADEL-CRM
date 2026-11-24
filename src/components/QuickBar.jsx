@@ -1,10 +1,11 @@
+import {TimePicker,CourtPicker} from './ActivityControls.jsx'
 import {useCallback,useEffect,useRef,useState} from 'react'
 import {callApi} from '../api.js'
 
 const MONEY=n=>'$ '+Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:2})
 const TODAY=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires'}).format(new Date())
 const payMethods=[['CASH','Efectivo'],['TRANSFER','Transferencia'],['CARD','Tarjeta']]
-const courts=['C1','C2','C3','C4']
+const courts=['C4','C3','C2','C1']
 function positive(value){
  const n=Number(String(value||'').trim().replace(/\./g,'').replace(',','.'))
  return Number.isFinite(n)&&n>0&&Math.round(n*100)/100===n?n:null
@@ -187,7 +188,7 @@ export default function QuickBar({soloVenta=false}){
     {conCancha&&<div className="bar-pos-inline">
      <label>Fecha del turno<input type="date" value={day} onChange={e=>{setDay(e.target.value);setBookingId('')}}/></label>
      <label>Reserva del calendario<select value={bookingId} onChange={e=>setBookingId(e.target.value)}><option value="">Asignar manualmente si no figura</option>{bookings.map(b=><option key={b.id} value={b.id}>{b.court} · {b.start} · {b.holder} ({b.kind})</option>)}</select></label>
-     {!bookingId&&<div className="bar-pos-court-manual"><label>Cancha<select value={court} onChange={e=>setCourt(e.target.value)}>{courts.map(x=><option key={x}>{x}</option>)}</select></label><label>Inicio del turno<input type="time" value={courtStart} onChange={e=>setCourtStart(e.target.value)} required/></label></div>}
+     {!bookingId&&<div className="bar-pos-court-manual"><CourtPicker value={court} onChange={setCourt}/><TimePicker label="Inicio del turno" value={courtStart} onChange={setCourtStart} required/></div>}
      <p className="win-bar-muted">{destination==='IMMEDIATE'?(selected?'Se cobra ahora y queda asociado a '+selected.holder+'.':'Se cobra ahora y queda asociado a esa cancha y horario.'):selected?'Vinculado a la reserva '+selected.holder+'. Se mostrará como pendiente hasta cobrarlo.':'Si no aparece una reserva, registrá cancha y horario para localizar el consumo después.'}</p>
     </div>}
     <label>Observación (opcional)<input value={note} maxLength={400} onChange={e=>setNote(e.target.value)} placeholder="Ej. Llevó a la cancha; cobra Recepción" /></label>
@@ -215,3 +216,4 @@ export default function QuickBar({soloVenta=false}){
   {!soloVenta&&<p className="win-bar-warning">Control de stock: cada entrega crea una salida en Supabase. Las existencias físicas seguirán sin saldo calculado hasta registrar el conteo inicial. No usar esta versión para cobrar operaciones reales sin probar antes la conciliación con Recepción.</p>}
  </div>
 }
+
