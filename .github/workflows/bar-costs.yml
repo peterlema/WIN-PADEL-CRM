@@ -1,0 +1,21 @@
+name: Validar costos Bar
+on:
+  push:
+    branches: [main, bar-costos-provisionales]
+  pull_request:
+    paths: ['src/components/Bar*', 'src/components/StockCatalog.jsx', 'supabase/**']
+permissions:
+  contents: read
+jobs:
+  costs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:bar
+      - run: node supabase/tests/bar-costs.test.mjs
+      - run: npm run build

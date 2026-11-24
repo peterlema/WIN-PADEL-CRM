@@ -39,7 +39,7 @@ export default function BarInventory({purchasesOnly=false,onStockChanged=()=>{}}
     <p className="win-bar-muted">Exige motivo y usuario. Reduce existencias; no genera ventas ni movimientos de dinero.</p></section>}
    {data.sales&&<section className="bar-inventory-section"><h4>Ventas registradas desde el inicio operativo</h4>
     <p>Ventas / entregas: <strong>{money(data.sales.revenue)}</strong> · Costo conocido: <strong>{money(data.sales.cogs)}</strong> · Margen sobre líneas con costo conocido: <strong>{money(data.sales.margin)}</strong>.</p>
-    <p className="win-bar-muted">{data.sales.unknownCostUnits} unidades vendidas con costo pendiente. El margen sólo incluye ventas con costos suficientes ({money(data.sales.knownCostRevenue)} de ventas). Ventas y cobros pueden ocurrir en fechas diferentes. La diferencia histórica no integra estas cifras.</p>
+    <p className="win-bar-muted">{data.sales.unknownCostUnits} unidades vendidas con costo pendiente. {data.sales.estimatedCostUnits||0} unidades tienen costo provisional; sus márgenes son estimados. El margen bruto no es utilidad neta. El margen sólo incluye ventas con costos suficientes ({money(data.sales.knownCostRevenue)} de ventas). Ventas y cobros pueden ocurrir en fechas diferentes. La diferencia histórica no integra estas cifras.</p>
    </section>}
   </>}
   {data.canEdit&&<section className="bar-inventory-section"><div className="win-bar-row"><h4>Compras registradas</h4><button disabled={busy} onClick={()=>setForm({type:'purchase',supplier:'',purchaseDate:today(),lines:[row()],note:''})}>+ Nueva compra</button></div>

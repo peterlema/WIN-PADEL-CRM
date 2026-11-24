@@ -1,0 +1,82 @@
+import assert from 'node:assert/strict'
+import {PGlite} from '@electric-sql/pglite'
+import {btree_gist} from '@electric-sql/pglite/contrib/btree_gist'
+import {pgcrypto} from '@electric-sql/pglite/contrib/pgcrypto'
+import {readFileSync} from 'node:fs'
+const db=new PGlite({extensions:{btree_gist,pgcrypto}})
+await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;create schema extensions;create extension pgcrypto schema extensions;
+create schema auth;create table auth.users(id uuid primary key);create schema storage;create table storage.buckets(id text primary key,name text,public boolean,file_size_limit bigint,allowed_mime_types text[]);`)
+const migrations=['20261123_win_foundation_users_cash.sql','20261123_win_private_username_pin_accounts.sql','20261123_win_backend_sessions_cash.sql','20261123_win_rbac_roles_permissions_initial.sql','20261124_win_court_bookings.sql','20261123_win_rbac_enforce_existing_cash_courts.sql','20261123_win_cash_expense_withdrawal_validation.sql','20261124_win_courts_v2_pricing_payments_abonos.sql','20261124_win_courts_v3_payment_method_at_collection.sql','20261123_win_bar_product_catalog_and_seed.sql','20261123_win_bar_pos_orders_pending_and_court.sql','20261123_win_bar_court_calendar_reception_settlement.sql','20261123_win_bar_daily_court_pending_markers.sql','20261125_win_bar_immediate_court_client.sql']
+for(const f of migrations)await db.exec(readFileSync(new URL('../migrations/'+f,import.meta.url),'utf8'))
+for(const f of ['20261124_win_courts_v4_prices_60_120.sql','20261125_win_config_catalog_coaches_prices.sql','20261125_win_config_bar_uses_products.sql','20261126_win_settings.sql'])await db.exec(readFileSync(new URL('../migrations/'+f,import.meta.url),'utf8'))
+for(const f of ['schema.sql','controls.sql','reports.sql','calendar.sql'])await db.exec(readFileSync(new URL('../operations/'+f,import.meta.url),'utf8'))
+for(const f of ['schema.sql','api.sql','integration.sql','compatibility.sql','move.sql'])await db.exec(readFileSync(new URL('../calendar/'+f,import.meta.url),'utf8'))
+const q=async(s,p=[])=>(await db.query(s,p)).rows
+const scalar=async(s,p=[])=>(await q(s,p))[0].v
+await q(`create or replace function public.win_pin_session(p_token text) returns table(account_id uuid,display_name text,role text,expires_at timestamptz) language sql security definer as $$ select id,display_name,role,now()+interval '1h' from win_auth.login_accounts where 'tok-'||username_key=p_token and enabled $$`)
+await q(`insert into win_auth.login_accounts(username,display_name,role,pin_hash,enabled) values('Pedro','Pedro Lema','ADMIN','x',true),('bar','Bar','BAR','x',true),('rec','Recepcion','RECEPTION','x',true)`)
+await db.exec(readFileSync(new URL('../operations/bar-stock.sql',import.meta.url),'utf8'))
+const seed=readFileSync(new URL('../operations/bar-opening-20261124.sql',import.meta.url),'utf8')
+
+await db.exec(seed)
+const id=()=>crypto.randomUUID()
+const api=(action,p={},tok='tok-pedro')=>scalar(`select public.win_bar_inventory_api($1,$2,$3::jsonb) v`,[tok,action,JSON.stringify(p)])
+const mutate=(action,p={})=>api(action,{requestId:id(),...p})
+const reject=async(f,code)=>assert.rejects(f,e=>e.message.includes(code))
+const water=await scalar(`select id v from win_products where name='Agua Manaos'`)
+await mutate('cash.open',{openingCash:0})
+await scalar(`select win_bar_order_place('tok-pedro',$1,$2::jsonb,'IMMEDIATE',null,null,null,null,null,'','CASH',true) v`,[id(),JSON.stringify([{id:water,quantity:1}])])
+const historicSale=await scalar(`select jsonb_agg(to_jsonb(t)) v from win_bar_order_items t`)
+await db.exec(readFileSync(new URL('../migrations/20261124160611_win_bar_provisional_costs.sql',import.meta.url),'utf8'))
+const baseline=()=>scalar(`select jsonb_build_object('stock',(select jsonb_agg(to_jsonb(t) order by id) from win_bar_stock_movements t),'purchases',(select jsonb_agg(to_jsonb(t) order by id) from win_bar_purchases t),'lines',(select jsonb_agg(to_jsonb(t) order by id) from win_bar_purchase_lines t),'sales',(select jsonb_agg(to_jsonb(t) order by id) from win_bar_order_items t),'cash',(select jsonb_agg(to_jsonb(t) order by id) from win_bar_cash_movements t)) v`)
+const before=await baseline()
+const costsSeed=readFileSync(new URL('../operations/bar-costs-initial-20261124.sql',import.meta.url),'utf8')
+await db.exec(costsSeed);await db.exec(costsSeed)
+assert.deepEqual(await baseline(),before)
+assert.equal(await scalar(`select count(*)::int v from win_products where cost_is_provisional`),11)
+assert.equal(await scalar(`select count(*)::int v from win_bar_inventory_audit where action='cost.set'`),11)
+assert.equal(Number(await scalar(`select unit_cost v from win_products where id=$1`,[water])),415.15)
+assert.ok(Math.abs(Number(await scalar(`select automatic_unit_cost v from win_products where id=$1`,[water]))-54800/132)<1e-7)
+assert.equal(Number(await scalar(`select sum(quantity_change) v from win_bar_stock_movements`)),392)
+const products=()=>scalar(`select win_bar_products_list('tok-pedro') v`)
+const product=async pid=>(await products()).products.find(p=>p.id===pid)
+for(const a of ['cost.set','cost.reconcile','cost.snapshot'])await reject(()=>api(a,{},'tok-bar'),'NOT_AUTHORIZED')
+assert.equal(await scalar(`select has_function_privilege('anon','public.win_bar_cost_api(text,text,jsonb)','EXECUTE') v`),false)
+assert.equal(await scalar(`select has_function_privilege('authenticated','public.win_bar_initial_cost_set(uuid,uuid,numeric,text,bigint)','EXECUTE') v`),false)
+const snap=await api('cost.snapshot')
+const differences=Object.fromEntries(snap.groups.map(g=>[g.group,Number(g.referenceTotal)-Number(g.originalTotal)]))
+assert.ok(Math.abs(differences['Agua Manaos']+0.2)<1e-8)
+assert.equal(differences['Coca común y Zero'],1760)
+assert.equal(differences['Gatorade y Powerade'],160)
+assert.equal(differences['Stella y Patagonia'],1200)
+const p=await product(water)
+const set={requestId:id(),productId:water,cost:500,version:p.costVersion,note:'Referencia actualizada de prueba'}
+await api('cost.set',set);await api('cost.set',set)
+assert.deepEqual(await baseline(),before)
+await reject(()=>mutate('cost.set',{...set,requestId:id(),cost:600}),'BAR_COST_STALE')
+const purchase=(await mutate('purchase.create',{supplier:'Proveedor real prueba',purchaseDate:'2026-11-24',lines:[{productId:water,quantity:9,totalCost:9000}]})).id
+const line=(await api('snapshot')).purchases.find(p=>p.id===purchase).lines[0]
+const receipt={requestId:id(),purchaseId:purchase,lines:[{lineId:line.id,quantity:9}]}
+await api('purchase.receive',receipt);await api('purchase.receive',receipt)
+let current=await product(water)
+assert.equal(Number(current.stock),100)
+assert.ok(Math.abs(Number(current.unitCost)-(91*500+9000)/100)<1e-7)
+const noOperationsChanged=await baseline()
+await mutate('cost.set',{productId:water,cost:600,version:current.costVersion,note:'Referencia revisada después de recepción'})
+assert.deepEqual(await baseline(),noOperationsChanged)
+current=await product(water)
+assert.ok(Math.abs(Number(current.unitCost)-(91*600+9000)/100)<1e-7)
+const group=snap.groups.find(g=>g.group==='Agua Manaos')
+await reject(()=>mutate('cost.reconcile',{purchaseId:group.purchaseId,group:group.group,lines:[{productId:water,quantity:132,totalCost:54801,version:current.costVersion}],note:'Factura confirmada prueba'}),'BAR_COST_TOTAL_MISMATCH')
+const reconcile={requestId:id(),purchaseId:group.purchaseId,group:group.group,lines:[{productId:water,quantity:132,totalCost:54800,version:current.costVersion}],note:'Factura confirmada prueba'}
+await api('cost.reconcile',reconcile);await api('cost.reconcile',reconcile)
+assert.deepEqual(await baseline(),noOperationsChanged)
+current=await product(water)
+assert.equal(current.costEstimated,false)
+assert.ok(Math.abs(Number(current.unitCost)-(91*(54800/132)+9000)/100)<1e-7)
+assert.equal(Number(current.automaticUnitCost),Number(current.unitCost))
+await reject(()=>q(`update win_bar_inventory_audit set action='overwrite'`),'BAR_IMMUTABLE')
+await reject(()=>q(`update win_bar_cost_reconciliations set evidence='overwrite'`),'BAR_IMMUTABLE')
+await q('set role service_role');assert.equal((await api('cost.snapshot')).groups.length,4);await q('reset role')
+console.log('PASS provisional costs: 11 variants, exact historical totals, 393 opening/392 current, no stock/cash/purchase/sale writes, ADMIN API, audit, replay/stale protection, weighted receipts, audited exact reconciliation.')
+await db.close()

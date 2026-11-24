@@ -1,7 +1,7 @@
 {
   "name": "win-padel-crm",
   "private": true,
-  "version": "0.16.0",
+  "version": "0.16.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,7 +12,8 @@
     "test:ui": "node scripts/activity-controls.test.mjs",
     "test:users": "node supabase/tests/users.test.mjs",
     "test:calendar-move": "node scripts/calendar-move.test.mjs && node supabase/tests/calendar_move.test.mjs",
-    "test:bar": "node supabase/tests/bar-stock.test.mjs"
+    "test:bar": "node supabase/tests/bar-stock.test.mjs",
+    "test:bar-costs": "node supabase/tests/bar-costs.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",
