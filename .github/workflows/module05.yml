@@ -1,7 +1,7 @@
 name: Validar Módulo 05
 on:
   push:
-    branches: [implementation/modulo-05, integration/calendario-historico, improvement/calendar-usability]
+    branches: [implementation/modulo-05, integration/calendario-historico, improvement/calendar-usability, implementation/bar-inventory]
 permissions:
   contents: read
 jobs:
@@ -36,6 +36,9 @@ jobs:
       - run: npm run test:ui
       - run: npm run test:history
       - run: npm run test:db
+      - run: npm run test:users
+      - run: npm run test:bar
+      - run: cmp supabase/operations/bar-stock.sql supabase/migrations/20261124124633_win_bar_inventory_cash_isolation.sql
       - run: python3 scripts/calendar-concurrency.py
         env:
           PGHOST: 127.0.0.1

@@ -46,6 +46,7 @@ function Raiz() {
   const [hash, setHash] = useState(window.location.hash)
   const [token, setToken] = useState(readToken())
   const [rol, setRol] = useState(null)
+  const [barAccess,setBarAccess]=useState(false)
   useEffect(() => {
     const onHash = () => setHash(window.location.hash)
     window.addEventListener('hashchange', onHash)
@@ -55,6 +56,7 @@ function Raiz() {
   useEffect(() => {
     if (!token) { setRol(null); return }
     callApi('me').then(r => setRol(r.user.role)).catch(() => {})
+    callApi('bar.inventory.access').then(r=>setBarAccess(r.allowed===true)).catch(()=>setBarAccess(false))
   }, [token])
   const ruta = rutaDe(hash)
   const enCalendario = ruta === 'calendario'
@@ -98,7 +100,7 @@ function Raiz() {
           {DEMO && <a href={RECEPCION} className={enRecepcion ? 'activa' : ''}>Recepción (borrador)</a>}
           <a href={RAIZ} className={enCalendario || enBar || enAdmin || enConfig || enRecepcion ? '' : 'activa'}>Recepción</a>
           <a href={CALENDARIO} className={enCalendario ? 'activa' : ''}>Calendario</a>
-          {['ADMIN','MANAGER','RECEPTION'].includes(rol) && <a href={BAR} className={enBar ? 'activa' : ''}>Bar / Buffet</a>}
+          {barAccess && <a href={BAR} className={enBar ? 'activa' : ''}>Bar / Buffet</a>}
           {rol === 'ADMIN' && <a href={ADMIN} className={enAdmin ? 'activa' : ''}>Administración</a>}
           {['ADMIN','MANAGER'].includes(rol) && <a href={CONFIG} className={enConfig ? 'activa' : ''}>Configuración</a>}
           {(enCalendario || enBar || enAdmin || enConfig) && <button type="button" className="enlace" onClick={salir}>Salir</button>}
@@ -109,7 +111,7 @@ function Raiz() {
         : enAdmin
         ? (token && rol === 'ADMIN' ? <Administracion /> : <main className="centro"><p>No tenés permiso para ingresar a Administración.</p></main>)
         : enBar
-          ? (token && ['ADMIN','MANAGER','RECEPTION'].includes(rol) ? <Bar soloVenta={rol === 'RECEPTION'} /> : <main className="centro"><p>No tenés permiso para ingresar al Bar.</p></main>)
+          ? (token && barAccess ? <Bar soloVenta={rol === 'RECEPTION'} /> : <main className="centro"><p>No tenés permiso para ingresar al Bar.</p></main>)
         : enCalendario
           ? (token ? <Calendario /> : <main className="centro"><p>Ingresá primero desde <a href={RAIZ}>Recepción</a> para ver el calendario.</p></main>)
         : enRecepcion
