@@ -74,6 +74,10 @@ Deno.serve(async (req) => {
   if (!token) return reply({ error: "Sesión requerida" }, 401, origin);
 
   const action = String(data.action || "");
+  if (["courts.book","courts.cancel","courts.pay","courts.abono.create","courts.abono.end","courts.abono.skip"].includes(action)) {
+    return reply({error:"Actualizá la página para usar el calendario integrado con pagos parciales y confirmación de actividad.",code:"CALENDAR_UPDATED"},409,origin);
+  }
+
   let name = "";
   let params: Record<string, unknown> = { p_token: token };
 
