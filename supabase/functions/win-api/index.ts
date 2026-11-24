@@ -10,7 +10,7 @@ const allowedOrigins = new Set([
   "http://127.0.0.1:5173",
 ]);
 function reply(obj: unknown, status=200, origin="") {
-  const headers: Record<string,string> = {"Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin"};
+  const headers: Record<string,string> = {"Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin","X-WIN-Backend-Version":"0.17.4"};
   if (allowedOrigins.has(origin)) { headers["Access-Control-Allow-Origin"]=origin; headers["Access-Control-Allow-Headers"]="authorization, content-type"; headers["Access-Control-Allow-Methods"]="POST, OPTIONS"; }
   return new Response(status === 204 ? null : JSON.stringify(obj), {status, headers});
 }
