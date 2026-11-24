@@ -95,7 +95,7 @@ declare a uuid;begin
  if not public.win_can_access(a,'COURTS',operation) then raise exception 'NOT_AUTHORIZED';end if;return a;
 end $$;
 create or replace function public.win_calendar_paid(id_ uuid) returns numeric language sql stable set search_path='' as $$
- select coalesce(sum(al.amount),0)+coalesce((select sum(o.cash+o.transfer) from public.win_ops_records o where o.booking_id=id_ and o.status='ACTIVE'),0)
+ select coalesce(sum(al.amount),0)+coalesce((select sum(o.cash+o.transfer) from public.win_ops_records o join public.win_court_bookings cb on cb.id=id_ where (o.booking_id=cb.id or (o.abono_id=cb.source_abono_id and o.payment_date=cb.business_date)) and o.status='ACTIVE'),0)
  from public.win_calendar_allocations al where al.booking_id=id_
 $$;
 create or replace function public.win_calendar_customer(a uuid,p jsonb,required_ boolean default true) returns uuid language plpgsql set search_path='' as $$
@@ -180,7 +180,10 @@ $$;
 
 -- Lectura sin escrituras: las ocurrencias futuras de un abono se proyectan desde su serie.
 create or replace function public.win_calendar_rows(d1 date,d2 date) returns jsonb language sql stable set search_path='' as $$
- select coalesce(jsonb_agg(x.item order by x.item->>'date',x.item->>'start',x.item->>'court'),'[]') from (
+ select coalesce(jsonb_agg(case when x.item->>'kind' in('RESERVA','ABONO') then x.item||jsonb_build_object(
+  'balance',greatest(coalesce((x.item->>'price')::numeric,0)-coalesce((x.item->>'paid')::numeric,0),0),
+  'paymentStatus',case when coalesce((x.item->>'paid')::numeric,0)=0 and coalesce((x.item->>'price')::numeric,1)>0 then 'PENDING' when x.item->>'price' is not null and (x.item->>'paid')::numeric>=(x.item->>'price')::numeric then 'PAID' else 'PARTIAL' end) else x.item end
+  order by x.item->>'date',x.item->>'start',x.item->>'court'),'[]') from (
   select public.win_calendar_json(b) item from public.win_court_bookings b where b.business_date between d1 and d2
   union all
   select jsonb_build_object('id','a:'||a.id||':'||d::date,'abonoId',a.id,'date',d::date,'court',a.court,'start',to_char(a.start_time,'HH24:MI'),'end',to_char(a.start_time+make_interval(mins=>a.duration_min),'HH24:MI'),
@@ -399,7 +402,7 @@ begin
     paid=public.win_calendar_paid(b.id);
     if paid>0 and b.starts_at<now()+interval '24 hours' and role_<>'ADMIN' then raise exception 'ADMIN_LATE_SKIP_REQUIRED';end if;
     -- Un anticipo histórico de Recepción no se puede trasladar sin identificar su cobro.
-    if exists(select 1 from public.win_ops_records o where o.booking_id=b.id and o.status='ACTIVE' and o.cash+o.transfer>0) then raise exception 'LEGACY_PAYMENT_REVIEW';end if;
+    if exists(select 1 from public.win_ops_records o where (o.booking_id=b.id or (o.abono_id=s.id and o.payment_date=b.business_date)) and o.status='ACTIVE' and o.cash+o.transfer>0) then raise exception 'LEGACY_PAYMENT_REVIEW';end if;
     for allocation in select * from public.win_calendar_allocations where booking_id=b.id order by payment_id loop
      remaining=allocation.amount;week_=1;
      delete from public.win_calendar_allocations where payment_id=allocation.payment_id and booking_id=b.id;

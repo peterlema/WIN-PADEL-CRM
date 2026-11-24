@@ -30,7 +30,10 @@ $$;
 
 -- Lectura sin escrituras: las ocurrencias futuras de un abono se proyectan desde su serie.
 create or replace function public.win_calendar_rows(d1 date,d2 date) returns jsonb language sql stable set search_path='' as $$
- select coalesce(jsonb_agg(x.item order by x.item->>'date',x.item->>'start',x.item->>'court'),'[]') from (
+ select coalesce(jsonb_agg(case when x.item->>'kind' in('RESERVA','ABONO') then x.item||jsonb_build_object(
+  'balance',greatest(coalesce((x.item->>'price')::numeric,0)-coalesce((x.item->>'paid')::numeric,0),0),
+  'paymentStatus',case when coalesce((x.item->>'paid')::numeric,0)=0 and coalesce((x.item->>'price')::numeric,1)>0 then 'PENDING' when x.item->>'price' is not null and (x.item->>'paid')::numeric>=(x.item->>'price')::numeric then 'PAID' else 'PARTIAL' end) else x.item end
+  order by x.item->>'date',x.item->>'start',x.item->>'court'),'[]') from (
   select public.win_calendar_json(b) item from public.win_court_bookings b where b.business_date between d1 and d2
   union all
   select jsonb_build_object('id','a:'||a.id||':'||d::date,'abonoId',a.id,'date',d::date,'court',a.court,'start',to_char(a.start_time,'HH24:MI'),'end',to_char(a.start_time+make_interval(mins=>a.duration_min),'HH24:MI'),
@@ -249,7 +252,7 @@ begin
     paid=public.win_calendar_paid(b.id);
     if paid>0 and b.starts_at<now()+interval '24 hours' and role_<>'ADMIN' then raise exception 'ADMIN_LATE_SKIP_REQUIRED';end if;
     -- Un anticipo histórico de Recepción no se puede trasladar sin identificar su cobro.
-    if exists(select 1 from public.win_ops_records o where o.booking_id=b.id and o.status='ACTIVE' and o.cash+o.transfer>0) then raise exception 'LEGACY_PAYMENT_REVIEW';end if;
+    if exists(select 1 from public.win_ops_records o where (o.booking_id=b.id or (o.abono_id=s.id and o.payment_date=b.business_date)) and o.status='ACTIVE' and o.cash+o.transfer>0) then raise exception 'LEGACY_PAYMENT_REVIEW';end if;
     for allocation in select * from public.win_calendar_allocations where booking_id=b.id order by payment_id loop
      remaining=allocation.amount;week_=1;
      delete from public.win_calendar_allocations where payment_id=allocation.payment_id and booking_id=b.id;

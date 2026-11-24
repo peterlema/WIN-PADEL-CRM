@@ -74,6 +74,11 @@ let changed=await write('two','update',{...book({start:'12:00',price:80000,price
 assert.equal(Number(changed.price),80000)
 const special=await write('one','create',book({start:'16:15',duration:75,price:78000,phone:'11 5555 0105'}))
 assert.equal(special.end,'17:30')
+const withoutPhone=await one("insert into public.win_customers(name,created_by)values('Cliente anterior sin teléfono',$1)returning id",[adminId])
+const enriched=await write('one','create',book({customerId:withoutPhone.id,customerName:'Cliente anterior sin teléfono',phone:'11 5555 0199',start:'17:30',duration:30,price:20000}))
+assert.equal(enriched.customerId,withoutPhone.id)
+assert.equal((await one('select phone from public.win_customers where id=$1',[withoutPhone.id])).phone,'5491155550199')
+
 console.log('OK clientes normalizados, homónimos, reversión completa por error, revisión concurrente y duración excepcional')
 const abono=await write('one','abono.create',book({court:'C3',start:'20:00',phone:'11 5555 0201'}))
 const a1=abono.id,a2='a:'+abono.abonoId+':'+add(future,7)
@@ -114,6 +119,14 @@ await fail(()=>write('one','skip',{id:lastSeries.id,note:'No hay otra fecha vige
 assert.equal((await one('select status from public.win_court_bookings where id=$1',[lastSeries.id])).status,'CONFIRMED')
 assert.equal(Number((await one('select public.win_calendar_paid($1) n',[lastSeries.id])).n),100000)
 console.log('OK aplicaciones parciales, cobro original inmutable y rechazo sin destino con reversión completa')
+const legacy=await write('one','abono.create',book({court:'C2',start:'16:00',phone:'11 5555 0206'}))
+await q('select public.win_calendar_legacy_ops_save($1,$2::jsonb)', ['one',JSON.stringify({requestId:uuid(),shiftId:opened.id,type:'ABONO',abonoId:legacy.abonoId,date:future,played:false,cash:100000,note:'Anticipo anterior al M05'})])
+const legacyRow=(await api('one','range',{start:future,end:future})).rows.find(x=>x.id===legacy.id)
+assert.equal(legacyRow.paymentStatus,'PAID')
+await fail(()=>write('one','pay',{id:legacy.id,shiftId:opened.id,cash:1000}),'ALREADY_PAID')
+await fail(()=>write('one','skip',{id:legacy.id,note:'Revisar anticipo histórico de Recepción'}),'LEGACY_PAYMENT_REVIEW')
+console.log('OK anticipo anterior de Recepción se reconoce y no se vuelve a cobrar')
+
 
 const lesson=await write('admin','create',{kind:'CLASE',date:yesterday,court:'C4',start:'09:00',duration:60,teacherId:coach.id,lesson:{participants:2,classKind:'TRADICIONAL'},participants:[]})
 await fail(()=>write('admin','create',{kind:'CLASE',date:yesterday,court:'C1',start:'09:30',duration:60,teacherId:coach.id,lesson:{participants:1}}),'COACH_OVERLAP')

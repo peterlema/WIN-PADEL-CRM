@@ -95,7 +95,7 @@ declare a uuid;begin
  if not public.win_can_access(a,'COURTS',operation) then raise exception 'NOT_AUTHORIZED';end if;return a;
 end $$;
 create or replace function public.win_calendar_paid(id_ uuid) returns numeric language sql stable set search_path='' as $$
- select coalesce(sum(al.amount),0)+coalesce((select sum(o.cash+o.transfer) from public.win_ops_records o where o.booking_id=id_ and o.status='ACTIVE'),0)
+ select coalesce(sum(al.amount),0)+coalesce((select sum(o.cash+o.transfer) from public.win_ops_records o join public.win_court_bookings cb on cb.id=id_ where (o.booking_id=cb.id or (o.abono_id=cb.source_abono_id and o.payment_date=cb.business_date)) and o.status='ACTIVE'),0)
  from public.win_calendar_allocations al where al.booking_id=id_
 $$;
 create or replace function public.win_calendar_customer(a uuid,p jsonb,required_ boolean default true) returns uuid language plpgsql set search_path='' as $$

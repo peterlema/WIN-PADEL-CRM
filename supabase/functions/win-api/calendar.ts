@@ -11,6 +11,7 @@ const messages: Record<string,string> = {
  EXCEPTION_REASON_REQUIRED:'Completá los importes reales y el motivo de la excepción.',COURTESY_REASON_REQUIRED:'Explicá el motivo de la cortesía.',
  AMOUNT_INVALID:'Revisá el importe. Usá un valor positivo o cero y hasta dos decimales.',PRICE_BELOW_PAID:'El precio no puede quedar por debajo de lo ya pagado. Revisá los cobros asociados.',
  ALREADY_PAID:'Esta fecha ya está pagada. No se registró otro cobro.',PAYMENT_INVALID:'Ingresá el importe que recibiste.',PAYMENT_EXCEEDS_BALANCE:'El cobro supera el saldo pendiente.',
+ BOOKING_ALREADY_PAID:'Hay un cobro anterior registrado desde Recepción. Revisá su origen antes de cargar otro importe.',
  CLASS_IS_NOT_CASH:'Las clases se registran como actividad. El dinero ingresa con la rendición del profesor.',
  SHIFT_NOT_OPEN:'La caja cambió o ya no está abierta. Actualizá antes de cobrar.',BOOKING_NOT_FOUND:'La actividad ya no está disponible. Actualizá la agenda.',
  STALE_REVISION:'Otra persona modificó esta actividad. Reabrí la ficha para ver la versión actual.',
