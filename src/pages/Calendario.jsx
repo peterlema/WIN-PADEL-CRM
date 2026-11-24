@@ -15,9 +15,9 @@ const defaults={GRID_OPEN_MIN:480,GRID_CLOSE_MIN:1500,BOOKING_DEFAULT_DURATION:9
 const uuid=()=>crypto.randomUUID()
 const initialFocus=()=>{try{return JSON.parse(sessionStorage.getItem('win_calendar_focus')||'null')}catch{return null}}
 
-function DayGrid({date,rows,settings,moveSettings,now,onCreate,onOpen,onMove,onReject,disabled,scrollRef}){
+function DayGrid({date,rows,settings,moveSettings,allowMove,now,onCreate,onOpen,onMove,onReject,disabled,scrollRef}){
  const first=Number(settings.GRID_OPEN_MIN),last=Number(settings.GRID_CLOSE_MIN),position=currentPosition(date,now)
- const {drag,bookingProps,columnProps}=useGridMove({rows,settings:moveSettings,now,disabled,onMove,onReject})
+ const {drag,bookingProps,columnProps}=useGridMove({rows,settings:moveSettings,now,disabled:disabled||!allowMove,onMove,onReject})
  const slots=Array.from({length:Math.ceil((last-first)/30)},(_,i)=>first+i*30)
  return <div className="m05-day-scroll" ref={scrollRef}><div className="m05-day-board" style={{height:(last-first)*PX+48}}>
   <div className="m05-day-head"><span>Hora</span>{COURTS.map(c=><strong key={c}>CANCHA {c.slice(1)}</strong>)}</div>
@@ -31,9 +31,9 @@ function DayGrid({date,rows,settings,moveSettings,now,onCreate,onOpen,onMove,onR
  </div></div>
 }
 
-function WeekGrid({start,rows,settings,moveSettings,onlyAbonos,onCreate,onOpen,onMove,onReject,disabled,now}){
+function WeekGrid({start,rows,settings,moveSettings,allowMove,onlyAbonos,onCreate,onOpen,onMove,onReject,disabled,now}){
  const dates=Array.from({length:7},(_,i)=>addDays(start,i)),first=Number(settings.GRID_OPEN_MIN),last=Number(settings.GRID_CLOSE_MIN)
- const {drag,bookingProps,columnProps}=useGridMove({rows,settings:moveSettings,now,disabled,onMove,onReject})
+ const {drag,bookingProps,columnProps}=useGridMove({rows,settings:moveSettings,now,disabled:disabled||!allowMove,onMove,onReject})
  const times=Array.from({length:Math.ceil((last-first)/30)},(_,i)=>first+i*30)
  const visible=rows.filter(b=>b.status!=='CANCELLED'&&(!onlyAbonos||b.kind==='ABONO'))
  return <div className="m05-week-scroll"><div className="m05-week-board" style={{height:(last-first)*PX+92,width:70+7*620}}>
@@ -88,7 +88,7 @@ export default function Calendario(){
  {['day','week','abonos'].includes(mode)&&<section className="tarjeta wide m05-agenda"><div className="m05-toolbar"><button className="secundario" aria-label="Período anterior" disabled={locked} onClick={()=>go(addDays(date,mode==='day'?-1:-7))}>Anterior</button><label className="m05-date">Fecha<input type="date" value={date} onChange={e=>e.target.value&&go(e.target.value)}/></label><button className="secundario" aria-label="Período siguiente" disabled={locked} onClick={()=>go(addDays(date,mode==='day'?1:7))}>Siguiente</button><button className="secundario" onClick={()=>go(today())} disabled={locked}>Hoy</button>{mode==='day'&&<button className="secundario" onClick={()=>{const n=currentPosition(date);if(n!=null)scroll.current?.scrollTo({top:Math.max(0,(n-settings.GRID_OPEN_MIN-60)*PX),behavior:'smooth'});else go(today())}}>Hora actual</button>}<button className="secundario" disabled={locked} onClick={()=>setRefresh(v=>v+1)}>Actualizar</button></div>
  <div className="m05-heading"><div><h2>{mode==='day'?longDate(date):longDate(start)+' al '+longDate(end)}</h2><p>{loading?'Cargando agenda…':active.length+' actividades programadas o realizadas'} · Hora de Buenos Aires</p></div>{writable&&<div className="m05-toolbar"><button disabled={locked||loading} onClick={()=>create('C4',label(settings.GRID_OPEN_MIN),date,false,'RESERVA')}>Crear reserva</button><button className="secundario" disabled={locked||loading} onClick={()=>create('C4',label(settings.GRID_OPEN_MIN),date,false,'CLASE')}>Crear clase</button></div>}</div>
  <div className="m05-legend"><span className="RESERVA">Reserva</span><span className="ABONO">Abono</span><span className="CLASE">Clase</span><span className="EVENTO">Evento</span><span className="BLOQUEO">Bloqueo</span></div>
- {mode==='day'?<DayGrid date={date} rows={visibleRows} settings={settings} moveSettings={moveSettings} onMove={requestMove} onReject={text=>fail(new Error(text))} now={now} onCreate={(c,t)=>create(c,t)} onOpen={open} disabled={locked||loading||Boolean(move)} scrollRef={scroll}/>:<WeekGrid start={start} rows={visibleRows} settings={settings} moveSettings={moveSettings} onMove={requestMove} onReject={text=>fail(new Error(text))} onlyAbonos={mode==='abonos'} now={now} onCreate={create} onOpen={open} disabled={locked||loading||Boolean(move)}/>}
+ {mode==='day'?<DayGrid date={date} rows={visibleRows} settings={settings} moveSettings={moveSettings} allowMove={Boolean(writable)} onMove={requestMove} onReject={text=>fail(new Error(text))} now={now} onCreate={(c,t)=>create(c,t)} onOpen={open} disabled={locked||loading||Boolean(move)} scrollRef={scroll}/>:<WeekGrid start={start} rows={visibleRows} settings={settings} moveSettings={moveSettings} allowMove={Boolean(writable)} onMove={requestMove} onReject={text=>fail(new Error(text))} onlyAbonos={mode==='abonos'} now={now} onCreate={create} onOpen={open} disabled={locked||loading||Boolean(move)}/>}
  <p className="m05-drag-hint">Arrastrá una reserva o clase para cambiarla de lugar. En pantalla táctil o con teclado, abrí su detalle y elegí «Mover actividad».</p>
  <p className="m05-help">Las actividades programadas reservan horario. Sólo las confirmadas alimentan los reportes de actividad. Los cobros conservan la fecha y caja en que se reciben.</p>
  {mode==='day'&&visibleRows.some(b=>b.status==='CANCELLED')&&<details><summary>Actividades canceladas de la jornada</summary>{visibleRows.filter(b=>b.status==='CANCELLED').map(b=><button className="secundario" key={b.id} onClick={()=>open(b)}>{b.start} · {b.court} · {b.name}</button>)}</details>}

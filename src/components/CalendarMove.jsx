@@ -1,7 +1,8 @@
 import {useEffect,useRef,useState} from 'react'
 import Modal from './Modal.jsx'
 import {CourtPicker,TimePicker,EndTime} from './ActivityControls.jsx'
-import {longDate,label,minutes} from '../calendarUtils.js'
+import {longDate,label,minutes,addDays} from '../calendarUtils.js'
+import {activityEnd} from '../activityTime.js'
 import {canMoveBooking,destinationAt,validateMove,sameSlot,movePayload} from '../calendarMove.js'
 import './calendar-move.css'
 
@@ -57,7 +58,7 @@ export function MoveActivityDialog({booking,initialTarget,rows,settings,now,busy
  const [target,setTarget]=useState(initialTarget),request=useRef(crypto.randomUUID())
  const problem=validateMove(booking,target,rows,settings,now),unchanged=sameSlot(booking,target)
  function change(patch){setTarget(t=>{const next={...t,...patch};delete next.minute;return next});request.current=crypto.randomUUID()}
- const format=b=>(b.date?longDate(b.date):'Sin fecha')+' · '+b.court+' · '+b.start+'–'+label(minutes(b.start)+Number(booking.duration))
+ const format=b=>{const startDate=b.date?(minutes(b.start)>=1440?addDays(b.date,1):b.date):null,end=activityEnd(b.date,b.start,booking.duration);return (startDate?longDate(startDate):'Sin fecha')+' · '+b.court+' · '+b.start+'–'+(end?.time||'—')+(end&&end.date!==startDate?' · termina '+longDate(end.date):'')}
  return <Modal titulo="Mover actividad" onCerrar={onClose} footer={<><button type="button" className="secundario" disabled={busy} onClick={onClose}>Cancelar</button><button type="submit" form="calendar-move-form" disabled={busy||Boolean(problem)||unchanged}>{busy?'Guardando…':'Confirmar movimiento'}</button></>}>
   <form id="calendar-move-form" onSubmit={e=>{e.preventDefault();if(!busy&&!problem&&!unchanged)onConfirm(movePayload(booking,target,request.current))}}>
    <h3>{booking.name}</h3>
