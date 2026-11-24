@@ -1,3 +1,4 @@
+import {TimePicker} from '../components/ActivityControls.jsx'
 import { useEffect, useState } from 'react'
 import { callApi } from '../api.js'
 
@@ -220,8 +221,7 @@ function Ajustes({ ajustes, guardar, busy }) {
     <p className="cfg-muted">Valores de funcionamiento que antes estaban fijos. Sólo los cambia un administrador.</p>
     {edit && <form className="cfg-form" onSubmit={enviar}>
       <strong className="cfg-form-title">{edit.label}</strong>
-      {edit.tipo === 'hora' && <label>Horario<select value={edit.valor} autoFocus onChange={e => setEdit({ ...edit, valor: e.target.value })}>
-        {HORAS.map(m => <option key={m} value={m}>{hhmm(m)}{m >= 1440 ? ' (día siguiente)' : ''}</option>)}</select></label>}
+      {edit.tipo === 'hora' && <TimePicker label="Horario" value={hhmm(Number(edit.valor))} allowAfterMidnight minuteOptions={['00','30']} onChange={time=>{const [h,m]=time.split(':').map(Number);setEdit({...edit,valor:String((h<6?h+24:h)*60+m)})}}/>}
       {edit.tipo === 'duracion' && <label>Duración<select value={edit.valor} autoFocus onChange={e => setEdit({ ...edit, valor: e.target.value })}>
         {[60, 90, 120].map(d => <option key={d} value={d}>{d} min</option>)}</select></label>}
       {edit.tipo === 'pct' && <label>% WIN<input inputMode="decimal" className="cfg-num" value={edit.valor} required autoFocus onChange={e => setEdit({ ...edit, valor: e.target.value })} /></label>}
@@ -236,3 +236,4 @@ function Ajustes({ ajustes, guardar, busy }) {
     </table>
   </section>
 }
+

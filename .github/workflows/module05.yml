@@ -1,7 +1,7 @@
 name: Validar Módulo 05
 on:
   push:
-    branches: [implementation/modulo-05, integration/calendario-historico]
+    branches: [implementation/modulo-05, integration/calendario-historico, improvement/calendar-usability]
 permissions:
   contents: read
 jobs:
@@ -33,6 +33,7 @@ jobs:
           deno-version: v2.x
       - run: npm ci
       - run: deno check supabase/functions/win-api/index.ts supabase/functions/win-courts/index.ts
+      - run: npm run test:ui
       - run: npm run test:history
       - run: npm run test:db
       - run: python3 scripts/calendar-concurrency.py
@@ -54,3 +55,4 @@ jobs:
           echo WIN_BUILD_START
           base64 -w 76 /tmp/m05-build.tgz
           echo WIN_BUILD_END
+

@@ -1,10 +1,12 @@
+import ValidatedForm from './ValidatedForm.jsx'
+import {TimePicker,CourtPicker} from './ActivityControls.jsx'
 import {useCallback,useEffect,useRef,useState} from 'react'
 import {callApi} from '../api.js'
 
 const MONEY=n=>'$ '+Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:2})
 const TODAY=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires'}).format(new Date())
 const payMethods=[['CASH','Efectivo'],['TRANSFER','Transferencia'],['CARD','Tarjeta']]
-const courts=['C1','C2','C3','C4']
+const courts=['C4','C3','C2','C1']
 function positive(value){
  const n=Number(String(value||'').trim().replace(/\./g,'').replace(',','.'))
  return Number.isFinite(n)&&n>0&&Math.round(n*100)/100===n?n:null
@@ -170,7 +172,7 @@ export default function QuickBar({soloVenta=false}){
     {items.map(p=><div className="bar-pos-cart-line" key={p.id}><div><strong>{p.name}{p.variant?' · '+p.variant:''}</strong><small>{MONEY(p.salePrice)} c/u</small></div><div className="bar-pos-qty"><button type="button" onClick={()=>changeQty(p.id,-1)}>−</button><b>{p.quantity}</b><button type="button" onClick={()=>changeQty(p.id,1)}>+</button></div><b>{MONEY(p.quantity*Number(p.salePrice))}</b></div>)}
    </div>}
    <div className="bar-pos-total"><span>Total</span><strong>{MONEY(total)}</strong></div>
-   <form className="win-bar-form bar-pos-checkout" onSubmit={place}>
+   <ValidatedForm id="bar-checkout-form" error={error} className="win-bar-form bar-pos-checkout" onSubmit={place}>
     <fieldset className="bar-pos-choice"><legend>¿Cómo se registra?</legend>
      {[['IMMEDIATE','Cobrar ahora'],['COURT','Pendiente de cancha'],['ACCOUNT','Cuenta corriente']].map(([id,label])=><button type="button" key={id} aria-pressed={destination===id} onClick={()=>setDestination(id)}>{label}</button>)}
     </fieldset>
@@ -187,13 +189,13 @@ export default function QuickBar({soloVenta=false}){
     {conCancha&&<div className="bar-pos-inline">
      <label>Fecha del turno<input type="date" value={day} onChange={e=>{setDay(e.target.value);setBookingId('')}}/></label>
      <label>Reserva del calendario<select value={bookingId} onChange={e=>setBookingId(e.target.value)}><option value="">Asignar manualmente si no figura</option>{bookings.map(b=><option key={b.id} value={b.id}>{b.court} · {b.start} · {b.holder} ({b.kind})</option>)}</select></label>
-     {!bookingId&&<div className="bar-pos-court-manual"><label>Cancha<select value={court} onChange={e=>setCourt(e.target.value)}>{courts.map(x=><option key={x}>{x}</option>)}</select></label><label>Inicio del turno<input type="time" value={courtStart} onChange={e=>setCourtStart(e.target.value)} required/></label></div>}
+     {!bookingId&&<div className="bar-pos-court-manual"><CourtPicker value={court} onChange={setCourt}/><TimePicker label="Inicio del turno" value={courtStart} onChange={setCourtStart} required/></div>}
      <p className="win-bar-muted">{destination==='IMMEDIATE'?(selected?'Se cobra ahora y queda asociado a '+selected.holder+'.':'Se cobra ahora y queda asociado a esa cancha y horario.'):selected?'Vinculado a la reserva '+selected.holder+'. Se mostrará como pendiente hasta cobrarlo.':'Si no aparece una reserva, registrá cancha y horario para localizar el consumo después.'}</p>
     </div>}
     <label>Observación (opcional)<input value={note} maxLength={400} onChange={e=>setNote(e.target.value)} placeholder="Ej. Llevó a la cancha; cobra Recepción" /></label>
     <button type="submit" disabled={!shift||!items.length||cannotSubmit||busy||uncertain||(destination==='IMMEDIATE'&&!cliente)}>{busy?'Guardando…':destination==='IMMEDIATE'?'Cobrar '+MONEY(total):'Guardar pendiente '+MONEY(total)}</button>
     {!shift&&<p className="win-bar-warning">Para registrar entregas o cobros debe haber una caja abierta por Recepción.</p>}
-   </form>
+   </ValidatedForm>
   </section>
   </div>
   <section className="win-bar-card">
@@ -215,3 +217,4 @@ export default function QuickBar({soloVenta=false}){
   {!soloVenta&&<p className="win-bar-warning">Control de stock: cada entrega crea una salida en Supabase. Las existencias físicas seguirán sin saldo calculado hasta registrar el conteo inicial. No usar esta versión para cobrar operaciones reales sin probar antes la conciliación con Recepción.</p>}
  </div>
 }
+
