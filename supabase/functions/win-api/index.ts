@@ -1,3 +1,4 @@
+import {barFailure} from './barErrors.ts';
 import { operationsError } from './operations.ts';
 import { calendarError } from './calendar.ts';
 import { createClient } from "npm:@supabase/supabase-js@2.119.2";
@@ -9,7 +10,7 @@ const allowedOrigins = new Set([
   "http://127.0.0.1:5173",
 ]);
 function reply(obj: unknown, status=200, origin="") {
-  const headers: Record<string,string> = {"Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin"};
+  const headers: Record<string,string> = {"Content-Type":"application/json","Cache-Control":"no-store","Vary":"Origin","X-WIN-Backend-Version":"0.17.4"};
   if (allowedOrigins.has(origin)) { headers["Access-Control-Allow-Origin"]=origin; headers["Access-Control-Allow-Headers"]="authorization, content-type"; headers["Access-Control-Allow-Methods"]="POST, OPTIONS"; }
   return new Response(status === 204 ? null : JSON.stringify(obj), {status, headers});
 }
@@ -121,6 +122,9 @@ Deno.serve(async req=>{
     else if(action==="bar.court.pending"){name="win_bar_court_pending";params.p_court=data.court;params.p_day=data.date;params.p_start=data.start;}
     else if(action==="bar.court.day"){name="win_bar_court_day_pending";params.p_day=data.date;}
     else if(action==="bar.pending") name="win_bar_pending";
+    else if(action==="bar.request.status"){
+      name="win_bar_request_status";Object.assign(params,{p_request_id:data.requestId,p_kind:data.kind,p_payload:data.payload||{}});
+    }
     else if(action==="bar.order.place"){
       name="win_bar_order_place";
       Object.assign(params,{p_request_id:data.requestId,p_items:data.items,p_destination:data.destination,
@@ -148,6 +152,11 @@ Deno.serve(async req=>{
     } else return reply({error:"Operación desconocida"},404,origin);
     const {data:result,error}=await db.rpc(name,params);
     if(error) {
+      if(["bar.order.place","bar.order.pay","bar.request.status"].includes(action)){
+        const failure=barFailure(error,errors);
+        console.error(JSON.stringify({action,requestId:data.requestId,sqlstate:error.code,message:error.message,category:failure.body.category}));
+        return reply({...failure.body,requestId:data.requestId},failure.status,origin);
+      }
       if(error.code==="23505") return reply({error:"Ya existe un producto con ese nombre y variante, o el código de barras ya está utilizado."},409,origin);
       const match=Object.keys(errors).find(k=>error.message.includes(k));
       return reply({error:match?errors[match]:"No se pudo completar la operación. Revisá el estado antes de reintentar."},match?409:500,origin);
@@ -155,6 +164,6 @@ Deno.serve(async req=>{
     return reply(result,200,origin);
   } catch(e) {
     console.error("win-api error:",e instanceof Error?e.message:"unknown");
-    return reply({error:"Servicio temporalmente no disponible"},503,origin);
+    return reply({error:"Servicio temporalmente no disponible. Consultá el resultado antes de reintentar.",code:"SERVICE_UNAVAILABLE",category:"SERVER",outcome:"UNKNOWN"},503,origin);
   }
 });

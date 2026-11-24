@@ -18,6 +18,6 @@ export async function callApi(action, data = {}, token = readToken()) {
   }
   let result
   try { result = await response.json() } catch { const e = new Error('No se pudo leer la confirmación. Consultá el estado antes de repetir.'); e.network = true; throw e }
-  if (!response.ok) { const e = new Error(result.error || 'No se pudo completar la operación.'); e.status = response.status; e.code = result.code; throw e }
+  if (!response.ok) { const e = new Error(result.error || 'No se pudo completar la operación.'); e.status = response.status; e.code = result.code; e.category = result.category; e.outcome = result.outcome; throw e }
   return result
 }
