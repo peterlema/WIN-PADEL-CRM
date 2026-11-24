@@ -4,6 +4,7 @@ import ValidatedForm from './ValidatedForm.jsx'
 import {TimePicker,CourtPicker} from './ActivityControls.jsx'
 import {useCallback,useEffect,useRef,useState} from 'react'
 import {callApi} from '../api.js'
+import {readBarTransaction,submitBarTransaction,recoverBarTransaction} from '../barTransactions.js'
 
 const MONEY = value => formatMoney(value,'Sin definir')
 const TODAY=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires'}).format(new Date())
@@ -22,6 +23,9 @@ export default function QuickBar({soloVenta=false}){
  const [loading,setLoading]=useState(true)
  const [busy,setBusy]=useState(false)
  const [uncertain,setUncertain]=useState(false)
+ const [recoveryStatus,setRecoveryStatus]=useState('')
+ const [owner,setOwner]=useState('')
+ const transactionBusy=useRef(false)
  const [error,setError]=useState('')
  const [notice,setNotice]=useState('')
  const [category,setCategory]=useState('Todas')
@@ -49,11 +53,11 @@ export default function QuickBar({soloVenta=false}){
  const reload=useCallback(async()=>{
   setLoading(true);setError('')
   try {
-   const [p,c,o,sh]=await Promise.all([
-    callApi('bar.products'),callApi('bar.customers'),callApi('bar.pending'),callApi('bar.inventory.cash.state')
+   const [p,c,o,sh,me]=await Promise.all([
+    callApi('bar.products'),callApi('bar.customers'),callApi('bar.pending'),callApi('bar.inventory.cash.state'),callApi('me')
    ])
    setProducts(p.products||[]);setCustomers(c.customers||[])
-   setPending(o.orders||[]);setShift(sh.shift||null);setUncertain(false)
+   setPending(o.orders||[]);setShift(sh.shift||null);setOwner(me.user.id)
   }catch(e){setError(e.message||'No se pudo actualizar el Bar.')}
   finally{setLoading(false)}
  },[])
@@ -62,6 +66,38 @@ export default function QuickBar({soloVenta=false}){
   catch(e){setBookings([]);setError(e.message||'No se pudo consultar el calendario.')}
  },[])
  useEffect(()=>{reload()},[reload])
+ useEffect(()=>{
+  if(owner){try{if(readBarTransaction(sessionStorage,owner))recoverLast(false)}catch(e){setUncertain(true);setError(e.message)}}
+ },[owner])
+ function finish(action,r){
+  setUncertain(false);setRecoveryStatus('')
+  if(action==='bar.order.place'){
+   setCart({});setNote('');setCliente('');setBookingId('');setCourtStart('');requestId.current=crypto.randomUUID()
+   setNotice('Venta confirmada: '+MONEY(r.total))
+  }else{
+   paymentRequest.current=crypto.randomUUID();setPaymentOrder(null);setPaymentAmount('')
+   setNotice('Cobro confirmado. Saldo restante: '+MONEY(r.remaining))
+  }
+ }
+ function failed(e){
+  setUncertain(e.uncertain===true);setRecoveryStatus(e.recoveryStatus||'')
+  if(!e.uncertain){requestId.current=crypto.randomUUID();paymentRequest.current=crypto.randomUUID()}
+  setError(e.message||'La operación fue rechazada.')
+ }
+ async function recoverLast(retry=false){
+  if(transactionBusy.current||!owner)return
+  transactionBusy.current=true;setBusy(true);setError('')
+  try{
+   const r=await recoverBarTransaction({call:callApi,storage:sessionStorage,owner,retry})
+   if(r.state==='CONFIRMED'){finish(r.action,r.result);await reload()}
+   else if(r.state==='EMPTY'){setUncertain(false);setRecoveryStatus('')}
+  }catch(e){setUncertain(true);setRecoveryStatus(e.recoveryStatus||'UNAVAILABLE');setError(e.message)}
+  finally{transactionBusy.current=false;setBusy(false)}
+ }
+ async function refresh(){
+  await reload()
+  if(owner){try{if(readBarTransaction(sessionStorage,owner))await recoverLast(false)}catch(e){setUncertain(true);setError(e.message)}}
+ }
  useEffect(()=>{loadCourts(day)},[day,loadCourts])
 
  const all=products.filter(p=>p.active)
@@ -84,11 +120,13 @@ export default function QuickBar({soloVenta=false}){
  const visiblePending=groupedPending.filter(x=>pendingFilter==='ALL'||x.destination===pendingFilter)
 
  function put(p){
+  if(busy||uncertain)return
   if(p.salePrice==null||Number(p.salePrice)<=0){setError('Configurá el precio de '+p.name+' desde Stock antes de venderlo.');return}
   setCart(old=>({...old,[p.id]:Math.min((old[p.id]||0)+1,100)}))
   setError('')
  }
  function changeQty(id,delta){
+  if(busy||uncertain)return
   setCart(old=>{const next={...old},n=(next[id]||0)+delta;if(n<=0)delete next[id];else next[id]=Math.min(n,100);return next})
  }
  async function addCustomer(e){
@@ -105,46 +143,40 @@ export default function QuickBar({soloVenta=false}){
  }
  async function place(e){
   e.preventDefault()
-  if(busy||uncertain||!shift)return
+  if(transactionBusy.current||busy||uncertain||!shift||!owner)return
   if(!items.length){setError('Seleccioná al menos un producto.');return}
   if(cannotSubmit){setError('Hay productos sin precio de venta.');return}
   if(destination==='ACCOUNT'&&!accountId){setError('Elegí o agregá una persona.');return}
   if(destination==='IMMEDIATE'&&!cliente){setError('Indicá la cancha y el horario del cliente, o elegí No conozco cliente.');return}
   if(conCancha&&(!selectedCourt||!selectedStart)){setError('Seleccioná una reserva o indicá cancha y horario.');return}
   if(!window.confirm(destination==='IMMEDIATE'?'¿Confirmar cobro de '+MONEY(total)+'?':'¿Registrar consumo pendiente por '+MONEY(total)+'?'))return
-  setBusy(true);setError('');setNotice('')
-  try {
-   const r=await callApi('bar.order.place',{
+  transactionBusy.current=true;setBusy(true);setError('');setNotice('')
+  const payload={
     requestId:requestId.current,items:items.map(p=>({id:p.id,quantity:p.quantity})),
     destination,customerId:destination==='ACCOUNT'?accountId:null,
     bookingId:conCancha&&selected?.id?selected.id:null,
-    court:conCancha?selectedCourt:null,
-    courtDate:conCancha?day:null,
-    courtStart:conCancha?selectedStart:null,
+    court:conCancha?selectedCourt:null,courtDate:conCancha?day:null,courtStart:conCancha?selectedStart:null,
     clientUnknown:destination==='IMMEDIATE'&&cliente==='UNKNOWN',
     method:destination==='IMMEDIATE'?method:null,note:note.trim()
-   })
-   setCart({});setNote('');setCliente('');setBookingId('');setCourtStart('');requestId.current=crypto.randomUUID()
-   setNotice(destination==='IMMEDIATE'?'Cobro registrado: '+MONEY(r.total):'Consumo pendiente registrado: '+MONEY(r.total))
-   await reload()
-  }catch(e){setUncertain(true);setError((e.message||'No se pudo confirmar.')+' Consultá los pendientes y la caja antes de intentar otra vez.')}
-  finally{setBusy(false)}
+  }
+  try{
+   const r=await submitBarTransaction({call:callApi,storage:sessionStorage,owner,action:'bar.order.place',payload})
+   finish(r.action,r.result);await reload()
+  }catch(e){failed(e)}
+  finally{transactionBusy.current=false;setBusy(false)}
  }
  async function settle(e){
   e.preventDefault()
-  if(busy||uncertain||!paymentOrder||!shift)return
+  if(transactionBusy.current||busy||uncertain||!paymentOrder||!shift||!owner)return
   const n=positive(paymentAmount)
   if(n==null||n>Number(paymentOrder.balance)){setError('El importe debe ser mayor a cero y no superar el saldo pendiente.');return}
   if(!window.confirm('¿Registrar cobro de '+MONEY(n)+'?'))return
-  setBusy(true);setError('');setNotice('')
+  transactionBusy.current=true;setBusy(true);setError('');setNotice('')
   try{
-   const r=await callApi('bar.order.pay',{requestId:paymentRequest.current,orderId:paymentOrder.id,amount:n,method:paymentMethod})
-   paymentRequest.current=crypto.randomUUID()
-   setPaymentOrder(null);setPaymentAmount('')
-   setNotice('Cobro registrado. Saldo restante: '+MONEY(r.remaining))
-   await reload()
-  }catch(e){setUncertain(true);setError((e.message||'No se pudo confirmar el cobro.')+' Verificá la caja antes de repetir.')}
-  finally{setBusy(false)}
+   const r=await submitBarTransaction({call:callApi,storage:sessionStorage,owner,action:'bar.order.pay',payload:{requestId:paymentRequest.current,orderId:paymentOrder.id,amount:n,method:paymentMethod}})
+   finish(r.action,r.result);await reload()
+  }catch(e){failed(e)}
+  finally{transactionBusy.current=false;setBusy(false)}
  }
  function chooseSettle(p){setPaymentOrder(p);setPaymentAmount(String(p.balance).replace('.',','));paymentRequest.current=crypto.randomUUID();setError('')}
  const formatDate=v=>new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hourCycle:'h23',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(v))
@@ -152,15 +184,15 @@ export default function QuickBar({soloVenta=false}){
   <div className="bar-pos-main">
   <section className="win-bar-card bar-pos-catalogo">
    <div className="win-bar-row"><div><h3>{soloVenta?'Vender':'Venta rápida por productos'}</h3>{!soloVenta&&<p className="win-bar-muted">Elegí una categoría y tocá cada bebida. El precio se toma de Stock.</p>}</div>
-    <div className="bar-pos-head-actions"><span className={'win-bar-status'+(shift?' abierta':shift===null?' cerrada':'')}>{loading?'Cargando…':shift?'Caja abierta':'Caja cerrada'}</span><button type="button" className="secundario" onClick={reload} disabled={busy||loading}>Actualizar</button></div></div>
+    <div className="bar-pos-head-actions"><span className={'win-bar-status'+(shift?' abierta':shift===null?' cerrada':'')}>{loading?'Cargando…':shift?'Caja abierta':'Caja cerrada'}</span><button type="button" className="secundario" onClick={refresh} disabled={busy||loading}>Actualizar</button></div></div>
    {error&&<p className="win-bar-message" role="alert">{error}</p>}
    {notice&&<p className="win-bar-message good" role="status">{notice}</p>}
-   {uncertain&&<div className="win-bar-warning">El resultado de la última operación no pudo confirmarse. Revisá movimientos y pendientes con Actualizar. No la repitas sin comprobar que no se registró.</div>}
+   {uncertain&&<div className="win-bar-warning"><p>Conservamos el identificador y los datos de la operación. La consulta comprueba esa misma solicitud; no crea una venta nueva.</p><button type="button" disabled={busy} onClick={()=>recoverLast(false)}>Consultar resultado</button>{recoveryStatus==='NOT_FOUND'&&<button type="button" disabled={busy} onClick={()=>recoverLast(true)}>Reintentar misma operación</button>}</div>}
    <div className="bar-pos-toolbar">
     <div className="bar-pos-filters">{categories.map(x=><button key={x} type="button" aria-pressed={category===x} onClick={()=>setCategory(x)}>{x}</button>)}</div>
     <input className="bar-pos-search-input" type="search" aria-label="Buscar producto" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar: Gatorade, Coca…" />
    </div>
-   <div className="bar-pos-products">{shown.map(p=><button className="bar-pos-product" type="button" key={p.id} disabled={p.salePrice==null||Number(p.salePrice)<=0||(p.stockKnown&&p.stock<=0)} onClick={()=>put(p)}>
+   <div className="bar-pos-products">{shown.map(p=><button className="bar-pos-product" type="button" key={p.id} disabled={busy||uncertain||p.salePrice==null||Number(p.salePrice)<=0||(p.stockKnown&&p.stock<=0)} onClick={()=>put(p)}>
     <span className="bar-pos-name">{p.name}</span>{p.variant&&<small>{p.variant}</small>}
     <strong>{hasPrice(p)?MONEY(p.salePrice):'Sin precio'}</strong><small>{p.stockKnown?p.stock+' disponibles':'Sin conteo'}</small>
     {cart[p.id]>0&&<b className="bar-pos-badge">{cart[p.id]}</b>}
@@ -169,12 +201,13 @@ export default function QuickBar({soloVenta=false}){
    {soloVenta&&sinPrecio.length>0&&<p className="bar-pos-sinprecio">Sin precio cargado, no se pueden vender todavía: {sinPrecio.map(p=>p.name+(p.variant?' '+p.variant:'')).join(', ')}. Avisá al encargado.</p>}
   </section>
   <section className="win-bar-card bar-pos-carrito">
-   <div className="win-bar-row"><h3>Carrito <span className="bar-pos-count">{items.reduce((n,p)=>n+p.quantity,0)} unidades</span></h3>{items.length>0&&<button type="button" className="enlace" onClick={()=>setCart({})}>Vaciar</button>}</div>
+   <div className="win-bar-row"><h3>Carrito <span className="bar-pos-count">{items.reduce((n,p)=>n+p.quantity,0)} unidades</span></h3>{items.length>0&&<button type="button" className="enlace" disabled={busy||uncertain} onClick={()=>setCart({})}>Vaciar</button>}</div>
    {!items.length?<p className="win-bar-empty">Tocá una bebida para agregarla.</p>:<div className="bar-pos-cart">
-    {items.map(p=><div className="bar-pos-cart-line" key={p.id}><div><strong>{p.name}{p.variant?' · '+p.variant:''}</strong><small>{MONEY(p.salePrice)} c/u</small></div><div className="bar-pos-qty"><button type="button" onClick={()=>changeQty(p.id,-1)}>−</button><b>{p.quantity}</b><button type="button" onClick={()=>changeQty(p.id,1)}>+</button></div><b>{MONEY(p.quantity*Number(p.salePrice))}</b></div>)}
+    {items.map(p=><div className="bar-pos-cart-line" key={p.id}><div><strong>{p.name}{p.variant?' · '+p.variant:''}</strong><small>{MONEY(p.salePrice)} c/u</small></div><div className="bar-pos-qty"><button type="button" disabled={busy||uncertain} onClick={()=>changeQty(p.id,-1)}>−</button><b>{p.quantity}</b><button type="button" onClick={()=>changeQty(p.id,1)}>+</button></div><b>{MONEY(p.quantity*Number(p.salePrice))}</b></div>)}
    </div>}
    <div className="bar-pos-total"><span>Total</span><strong>{MONEY(total)}</strong></div>
    <ValidatedForm id="bar-checkout-form" error={error} className="win-bar-form bar-pos-checkout" onSubmit={place}>
+    <fieldset disabled={busy||uncertain} style={{border:0,padding:0,minWidth:0}}>
     <fieldset className="bar-pos-choice"><legend>¿Cómo se registra?</legend>
      {[['IMMEDIATE','Cobrar ahora'],['COURT','Pendiente de cancha'],['ACCOUNT','Cuenta corriente']].map(([id,label])=><button type="button" key={id} aria-pressed={destination===id} onClick={()=>setDestination(id)}>{label}</button>)}
     </fieldset>
@@ -197,6 +230,7 @@ export default function QuickBar({soloVenta=false}){
     <label>Observación (opcional)<input value={note} maxLength={400} onChange={e=>setNote(e.target.value)} placeholder="Ej. Llevó a la cancha; pendiente de cobro en Bar" /></label>
     <button type="submit" disabled={!shift||!items.length||cannotSubmit||busy||uncertain||(destination==='IMMEDIATE'&&!cliente)}>{busy?'Guardando…':destination==='IMMEDIATE'?'Cobrar '+MONEY(total):'Guardar pendiente '+MONEY(total)}</button>
     {!shift&&<p className="win-bar-warning">Para registrar entregas o cobros debe haber una Caja Bar abierta desde la pestaña Caja Bar.</p>}
+    </fieldset>
    </ValidatedForm>
   </section>
   </div>
@@ -208,13 +242,13 @@ export default function QuickBar({soloVenta=false}){
     <small>{formatDate(p.date)} · {(p.items||[]).map(i=>i.quantity+'× '+i.name).join(', ')}</small>
     {p.note&&<small>{p.note}</small>}
    </div><div className="bar-pos-pending-amount"><strong>{MONEY(p.balance)}</strong><button type="button" disabled={!shift||busy||uncertain} onClick={()=>chooseSettle(p)}>Cobrar</button></div></div>)}
-   {paymentOrder&&<form className="bar-pos-payment" onSubmit={settle}>
+   {paymentOrder&&<form className="bar-pos-payment" onSubmit={settle}><fieldset disabled={busy||uncertain} style={{border:0,padding:0,minWidth:0}}>
     <div className="win-bar-row"><h3>Cobrar consumo pendiente</h3><button type="button" className="secundario" onClick={()=>setPaymentOrder(null)}>Cerrar</button></div>
     <p className="win-bar-muted">Saldo: {MONEY(paymentOrder.balance)}. Podés cobrar una parte y dejar el resto pendiente.</p>
     <label>Importe que se recibe ($)<MoneyInput inputMode="decimal" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} required/></label>
     <fieldset className="win-bar-methods"><legend>Medio</legend>{payMethods.map(([id,label])=><button key={id} type="button" className={paymentMethod===id?'selected':''} onClick={()=>setPaymentMethod(id)}>{label}</button>)}</fieldset>
     <button disabled={busy||uncertain}>Confirmar cobro</button>
-   </form>}
+   </fieldset></form>}
   </section>
   {!soloVenta&&<p className="win-bar-warning">Cada entrega descuenta existencias una sola vez. Los cobros usan exclusivamente Caja Bar. El inventario físico y la conciliación histórica se consultan en Stock y precios.</p>}
  </div>
