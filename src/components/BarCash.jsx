@@ -1,6 +1,8 @@
+import MoneyInput from './MoneyInput.jsx'
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import {useEffect,useRef,useState} from 'react'
 import {callApi} from '../api.js'
-const money=v=>'$ '+Number(v||0).toLocaleString('es-AR',{maximumFractionDigits:2})
+const money = value => formatMoney(value,'Sin definir')
 export default function BarCash(){
  const [data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[amount,setAmount]=useState(''),[note,setNote]=useState(''),[bank,setBank]=useState(''),[admin,setAdmin]=useState(false)
  const request=useRef({key:null,id:null})
@@ -11,8 +13,8 @@ export default function BarCash(){
   <p className="win-bar-muted">Caja y cuenta bancaria exclusivas del Bar. Abrir, cobrar o pagar aquí no modifica Caja Recepción. El conteo inicial y la compra histórica no generaron movimientos de dinero.</p>
   {error&&<p className="win-bar-message" role="alert">{error}</p>}
   {!data?<p>Cargando…</p>:<><p><strong>{data.shift?'Caja Bar abierta':'Caja Bar cerrada'}</strong>{data.shift&&' · Efectivo esperado: '+money(data.cashExpected)}</p>
-   <form className="bar-product-editor" onSubmit={e=>{e.preventDefault();run(data.shift?'cash.close':'cash.open',data.shift?{shiftId:data.shift.id,countedCash:Number(amount),note}:{openingCash:Number(amount)})}}>
-    <label>{data.shift?'Efectivo contado al cerrar ($)':'Efectivo real para apertura ($)'}<input type="number" min="0" step="0.01" required value={amount} onChange={e=>setAmount(e.target.value)}/></label>
+   <form className="bar-product-editor" onSubmit={e=>{e.preventDefault();run(data.shift?'cash.close':'cash.open',data.shift?{shiftId:data.shift.id,countedCash:parseMoneyInput(amount),note}:{openingCash:parseMoneyInput(amount)})}}>
+    <label>{data.shift?'Efectivo contado al cerrar ($)':'Efectivo real para apertura ($)'}<MoneyInput type="number" min="0" step="0.01" required value={amount} onChange={e=>setAmount(e.target.value)}/></label>
     {data.shift&&<label>Motivo de diferencia / observación<input maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>}
     <button disabled={busy}>{data.shift?'Confirmar cierre Caja Bar':'Abrir Caja Bar'}</button>
    </form>

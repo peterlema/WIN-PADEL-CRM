@@ -1,7 +1,9 @@
+import MoneyInput from '../components/MoneyInput.jsx'
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import { useEffect, useState } from 'react'
 import { callApi } from '../api.js'
 
-const money = n => new Intl.NumberFormat('es-AR',{style:'currency',currency:'ARS'}).format(Number(n)||0)
+const money = value => formatMoney(value,'Sin definir')
 const units = { COURTS:'Canchas', ACADEMY:'Academia', EVENTS:'Eventos', CAFE_BAR:'Café / Bar', SHOP:'Shop', GENERAL:'General' }
 const methods = { CASH:'Efectivo', TRANSFER:'Transferencia', CARD:'Tarjeta', OTHER:'Otro' }
 
@@ -37,7 +39,7 @@ export default function Panel({ user, onLogout }) {
       setUncertain(true)
     } finally { setBusy(false) }
   }
-  const validAmount=x=>Number(String(x).replace(',','.'))
+  const validAmount=parseMoneyInput
   const canClose=shift && (user.role==='ADMIN'||user.id===shift.opened_by)
   return <div className="panel">
     <header className="barra"><strong>WIN Gestión</strong><span className="usuario">{user.name} · {user.role}</span><button onClick={onLogout}>Salir</button></header>
@@ -50,7 +52,7 @@ export default function Panel({ user, onLogout }) {
       {!shift && <section className="tarjeta" style={{marginTop:18}}>
         <h2>Caja cerrada</h2>
         {user.role!=='BAR' && <form onSubmit={e=>{e.preventDefault();action('cash.open',{amount:validAmount(opening)})}}>
-          <label>Efectivo inicial<input inputMode="decimal" value={opening} onChange={e=>setOpening(e.target.value)} required /></label>
+          <label>Efectivo inicial<MoneyInput inputMode="decimal" value={opening} onChange={e=>setOpening(e.target.value)} required /></label>
           <button disabled={busy||uncertain}>Abrir caja</button>
         </form>}
       </section>}
@@ -61,14 +63,14 @@ export default function Panel({ user, onLogout }) {
             <label>Tipo<select value={kind} onChange={e=>setKind(e.target.value)}>{Object.entries({SALE:'Venta',EXPENSE:'Gasto',WITHDRAWAL:'Retiro',DEPOSIT:'Ingreso adicional'}).filter(([k])=>user.role!=='BAR'||k==='SALE').map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
             <label>Unidad<select value={unit} onChange={e=>setUnit(e.target.value)}>{Object.entries(units).filter(([k])=>user.role!=='BAR'||k==='CAFE_BAR').map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
             <label>Medio<select value={method} onChange={e=>setMethod(e.target.value)}>{Object.entries(methods).map(([k,v])=><option key={k} value={k}>{v}</option>)}</select></label>
-            <label>Importe<input inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)} required /></label>
+            <label>Importe<MoneyInput inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)} required /></label>
             <label>Observación<input value={note} maxLength={400} onChange={e=>setNote(e.target.value)} /></label>
             <button disabled={busy||uncertain}>Guardar movimiento</button>
           </form>
         </section>
         {canClose && <section className="tarjeta wide"><h2>Cerrar turno</h2>
           <form onSubmit={e=>{e.preventDefault();if(confirm('¿Cerrar la caja?'))action('cash.close',{shiftId:shift.id,counted:validAmount(counted),note})}}>
-            <label>Efectivo contado<input inputMode="decimal" value={counted} onChange={e=>setCounted(e.target.value)} required /></label>
+            <label>Efectivo contado<MoneyInput inputMode="decimal" value={counted} onChange={e=>setCounted(e.target.value)} required /></label>
             <label>Observación<input value={note} onChange={e=>setNote(e.target.value)} maxLength={400}/></label>
             <button disabled={busy||uncertain}>Confirmar cierre</button>
           </form>

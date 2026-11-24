@@ -1,7 +1,9 @@
+import MoneyInput from '../components/MoneyInput.jsx'
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { callApi } from '../api.js'
 
-const currency = amount => '$ ' + Math.round(Number(amount) || 0).toLocaleString('es-AR')
+const currency = value => formatMoney(value,'Sin definir')
 const dateTime = v => v ? new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hour:'2-digit',minute:'2-digit'}).format(new Date(v)) : '—'
 const actions = [
   {id:'abono',title:'+ Abono',enabled:false,description:'Juego realizado y cobros anticipados, separados para no duplicar ingresos.'},
@@ -73,10 +75,7 @@ export default function RecepcionV5({user,onLogout}) {
     requestId.current=crypto.randomUUID()
     setTimeout(()=>formRef.current?.scrollIntoView({behavior:'smooth',block:'nearest'}),40)
   }
-  function amountValue(input) {
-    const raw=String(input).trim().replace(/\./g,'').replace(',','.')
-    return raw===''?NaN:Number(raw)
-  }
+  const amountValue=parseMoneyInput
   async function perform(action,params,message) {
     if(busy||uncertain)return false
     setBusy(true);setError('');setSuccess('')
@@ -143,7 +142,7 @@ export default function RecepcionV5({user,onLogout}) {
       <h2>Abrir caja</h2>
       <p className="win-rec-muted">Contá el efectivo real antes de abrir. La comparación con el cierre anterior todavía no está implementada en V5.</p>
       <form className="win-rec-form" onSubmit={openShift}>
-        <label>Efectivo contado al abrir ($)<input inputMode="decimal" value={opening} onChange={e=>setOpening(e.target.value)} required/></label>
+        <label>Efectivo contado al abrir ($)<MoneyInput inputMode="decimal" value={opening} onChange={e=>setOpening(e.target.value)} required/></label>
         <button disabled={busy||uncertain}>Abrir caja</button>
       </form>
     </section>}
@@ -180,7 +179,7 @@ export default function RecepcionV5({user,onLogout}) {
           <p className="win-rec-muted">{available.description}</p>
           {!available.enabled?<p className="win-rec-pending">Este formulario no está habilitado porque falta integrar el registro de actividad y su validación en Supabase. No se guardarán datos ficticios.</p>:
           <form className="win-rec-form" onSubmit={submitMovement}>
-            <label>Importe ($)<input inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0" required/></label>
+            <label>Importe ($)<MoneyInput inputMode="decimal" value={amount} onChange={e=>setAmount(e.target.value)} placeholder="0" required/></label>
             {(available.kind==='SALE'||available.kind==='DEPOSIT')&&<label>Medio de pago<select value={method} onChange={e=>setMethod(e.target.value)}><option value="CASH">Efectivo</option><option value="TRANSFER">Transferencia</option><option value="CARD">Tarjeta</option></select></label>}
             <label>{available.kind==='WITHDRAWAL'?'Destinatario y motivo':'Concepto'}<input value={concept} onChange={e=>setConcept(e.target.value)} maxLength={400} required placeholder={available.kind==='WITHDRAWAL'?'A quién se entrega el efectivo y por qué':'Describí la operación'}/></label>
             <button type="submit" disabled={busy||uncertain}>{busy?'Guardando…':'Guardar anotación'}</button>
@@ -210,7 +209,7 @@ export default function RecepcionV5({user,onLogout}) {
         {closing&&<>
           <p className="win-rec-pending">Esta es una versión básica del cierre. Falta la conciliación de comprobantes por turno y por jornada definida en el Manual 01.</p>
           <form className="win-rec-form" onSubmit={closeShift}>
-            <label>Efectivo contado ($)<input inputMode="decimal" required value={counted} onChange={e=>setCounted(e.target.value)}/></label>
+            <label>Efectivo contado ($)<MoneyInput inputMode="decimal" required value={counted} onChange={e=>setCounted(e.target.value)}/></label>
             <label>Observación por diferencia<input value={closeNote} onChange={e=>setCloseNote(e.target.value)} maxLength={400}/></label>
             <button disabled={busy||uncertain}>Confirmar cierre básico</button>
           </form>

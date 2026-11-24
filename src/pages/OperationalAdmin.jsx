@@ -1,3 +1,4 @@
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import {BarEmployeeReport} from '../components/BarEmployeePricing.jsx'
 import ValidatedForm from '../components/ValidatedForm.jsx'
 import {TimePicker,CourtPicker} from '../components/ActivityControls.jsx'
@@ -7,7 +8,7 @@ import {callApi} from '../api.js'
 import {periodBounds,comparisonBounds} from '../adminPeriods.js'
 import {alignDays,compareGroups} from '../adminComparisons.js'
 const api=(action,data={})=>callApi('ops.'+action,data)
-const money=n=>n==null?'—':'$ '+Number(n).toLocaleString('es-AR',{maximumFractionDigits:2})
+const money = value => formatMoney(value,'—')
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
 const labels={RESERVA:'Reservas regulares',ABONO:'Abonos',CLASE:'Clases',RENDICION:'Rendiciones',EVENTO:'Eventos',TIENDA:'Tienda',GASTO:'Gastos',RETIRO:'Retiros',OTRO:'Otros ingresos',COURTS:'Canchas',ACADEMY:'Academia',CAFE_BAR:'Bar',SHOP:'Tienda',GENERAL:'General',EVENTS:'Eventos',SALE:'Ventas',DEPOSIT:'Ingresos',EXPENSE:'Gastos',WITHDRAWAL:'Retiros',REFUND:'Devoluciones',ADJUSTMENT:'Ajustes',CASH:'Efectivo',TRANSFER:'Transferencia',CARD:'Tarjeta',OTHER:'Otro'}
 const stored=()=>{try{return JSON.parse(sessionStorage.getItem('win_admin_view')||'{}')}catch{return {}}}

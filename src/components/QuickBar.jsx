@@ -1,14 +1,16 @@
+import MoneyInput from './MoneyInput.jsx'
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import ValidatedForm from './ValidatedForm.jsx'
 import {TimePicker,CourtPicker} from './ActivityControls.jsx'
 import {useCallback,useEffect,useRef,useState} from 'react'
 import {callApi} from '../api.js'
 
-const MONEY=n=>'$ '+Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:2})
+const MONEY = value => formatMoney(value,'Sin definir')
 const TODAY=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires'}).format(new Date())
 const payMethods=[['CASH','Efectivo'],['TRANSFER','Transferencia'],['CARD','Tarjeta']]
 const courts=['C4','C3','C2','C1']
 function positive(value){
- const n=Number(String(value||'').trim().replace(/\./g,'').replace(',','.'))
+ const n=parseMoneyInput(value)
  return Number.isFinite(n)&&n>0&&Math.round(n*100)/100===n?n:null
 }
 export default function QuickBar({soloVenta=false}){
@@ -209,7 +211,7 @@ export default function QuickBar({soloVenta=false}){
    {paymentOrder&&<form className="bar-pos-payment" onSubmit={settle}>
     <div className="win-bar-row"><h3>Cobrar consumo pendiente</h3><button type="button" className="secundario" onClick={()=>setPaymentOrder(null)}>Cerrar</button></div>
     <p className="win-bar-muted">Saldo: {MONEY(paymentOrder.balance)}. Podés cobrar una parte y dejar el resto pendiente.</p>
-    <label>Importe que se recibe ($)<input inputMode="decimal" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} required/></label>
+    <label>Importe que se recibe ($)<MoneyInput inputMode="decimal" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} required/></label>
     <fieldset className="win-bar-methods"><legend>Medio</legend>{payMethods.map(([id,label])=><button key={id} type="button" className={paymentMethod===id?'selected':''} onClick={()=>setPaymentMethod(id)}>{label}</button>)}</fieldset>
     <button disabled={busy||uncertain}>Confirmar cobro</button>
    </form>}

@@ -1,14 +1,14 @@
+import MoneyInput from './MoneyInput.jsx'
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import {useEffect,useRef,useState} from 'react'
 import {callApi} from '../api.js'
-export const costMoney=n=>n==null?'Pendiente':'$'+Number(n).toLocaleString('es-AR',{maximumFractionDigits:2})
+export const costMoney=n=>formatMoney(n,'Pendiente')
 export function parseCost(raw){
- const value=String(raw).trim().replace(/^\$\s*/,'')
- if(!/^(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d{1,2})?$/.test(value))throw new Error('Ingresá un importe argentino, por ejemplo 1.435 o 415,15.')
- const n=Number(value.replace(/\./g,'').replace(',','.'))
+ const n=parseMoneyInput(raw)
  if(!Number.isFinite(n)||n<0||n>1000000000)throw new Error('El costo debe estar entre $0 y $1.000.000.000.')
  return n
 }
-const input=n=>n==null?'':Number(n).toLocaleString('es-AR',{useGrouping:false,maximumFractionDigits:2})
+const input=moneyInputValue
 export function BarProductCost({product,onSaved}){
  const [cost,setCost]=useState(input(product.provisionalInitialCost)),[note,setNote]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState('')
  const request=useRef(null)
@@ -26,7 +26,7 @@ export function BarProductCost({product,onSaved}){
   <h4>Costo inicial provisional · {product.name} {product.variant}</h4>
   <p>Vigente: <strong>{costMoney(product.unitCost)}</strong> · {product.costOrigin}{product.costEstimated?' · Márgenes estimados':''}</p>
   <p className="win-bar-muted">Costo automático desde compras: {costMoney(product.automaticUnitCost)}. Guardar este costo no cambia el precio, las unidades, las compras ni la caja. Las ventas anteriores conservan su costo.</p>
-  <div className="bar-product-fields"><label>Costo provisional manual ($)<input required inputMode="decimal" placeholder="1.435 o 415,15" value={cost} onChange={e=>setCost(e.target.value)}/></label>
+  <div className="bar-product-fields"><label>Costo provisional manual ($)<MoneyInput required inputMode="decimal" placeholder="1.435 o 415,15" value={cost} onChange={e=>setCost(e.target.value)}/></label>
   <label>Motivo obligatorio<input required minLength={5} maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label></div>
   {error&&<p className="win-bar-message" role="alert">{error}</p>}
   <button disabled={busy}>{busy?'Guardando…':'Guardar sólo costo provisional'}</button>
@@ -62,7 +62,7 @@ export default function BarCosts({products,onSaved}){
   </tbody></table></div>}
   {group&&<form className="bar-product-editor" onSubmit={reconcile}><h4>Conciliar {group.group}</h4>
    <p>Distribuí {group.units} unidades y {costMoney(group.originalTotal)} según el comprobante. Indicá las cantidades originales por variante, no las existencias actuales. No suma stock ni modifica ventas o caja.</p>
-   {rows.map((l,i)=><div className="bar-product-fields" key={l.productId}><strong>{l.label}</strong><label>Unidades originales<input type="number" min="0" step="1" value={l.quantity} onChange={e=>setRows(rows.map((r,j)=>i===j?{...r,quantity:e.target.value}:r))}/></label><label>Importe total real de la variante ($)<input inputMode="decimal" value={l.totalCost} onChange={e=>setRows(rows.map((r,j)=>i===j?{...r,totalCost:e.target.value}:r))}/></label></div>)}
+   {rows.map((l,i)=><div className="bar-product-fields" key={l.productId}><strong>{l.label}</strong><label>Unidades originales<input type="number" min="0" step="1" value={l.quantity} onChange={e=>setRows(rows.map((r,j)=>i===j?{...r,quantity:e.target.value}:r))}/></label><label>Importe total real de la variante ($)<MoneyInput inputMode="decimal" value={l.totalCost} onChange={e=>setRows(rows.map((r,j)=>i===j?{...r,totalCost:e.target.value}:r))}/></label></div>)}
    <label>Comprobante / motivo obligatorio<input required minLength={5} maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>
    <button disabled={busy}>{busy?'Conciliando…':'Guardar conciliación auditada'}</button><button type="button" className="secundario" disabled={busy} onClick={()=>setGroup(null)}>Cancelar</button>
   </form>}

@@ -1,7 +1,7 @@
 name: Validar Módulo 05
 on:
   push:
-    branches: [implementation/modulo-05, integration/calendario-historico, improvement/calendar-usability, implementation/bar-inventory, implementation/bar-employee-pricing]
+    branches: [implementation/modulo-05, integration/calendario-historico, improvement/calendar-usability, implementation/bar-inventory, improvement/argentine-money, implementation/bar-employee-pricing]
 permissions:
   contents: read
 jobs:
@@ -34,6 +34,7 @@ jobs:
       - run: npm ci
       - run: deno check supabase/functions/win-api/index.ts supabase/functions/win-courts/index.ts
       - run: npm run test:ui
+      - run: npm run test:money
       - run: npm run test:history
       - run: npm run test:db
       - run: npm run test:users

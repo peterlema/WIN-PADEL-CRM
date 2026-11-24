@@ -1,20 +1,22 @@
+import MoneyInput from '../components/MoneyInput.jsx'
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import {TimePicker,CourtPicker,DurationPicker,EndTime} from '../components/ActivityControls.jsx'
 import ValidatedForm from '../components/ValidatedForm.jsx'
 import Modal from '../components/Modal.jsx'
 import {useEffect,useRef,useState} from 'react'
 import {callApi} from '../api.js'
 
-const money=n=>'$ '+Number(n||0).toLocaleString('es-AR',{maximumFractionDigits:2})
+const money = value => formatMoney(value,'Sin definir')
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date())
 const clock=()=>new Intl.DateTimeFormat('en-GB',{timeZone:'America/Argentina/Buenos_Aires',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date())
 const when=s=>s?new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(s)):'—'
-const num=v=>{const s=String(v??'').trim();if(!s)return 0;if(s.includes(','))return Number(s.replace(/\./g,'').replace(',','.'));return /^-?\d{1,3}(\.\d{3})+$/.test(s)?Number(s.replace(/\./g,'')):Number(s)}
+const num=value=>parseMoneyInput(value,{empty:0})
 const types={ACTIVITY_EVENT:'Anotación de calendario',RESERVA:'Reserva regular',ABONO:'Abono',CLASE:'Clase',RENDICION:'Rendición',EVENTO:'Evento / Cancha abierta',TIENDA:'Tienda',GASTO:'Gasto',RETIRO:'Retiro',OTRO:'Otros ingresos',SALE:'Venta',EXPENSE:'Gasto',WITHDRAWAL:'Retiro',DEPOSIT:'Otros ingresos',REFUND:'Devolución',ADJUSTMENT:'Ajuste'}
 const categories=['Artículos de limpieza','Bar / Compras','Inversión / Equipamiento pádel','Inversión / Equipamiento club','Mantenimiento y reparaciones / Gastos menores','Otros gastos']
 const uuid=()=>crypto.randomUUID()
 const ops=(action,data={})=>{if(action==='control'){const {action:operation,...rest}=data;return callApi('ops.control',{...rest,operation})}return callApi('ops.'+action,data)}
 const courtNames=['C4','C3','C2','C1']
-function Amount({label,value,onChange,required=false}){return <label>{label}<input inputMode="decimal" value={value} onChange={e=>onChange(e.target.value)} placeholder="0" required={required}/></label>}
+function Amount({label,value,onChange,required=false}){return <label>{label}<MoneyInput inputMode="decimal" value={value} onChange={e=>onChange(e.target.value)} placeholder="0" required={required}/></label>}
 
 export default function OperationalReception({user,onLogout}){
  const [view,setView]=useState(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[success,setSuccess]=useState('')

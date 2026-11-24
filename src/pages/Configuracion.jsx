@@ -1,3 +1,5 @@
+import MoneyInput from '../components/MoneyInput.jsx'
+import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import UserManagement from '../components/UserManagement.jsx'
 import {TimePicker} from '../components/ActivityControls.jsx'
 import { useEffect, useState } from 'react'
@@ -6,9 +8,9 @@ import { callApi } from '../api.js'
 // Configuración: datos que cambian seguido (productos, precios y profesores), editables sin tocar la base.
 // La pantalla sólo muestra y envía; permisos, validaciones y auditoría viven en win_config_* (PostgreSQL).
 
-const money = n => '$ ' + (Number(n) || 0).toLocaleString('es-AR', { maximumFractionDigits: 2 })
+const money = value => formatMoney(value,'Sin definir')
 const fecha = d => d ? new Intl.DateTimeFormat('es-AR', { timeZone: 'UTC', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date(d + 'T00:00:00Z')) : '—'
-const num = v => { const s = String(v ?? '').trim().replace(/\./g, '').replace(',', '.'); return s === '' ? NaN : Number(s) }
+const num=value=>parseMoneyInput(value,{empty:NaN})
 const pct = v => { const s = String(v ?? '').trim().replace(',', '.'); return s === '' ? NaN : Number(s) }
 // [código, duración en minutos, rótulo]. La cancha tiene precio por duración; las clases, por cantidad de alumnos.
 const PRECIOS = [
@@ -104,7 +106,7 @@ function Productos({ data, guardar, busy }) {
       {esBar && <label>Sabor / variante<input value={edit.variante} maxLength={90} placeholder="Ej. Azul, Amber (opcional)" onChange={e => setEdit({ ...edit, variante: e.target.value })} /></label>}
       <label>Categoría<input value={edit.categoria} maxLength={60} list="cfg-categorias" placeholder="Ej. Bebidas" onChange={e => setEdit({ ...edit, categoria: e.target.value })} /></label>
       <datalist id="cfg-categorias">{categorias.map(c => <option key={c} value={c} />)}</datalist>
-      <label>Precio ($)<input inputMode="decimal" className="cfg-num" value={edit.precio} required onChange={e => setEdit({ ...edit, precio: e.target.value })} /></label>
+      <label>Precio ($)<MoneyInput inputMode="decimal" className="cfg-num" value={edit.precio} required onChange={e => setEdit({ ...edit, precio: e.target.value })} /></label>
       <label className="cfg-check"><input type="checkbox" checked={edit.activo} onChange={e => setEdit({ ...edit, activo: e.target.checked })} />Activo</label>
       <div className="cfg-actions"><button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button><button type="button" className="secundario" onClick={() => setEdit(null)}>Cancelar</button></div>
     </form>}
@@ -140,8 +142,8 @@ function Precios({ data, guardar, busy }) {
     <p className="cfg-muted">Un precio nuevo rige desde la fecha que elijas (hoy o más adelante). Lo ya cobrado conserva su importe.</p>
     {edit && <form className="cfg-form" onSubmit={enviar}>
       <strong className="cfg-form-title">{edit.rotulo}</strong>
-      <label>Efectivo ($)<input inputMode="decimal" className="cfg-num" value={edit.efectivo} required autoFocus onChange={e => setEdit({ ...edit, efectivo: e.target.value })} /></label>
-      {!edit.mismo && <label>Transferencia ($)<input inputMode="decimal" className="cfg-num" value={edit.transferencia} required onChange={e => setEdit({ ...edit, transferencia: e.target.value })} /></label>}
+      <label>Efectivo ($)<MoneyInput inputMode="decimal" className="cfg-num" value={edit.efectivo} required autoFocus onChange={e => setEdit({ ...edit, efectivo: e.target.value })} /></label>
+      {!edit.mismo && <label>Transferencia ($)<MoneyInput inputMode="decimal" className="cfg-num" value={edit.transferencia} required onChange={e => setEdit({ ...edit, transferencia: e.target.value })} /></label>}
       <label className="cfg-check"><input type="checkbox" checked={edit.mismo} onChange={e => setEdit({ ...edit, mismo: e.target.checked })} />Mismo importe en transferencia</label>
       <label>Vigente desde<input type="date" min={data.hoy} value={edit.desde} required onChange={e => setEdit({ ...edit, desde: e.target.value })} /></label>
       <div className="cfg-actions"><button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button><button type="button" className="secundario" onClick={() => setEdit(null)}>Cancelar</button></div>
@@ -158,7 +160,7 @@ function Precios({ data, guardar, busy }) {
             <td className="n">{vigente ? money(vigente.efectivo) : '—'}</td>
             <td className="n">{vigente ? money(vigente.transferencia) : '—'}</td>
             <td>{vigente ? fecha(vigente.desde) : 'Sin precio: no se puede cobrar'}</td>
-            <td><button type="button" className="enlace" disabled={busy} onClick={() => setEdit({ codigo, duracion, rotulo: label, efectivo: vigente ? String(vigente.efectivo) : '', transferencia: vigente ? String(vigente.transferencia) : '', mismo: vigente ? Number(vigente.efectivo) === Number(vigente.transferencia) : false, desde: data.hoy })}>Cambiar</button></td>
+            <td><button type="button" className="enlace" disabled={busy} onClick={() => setEdit({ codigo, duracion, rotulo: label, efectivo: vigente ? moneyInputValue(vigente.efectivo) : '', transferencia: vigente ? moneyInputValue(vigente.transferencia) : '', mismo: vigente ? Number(vigente.efectivo) === Number(vigente.transferencia) : false, desde: data.hoy })}>Cambiar</button></td>
           </tr>,
           ...filas.filter(x => x.futuro).map(x => <tr key={clave + x.desde} className="futuro">
             <td>↳ programado</td><td className="n">{money(x.efectivo)}</td><td className="n">{money(x.transferencia)}</td><td>{fecha(x.desde)}</td>
@@ -187,7 +189,7 @@ function Profesores({ data, guardar, busy, pctBase }) {
       <label>Nombre<input value={edit.nombre} maxLength={60} required autoFocus onChange={e => setEdit({ ...edit, nombre: e.target.value })} /></label>
       <label>% WIN<input inputMode="decimal" className="cfg-num" value={edit.porcentaje} required onChange={e => setEdit({ ...edit, porcentaje: e.target.value })} /></label>
       <label className="cfg-check"><input type="checkbox" checked={edit.activo} onChange={e => setEdit({ ...edit, activo: e.target.checked })} />Activo</label>
-      {ejemplo && <small className="cfg-muted">Ej.: clase de $ 100.000 → WIN {money(pct(edit.porcentaje) * 1000)} · profesor {money((100 - pct(edit.porcentaje)) * 1000)}</small>}
+      {ejemplo && <small className="cfg-muted">Ej.: clase de $100.000 → WIN {money(pct(edit.porcentaje) * 1000)} · profesor {money((100 - pct(edit.porcentaje)) * 1000)}</small>}
       <div className="cfg-actions"><button type="submit" disabled={busy}>{busy ? 'Guardando…' : 'Guardar'}</button><button type="button" className="secundario" onClick={() => setEdit(null)}>Cancelar</button></div>
     </form>}
     <table className="cfg-table">
