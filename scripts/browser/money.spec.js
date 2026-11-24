@@ -6,7 +6,7 @@ test.beforeEach(async({page})=>{
   const request=route.request(),headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,content-type','Access-Control-Allow-Methods':'POST, OPTIONS'}
   if(request.method()==='OPTIONS')return route.fulfill({status:204,headers})
   const {action}=request.postDataJSON()
-  const responses={me:{user:{id:'test-admin',name:'Prueba aislada',role:'ADMIN'}},'bar.inventory.access':{allowed:true},'bar.products':{products:[product],canEdit:true,stockConfigured:true},'bar.inventory.snapshot':{canEdit:true,counts:[],reconciliation:[],purchases:[],movements:[],sales:null},'bar.employee.admin.list':{products:[{...product,averageCost:null,publicPrice:2000,mode:'FIXED_PRICE',value:1500.5,revision:0}],employees:[]},'bar.employee.report':{sales:[],accounts:[],enabled:false},'bar.pending':{orders:[]},'bar.customers':{customers:[]},'bar.courts':{bookings:[]},'bar.inventory.cash.state':{shift:null,cashExpected:0,bankConfigured:false,movements:[],shifts:[]}}
+  const responses={me:{user:{id:'test-admin',name:'Prueba aislada',role:'ADMIN'}},'bar.inventory.access':{allowed:true},'bar.products':{products:[product],canEdit:true,stockConfigured:true},'bar.inventory.cost.snapshot':{groups:[],history:[]},'bar.inventory.snapshot':{canEdit:true,counts:[],reconciliation:[],purchases:[],movements:[],sales:null},'bar.employee.admin.list':{products:[{...product,averageCost:null,publicPrice:2000,mode:'FIXED_PRICE',value:1500.5,revision:0}],employees:[]},'bar.employee.report':{sales:[],accounts:[],enabled:false},'bar.pending':{orders:[]},'bar.customers':{customers:[]},'bar.courts':{bookings:[]},'bar.inventory.cash.state':{shift:null,cashExpected:0,bankConfigured:false,movements:[],shifts:[]}}
   const response=responses[action]
   await route.fulfill({status:response?200:409,headers,contentType:'application/json',body:JSON.stringify(response||{error:'Prueba aislada: no se guarda ninguna transacción.'})})
  })
@@ -62,4 +62,16 @@ test('empleados: borrador desactivado con moneda compartida',async({page})=>{
  await page.getByRole('button',{name:'Guardar borrador desactivado',exact:true}).click()
  expect((await request).postDataJSON().value).toBe(1250.5)
  await expect(input).toHaveValue('$1.250,50')
+})
+
+test('costos provisionales: decimales y valor numérico conservados',async({page})=>{
+ await page.getByRole('button',{name:'Stock y precios',exact:true}).click()
+ await page.getByRole('button',{name:'Editar precio / producto',exact:true}).click()
+ const input=page.getByRole('textbox',{name:/^Costo provisional manual/})
+ await input.fill('1.500,50');await input.press('Tab');await expect(input).toHaveValue('$1.500,50')
+ await page.getByLabel('Motivo obligatorio',{exact:true}).fill('Prueba de costo aislada')
+ const request=page.waitForRequest(r=>r.method()==='POST'&&r.postDataJSON()?.action==='bar.inventory.cost.set')
+ await page.getByRole('button',{name:'Guardar sólo costo provisional',exact:true}).click()
+ expect((await request).postDataJSON().cost).toBe(1500.5)
+ await expect(input).toHaveValue('$1.500,50')
 })
