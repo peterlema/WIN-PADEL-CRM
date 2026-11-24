@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:db": "node supabase/tests/courts.test.mjs && node supabase/tests/courts_v2.test.mjs && node supabase/tests/config.test.mjs && node supabase/tests/bar_immediate.test.mjs && node supabase/tests/operations.test.mjs && node supabase/tests/calendar.test.mjs",
-    "test:history": "node scripts/admin-periods.test.mjs && python3 scripts/test_import_history.py"
+    "test:history": "node scripts/admin-periods.test.mjs && node scripts/admin-comparisons.test.mjs && python3 scripts/test_import_history.py"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",

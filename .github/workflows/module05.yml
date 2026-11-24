@@ -44,6 +44,10 @@ jobs:
           PGPASSWORD: disposable-ci-only
       - run: node scripts/calendar-utils.test.mjs
       - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: win-cloudflare-release
+          path: dist
       - name: Preparar revisión local sin datos de producción
         run: |
           tar -czf /tmp/m05-build.tgz dist
