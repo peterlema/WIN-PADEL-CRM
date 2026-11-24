@@ -1,6 +1,6 @@
 # Mover actividades desde Calendario · v0.15.0
 
-Recepción, Encargado y Administración pueden arrastrar una actividad futura a otra cancha u horario en Día y Semana. El navegador inicia el arrastre después de su umbral de movimiento; el clic normal abre el detalle. El destino se ajusta a 15 minutos, conserva duración y muestra disponibilidad de cancha y profesor en la agenda cargada. Al soltar se pide confirmación; cancelar o un rechazo conserva la posición original.
+Recepción, Encargado y Administración pueden arrastrar una actividad futura a otra cancha u horario en Día y Semana. El arrastre usa eventos de puntero y un umbral de 8 píxeles; el clic normal abre el detalle. El destino se ajusta a 15 minutos, conserva duración y muestra disponibilidad de cancha y profesor en la agenda cargada. Al soltar se pide confirmación; cancelar o un rechazo conserva la posición original.
 
 Para teclado y pantallas táctiles: abrir el detalle → Mover actividad → elegir fecha, cancha e inicio → Confirmar movimiento. Es la misma operación y la misma confirmación que usa el arrastre. La edición completa sigue disponible.
 

@@ -7,43 +7,71 @@ import {canMoveBooking,destinationAt,validateMove,sameSlot,movePayload} from '..
 import './calendar-move.css'
 
 export function useGridMove({rows,settings,now,disabled,onMove,onReject}){
- const [drag,setDrag]=useState(null),active=useRef(null),press=useRef(null),suppressUntil=useRef(0)
- function clear(){active.current=null;setDrag(null)}
+ const [drag,setDrag]=useState(null),active=useRef(null),press=useRef(null),suppressUntil=useRef(0),pointer=useRef(null)
+ function clear(){
+  const p=press.current;active.current=null;press.current=null;pointer.current=null;setDrag(null)
+  if(p?.node.hasPointerCapture?.(p.pointerId))p.node.releasePointerCapture(p.pointerId)
+ }
+ function locate(x,y){
+  const column=document.elementFromPoint(x,y)?.closest('[data-move-court]')
+  if(!column)return null
+  const target=destinationAt(column.dataset.moveDate,column.dataset.moveCourt,y,column.getBoundingClientRect().top,active.current.offset,Number(settings.GRID_OPEN_MIN))
+  return {target,error:validateMove(active.current.row,target,rows,settings,now)}
+ }
+ function preview(x,y){
+  if(!active.current)return
+  const candidate=locate(x,y)
+  setDrag({row:active.current.row,...candidate,x,y})
+ }
  useEffect(()=>{if(disabled)clear()},[disabled])
- useEffect(()=>{const cancel=e=>{if(e.key==='Escape'&&active.current){suppressUntil.current=Date.now()+500;clear()}};window.addEventListener('keydown',cancel);return()=>window.removeEventListener('keydown',cancel)},[])
+ useEffect(()=>{const cancel=e=>{if(e.key==='Escape'&&press.current){suppressUntil.current=Date.now()+500;clear()}};window.addEventListener('keydown',cancel);return()=>window.removeEventListener('keydown',cancel)},[])
+ // Continuous edge scrolling while the pointer stays still at the edge of a long day/week.
+ useEffect(()=>{
+  if(!drag)return;let frame
+  function scroll(){
+   const point=pointer.current,host=press.current?.node.closest('.m05-day-scroll,.m05-week-scroll')
+   if(point&&host&&active.current){
+    const r=host.getBoundingClientRect(),top=Math.max(0,r.top)+48,bottom=Math.min(window.innerHeight,r.bottom),left=Math.max(0,r.left)+70,right=Math.min(window.innerWidth,r.right)
+    const dy=point.y<top+28?-12:point.y>bottom-28?12:0,dx=point.x<left+28?-12:point.x>right-28?12:0
+    if(dx||dy){const x=host.scrollLeft,y=host.scrollTop;host.scrollBy(dx,dy);if(x!==host.scrollLeft||y!==host.scrollTop)preview(point.x,point.y)}
+   }
+   frame=requestAnimationFrame(scroll)
+  }
+  frame=requestAnimationFrame(scroll);return()=>cancelAnimationFrame(frame)
+ },[Boolean(drag)])
  function bookingProps(row,onOpen){return {
-  'data-move-id':row.id,
-  draggable:!disabled&&canMoveBooking(row,now),
-  onPointerDown:e=>{press.current={id:row.id,offset:e.clientY-e.currentTarget.getBoundingClientRect().top}},
-  onDragStart:e=>{
-   if(disabled||!canMoveBooking(row,now)){e.preventDefault();return}
-   const offset=press.current?.id===row.id?press.current.offset:e.clientY-e.currentTarget.getBoundingClientRect().top
-   active.current={row,offset};e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',row.id)
-   suppressUntil.current=Date.now()+500;setDrag({row,target:null})
+  'data-move-id':row.id,'data-movable':!disabled&&canMoveBooking(row,now),
+  draggable:false,onDragStart:e=>e.preventDefault(),
+  onPointerDown:e=>{
+   if(disabled||e.pointerType==='touch'||e.button!==0||!canMoveBooking(row,now))return
+   press.current={row,node:e.currentTarget,pointerId:e.pointerId,x:e.clientX,y:e.clientY,offset:e.clientY-e.currentTarget.getBoundingClientRect().top}
+   e.currentTarget.setPointerCapture(e.pointerId)
   },
-  onDragEnd:()=>{if(active.current)suppressUntil.current=Date.now()+500;clear()},
+  onPointerMove:e=>{
+   const p=press.current;if(!p||p.pointerId!==e.pointerId||disabled)return
+   if(!active.current&&Math.hypot(e.clientX-p.x,e.clientY-p.y)<8)return
+   e.preventDefault();active.current={row:p.row,offset:p.offset};pointer.current={x:e.clientX,y:e.clientY};preview(e.clientX,e.clientY)
+  },
+  onPointerUp:e=>{
+   if(!press.current||press.current.pointerId!==e.pointerId)return
+   if(!active.current){clear();return}
+   const row=active.current.row,candidate=locate(e.clientX,e.clientY)
+   suppressUntil.current=Date.now()+500;clear()
+   if(!candidate)return
+   if(candidate.error){onReject(candidate.error);return}
+   if(!sameSlot(row,candidate.target))onMove(row,candidate.target)
+  },
+  onPointerCancel:()=>{if(active.current)suppressUntil.current=Date.now()+500;clear()},
+  onLostPointerCapture:()=>{if(press.current){if(active.current)suppressUntil.current=Date.now()+500;clear()}},
   onClick:()=>{if(Date.now()>=suppressUntil.current)onOpen(row)}
  }}
- function columnProps(date,court){return {
-  'data-move-date':date,'data-move-court':court,
-  onDragOver:e=>{
-   if(!active.current||disabled)return;e.preventDefault()
-   const {row,offset}=active.current,target=destinationAt(date,court,e.clientY,e.currentTarget.getBoundingClientRect().top,offset,Number(settings.GRID_OPEN_MIN))
-   const error=validateMove(row,target,rows,settings,now)
-   e.dataTransfer.dropEffect='move'
-   // Even invalid cells accept a drop so we can explain the rejection and reset the source.
-   setDrag({row,target,error})
-  },
-  onDrop:e=>{
-   if(!active.current||disabled)return;e.preventDefault();e.stopPropagation()
-   const {row,offset}=active.current,target=destinationAt(date,court,e.clientY,e.currentTarget.getBoundingClientRect().top,offset,Number(settings.GRID_OPEN_MIN))
-   const error=validateMove(row,target,rows,settings,now)
-   suppressUntil.current=Date.now()+500;clear()
-   if(error){onReject(error);return}
-   if(!sameSlot(row,target))onMove(row,target)
-  }
- }}
+ function columnProps(date,court){return {'data-move-date':date,'data-move-court':court}}
  return {drag,bookingProps,columnProps}
+}
+
+export function MoveGhost({drag}){
+ if(!drag)return null
+ return <div className="m05-move-ghost" style={{left:Math.min(drag.x+14,window.innerWidth-220),top:Math.min(drag.y+14,window.innerHeight-100)}} aria-hidden="true"><strong>{drag.row.name}</strong><span>{drag.row.duration} min · {drag.target?drag.target.court+' '+drag.target.start:'Elegí un destino'}</span></div>
 }
 
 export function MovePreview({drag,date,court,first}){

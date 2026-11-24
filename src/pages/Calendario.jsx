@@ -6,7 +6,7 @@ import {CalendarBar,ReceiverSchedules} from '../components/CalendarTools.jsx'
 import {COURTS,ZONE,money,today,minutes,label,addDays,monday,longDate,timestamp,number,kindLabel,stateLabel,paymentLabel,currentPosition} from '../calendarUtils.js'
 import {TimePicker,CourtPicker,DurationPicker,EndTime} from '../components/ActivityControls.jsx'
 import ValidatedForm from '../components/ValidatedForm.jsx'
-import {useGridMove,MovePreview,MoveActivityDialog} from '../components/CalendarMove.jsx'
+import {useGridMove,MovePreview,MoveGhost,MoveActivityDialog} from '../components/CalendarMove.jsx'
 import {canMoveBooking} from '../calendarMove.js'
 import '../calendar-m05.css'
 const api=(action,p={})=>callApi('calendar.'+action,p)
@@ -19,7 +19,7 @@ function DayGrid({date,rows,settings,moveSettings,allowMove,now,onCreate,onOpen,
  const first=Number(settings.GRID_OPEN_MIN),last=Number(settings.GRID_CLOSE_MIN),position=currentPosition(date,now)
  const {drag,bookingProps,columnProps}=useGridMove({rows,settings:moveSettings,now,disabled:disabled||!allowMove,onMove,onReject})
  const slots=Array.from({length:Math.ceil((last-first)/30)},(_,i)=>first+i*30)
- return <div className="m05-day-scroll" ref={scrollRef}><div className="m05-day-board" style={{height:(last-first)*PX+48}}>
+ return <><MoveGhost drag={drag}/><div className="m05-day-scroll" ref={scrollRef}><div className="m05-day-board" style={{height:(last-first)*PX+48}}>
   <div className="m05-day-head"><span>Hora</span>{COURTS.map(c=><strong key={c}>CANCHA {c.slice(1)}</strong>)}</div>
   <div className="m05-time-column">{slots.map(m=><span key={m} style={{top:(m-first)*PX,height:30*PX}}>{label(m)}</span>)}</div>
   <div className="m05-court-columns">{COURTS.map(c=><div className="m05-court-column" key={c} aria-label={'Cancha '+c.slice(1)} {...columnProps(date,c)}>
@@ -28,7 +28,7 @@ function DayGrid({date,rows,settings,moveSettings,allowMove,now,onCreate,onOpen,
    <MovePreview drag={drag} date={date} court={c} first={first}/>
   </div>)}</div>
   {position!=null&&position>=first&&position<=last&&<div className="m05-now-line" role="img" aria-label={'Hora actual de Buenos Aires '+label(position)} style={{top:48+(position-first)*PX}}><span>{label(position)}</span></div>}
- </div></div>
+ </div></div></>
 }
 
 function WeekGrid({start,rows,settings,moveSettings,allowMove,onlyAbonos,onCreate,onOpen,onMove,onReject,disabled,now}){
@@ -36,7 +36,7 @@ function WeekGrid({start,rows,settings,moveSettings,allowMove,onlyAbonos,onCreat
  const {drag,bookingProps,columnProps}=useGridMove({rows,settings:moveSettings,now,disabled:disabled||!allowMove,onMove,onReject})
  const times=Array.from({length:Math.ceil((last-first)/30)},(_,i)=>first+i*30)
  const visible=rows.filter(b=>b.status!=='CANCELLED'&&(!onlyAbonos||b.kind==='ABONO'))
- return <div className="m05-week-scroll"><div className="m05-week-board" style={{height:(last-first)*PX+92,width:70+7*620}}>
+ return <><MoveGhost drag={drag}/><div className="m05-week-scroll"><div className="m05-week-board" style={{height:(last-first)*PX+92,width:70+7*620}}>
   <div className="m05-week-day-head"><span>Jornada</span>{dates.map(d=><strong key={d}>{longDate(d)}</strong>)}</div>
   <div className="m05-week-court-head"><span>Hora</span>{dates.flatMap(d=>COURTS.map(c=><strong key={d+c}>CANCHA {c.slice(1)}</strong>))}</div>
   <div className="m05-time-column">{times.map(m=><span key={m} style={{top:(m-first)*PX,height:30*PX}}>{label(m)}</span>)}</div>
@@ -46,7 +46,7 @@ function WeekGrid({start,rows,settings,moveSettings,allowMove,onlyAbonos,onCreat
    <MovePreview drag={drag} date={d} court={c} first={first}/>
   </div>))}</div>
   {dates.map((d,i)=>{const pos=currentPosition(d,now);return pos!=null&&pos>=first&&pos<=last?<div key={d} className="m05-now-line" role="img" aria-label={'Hora actual de Buenos Aires '+label(pos)} style={{top:92+(pos-first)*PX,left:70+i*620,right:'auto',width:620}}><span>{label(pos)}</span></div>:null})}
- </div></div>
+ </div></div></>
 }
 
 export default function Calendario(){
