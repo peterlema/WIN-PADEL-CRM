@@ -27,7 +27,7 @@ export default function OperationalReception({user,onLogout}){
  const formRef=useRef(null),messageRef=useRef(null),request=useRef(uuid()),openRequest=useRef(uuid()),closeRequest=useRef(uuid()),dayRequest=useRef(uuid()),historyEpoch=useRef(0)
  const sh=view?.shift,totals=view?.totals
  const set=(k,v)=>setForm(f=>({...f,[k]:v})), setC=(k,v)=>setClose(f=>({...f,[k]:v})),setD=(k,v)=>setDayForm(f=>({...f,[k]:v}))
- function alertError(e){setError(e.message||String(e));setTimeout(()=>messageRef.current?.focus(),20)}
+ function alertError(e){setError(e.message||String(e));setTimeout(()=>{if(!form)messageRef.current?.focus()},20)}
  async function refresh(){setLoading(true);try{setView(await ops('overview'))}catch(e){alertError(e)}finally{setLoading(false)}}
  async function loadHistory(){const epoch=++historyEpoch.current;try{const r=await ops('history',filter);if(epoch===historyEpoch.current)setHistory(r)}catch(e){if(epoch===historyEpoch.current)alertError(e)}}
  useEffect(()=>{refresh()},[])

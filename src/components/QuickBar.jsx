@@ -1,3 +1,4 @@
+import ValidatedForm from './ValidatedForm.jsx'
 import {TimePicker,CourtPicker} from './ActivityControls.jsx'
 import {useCallback,useEffect,useRef,useState} from 'react'
 import {callApi} from '../api.js'
@@ -171,7 +172,7 @@ export default function QuickBar({soloVenta=false}){
     {items.map(p=><div className="bar-pos-cart-line" key={p.id}><div><strong>{p.name}{p.variant?' · '+p.variant:''}</strong><small>{MONEY(p.salePrice)} c/u</small></div><div className="bar-pos-qty"><button type="button" onClick={()=>changeQty(p.id,-1)}>−</button><b>{p.quantity}</b><button type="button" onClick={()=>changeQty(p.id,1)}>+</button></div><b>{MONEY(p.quantity*Number(p.salePrice))}</b></div>)}
    </div>}
    <div className="bar-pos-total"><span>Total</span><strong>{MONEY(total)}</strong></div>
-   <form className="win-bar-form bar-pos-checkout" onSubmit={place}>
+   <ValidatedForm id="bar-checkout-form" error={error} className="win-bar-form bar-pos-checkout" onSubmit={place}>
     <fieldset className="bar-pos-choice"><legend>¿Cómo se registra?</legend>
      {[['IMMEDIATE','Cobrar ahora'],['COURT','Pendiente de cancha'],['ACCOUNT','Cuenta corriente']].map(([id,label])=><button type="button" key={id} aria-pressed={destination===id} onClick={()=>setDestination(id)}>{label}</button>)}
     </fieldset>
@@ -194,7 +195,7 @@ export default function QuickBar({soloVenta=false}){
     <label>Observación (opcional)<input value={note} maxLength={400} onChange={e=>setNote(e.target.value)} placeholder="Ej. Llevó a la cancha; cobra Recepción" /></label>
     <button type="submit" disabled={!shift||!items.length||cannotSubmit||busy||uncertain||(destination==='IMMEDIATE'&&!cliente)}>{busy?'Guardando…':destination==='IMMEDIATE'?'Cobrar '+MONEY(total):'Guardar pendiente '+MONEY(total)}</button>
     {!shift&&<p className="win-bar-warning">Para registrar entregas o cobros debe haber una caja abierta por Recepción.</p>}
-   </form>
+   </ValidatedForm>
   </section>
   </div>
   <section className="win-bar-card">
