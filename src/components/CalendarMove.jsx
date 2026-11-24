@@ -7,7 +7,7 @@ import {canMoveBooking,destinationAt,validateMove,sameSlot,movePayload} from '..
 import './calendar-move.css'
 
 export function useGridMove({rows,settings,now,disabled,onMove,onReject}){
- const [drag,setDrag]=useState(null),active=useRef(null),press=useRef(null),suppressUntil=useRef(0),pointer=useRef(null)
+ const [drag,setDrag]=useState(null),active=useRef(null),press=useRef(null),suppressUntil=useRef(0),suppressRow=useRef(null),pointer=useRef(null)
  function clear(){
   const p=press.current;active.current=null;press.current=null;pointer.current=null;setDrag(null)
   if(p?.node.hasPointerCapture?.(p.pointerId))p.node.releasePointerCapture(p.pointerId)
@@ -50,7 +50,7 @@ export function useGridMove({rows,settings,now,disabled,onMove,onReject}){
   onPointerMove:e=>{
    const p=press.current;if(!p||p.pointerId!==e.pointerId||disabled)return
    if(!active.current&&Math.hypot(e.clientX-p.x,e.clientY-p.y)<8)return
-   e.preventDefault();active.current={row:p.row,offset:p.offset};pointer.current={x:e.clientX,y:e.clientY};preview(e.clientX,e.clientY)
+   e.preventDefault();suppressRow.current=row.id;active.current={row:p.row,offset:p.offset};pointer.current={x:e.clientX,y:e.clientY};preview(e.clientX,e.clientY)
   },
   onPointerUp:e=>{
    if(!press.current||press.current.pointerId!==e.pointerId)return
@@ -63,7 +63,7 @@ export function useGridMove({rows,settings,now,disabled,onMove,onReject}){
   },
   onPointerCancel:()=>{if(active.current)suppressUntil.current=Date.now()+500;clear()},
   onLostPointerCapture:()=>{if(press.current){if(active.current)suppressUntil.current=Date.now()+500;clear()}},
-  onClick:()=>{if(Date.now()>=suppressUntil.current)onOpen(row)}
+  onClick:()=>{if(suppressRow.current!==row.id||Date.now()>=suppressUntil.current)onOpen(row)}
  }}
  function columnProps(date,court){return {'data-move-date':date,'data-move-court':court}}
  return {drag,bookingProps,columnProps}

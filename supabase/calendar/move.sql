@@ -55,7 +55,7 @@ begin
   or p->'from'->>'start' is distinct from to_char(b.start_time,'HH24:MI') then raise exception 'STALE_REVISION';end if;
  -- Keeping the commercial date preserves legacy abono payments, skips and occurrence identity.
  if b.source_abono_id is not null and (coalesce(p->>'scope','')<>'occurrence' or dt<>b.business_date) then raise exception 'ABONO_MOVE_SCOPE';end if;
- if b.teacher_id is not null and not exists(select 1 from public.win_coaches where id=b.teacher_id and active) then raise exception 'COACH_INVALID';end if;
+ if b.kind='CLASE' and (b.teacher_id is null or not exists(select 1 from public.win_coaches where id=b.teacher_id and active)) then raise exception 'COACH_INVALID';end if;
  if b.kind='CLASE' and dt<>b.business_date then
   candidate=b;candidate.business_date=dt;
   if public.win_calendar_economics(candidate) is distinct from public.win_calendar_economics(b) then raise exception 'MOVE_CLASS_RATE_CHANGE';end if;
@@ -64,6 +64,7 @@ begin
  if at_<=now() then raise exception 'MOVE_IN_PAST';end if;
  if public.win_abono_minutes_(st)<coalesce((select value from public.win_settings where key='GRID_OPEN_MIN'),480)
   or public.win_abono_minutes_(st)+b.duration_min>coalesce((select value from public.win_settings where key='GRID_CLOSE_MIN'),1500) then raise exception 'OUTSIDE_HOURS';end if;
+ if exists(select 1 from public.win_ops_availability v where v.business_date=dt and v.court=court_ and (at_<v.starts_at or finish_>v.ends_at)) then raise exception 'OUTSIDE_HOURS';end if;
  if dt=b.business_date and court_=b.court and st=b.start_time then raise exception 'MOVE_UNCHANGED';end if;
  old_date=b.business_date;old_court=b.court;old_start=b.start_time;
  -- No customer, class economics, participant, price, payment or cash columns are submitted or rewritten.
