@@ -1,3 +1,4 @@
+import UserManagement from '../components/UserManagement.jsx'
 import {TimePicker} from '../components/ActivityControls.jsx'
 import { useEffect, useState } from 'react'
 import { callApi } from '../api.js'
@@ -23,11 +24,12 @@ export default function Configuracion() {
   const [ok, setOk] = useState('')
   const [busy, setBusy] = useState(false)
   const [ajustes, setAjustes] = useState(null)
+  const [admin, setAdmin] = useState(false)
 
   async function cargar() {
     try {
-      const [r, a] = await Promise.all([callApi('config.list'), callApi('settings.get').catch(() => null)])
-      setData(r); setAjustes(a); setError('')
+      const [r, a, me] = await Promise.all([callApi('config.list'), callApi('settings.get').catch(() => null), callApi('me')])
+      setData(r); setAjustes(a); setAdmin(me.user.role === 'ADMIN'); setError('')
     } catch (e) { setError(e.message) }
   }
   useEffect(() => { cargar() }, [])
@@ -41,6 +43,7 @@ export default function Configuracion() {
 
   const p = data?.permisos || {}
   const tabs = [
+    admin && ['usuarios', 'Usuarios y roles'],
     (p.bar || p.tienda) && ['productos', 'Productos'],
     p.precios && ['precios', 'Precios'],
     p.profesores && ['profesores', 'Profesores'],
@@ -49,7 +52,7 @@ export default function Configuracion() {
   const actual = tabs.some(t => t[0] === tab) ? tab : tabs[0]?.[0]
 
   return <main className="cfg-page">
-    <section className="cfg-heading"><h2>Configuración</h2><p>Productos, precios y profesores. Cada cambio queda registrado con usuario y hora.</p></section>
+    <section className="cfg-heading"><h2>Configuración</h2><p>Usuarios, roles, productos, precios y profesores. Cada cambio queda registrado con usuario y hora.</p></section>
     {data && <nav className="admin-tabs" aria-label="Secciones de configuración">
       {tabs.map(([id, label]) => <button key={id} type="button" className={actual === id ? 'active' : ''} aria-current={actual === id ? 'page' : undefined} onClick={() => { setTab(id); setOk(''); setError('') }}>{label}</button>)}
     </nav>}
@@ -58,6 +61,7 @@ export default function Configuracion() {
       {ok && <p className="cfg-msg good">{ok}</p>}
     </div>
     {!data && !error && <p className="cfg-muted">Cargando…</p>}
+    {data && actual === 'usuarios' && <UserManagement />}
     {data && actual === 'productos' && <Productos data={data} guardar={guardar} busy={busy} />}
     {data && actual === 'precios' && <Precios data={data} guardar={guardar} busy={busy} />}
     {data && actual === 'profesores' && <Profesores data={data} guardar={guardar} busy={busy} pctBase={ajustes?.COACH_DEFAULT_WIN_PCT ?? 60} />}

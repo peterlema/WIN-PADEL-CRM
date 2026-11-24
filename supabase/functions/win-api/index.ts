@@ -53,6 +53,15 @@ Deno.serve(async req=>{
     if(!identity) return reply({error:"Sesión inválida o vencida"},401,origin);
     if(action==="me") return reply({user:{id:identity.account_id,name:identity.display_name,role:identity.role},expiresAt:identity.expires_at},200,origin);
     if(action==="logout") { await db.rpc("win_pin_logout",{p_token:token});return reply({ok:true},200,origin); }
+    if(action.startsWith("users.")) {
+      const {data:result,error}=await db.rpc("win_users_api",{p_token:token,p_action:action.slice(6),p:data});
+      if(error){
+        const messages:Record<string,string>={SESSION_INVALID:"La sesión expiró. Volvé a ingresar.",NOT_AUTHORIZED:"Sólo un administrador puede gestionar usuarios y roles.",USER_PIN_INVALID:"Ingresá un PIN de exactamente seis dígitos.",USER_DATA_INVALID:"Completá el nombre y un usuario de entre 3 y 100 caracteres.",USER_ROLE_INVALID:"Elegí un perfil de permisos válido.",USER_NAME_TAKEN:"Ese usuario de ingreso ya existe.",USER_ROLE_TAKEN:"Ya existe un rol con ese nombre.",USER_NOT_FOUND:"El usuario ya no existe. Actualizá la lista.",USER_SELF_PROTECTED:"Tu propio usuario debe conservar el acceso de administrador.",USER_LAST_ADMIN:"Debe quedar al menos un administrador activo.",USER_REQUEST_REQUIRED:"Cerrá y volvé a abrir el formulario.",USER_REQUEST_REUSED:"Esta solicitud ya se usó con otros datos. Actualizá la lista.",USER_ACTION_INVALID:"Operación de usuarios no disponible."};
+        const code=Object.keys(messages).find(k=>error.message.includes(k));
+        return reply({error:code?messages[code]:"No se pudo guardar. Actualizá la lista antes de reintentar.",code:code||"USER_ERROR"},code==="NOT_AUTHORIZED"?403:code==="SESSION_INVALID"?401:409,origin);
+      }
+      return reply(result,200,origin);
+    }
     if(action.startsWith("calendar.")) {
       const {data:result,error}=await db.rpc("win_calendar_api",{p_token:token,p_action:action.slice(9),p:data});
       if(error){const failure=calendarError(error);return reply({error:failure.message,code:failure.code},failure.status,origin);}

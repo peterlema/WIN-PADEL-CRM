@@ -1,3 +1,4 @@
+import {usersDemo} from './mockUsers.js'
 import { recepcion } from './mockRecepcion.js'
 import { courts } from './mockCourts.js'
 import { configDemo } from './mockConfig.js'
@@ -16,6 +17,7 @@ let turno = { ...caja }
 let usuario = { id: 'demo', name: 'Usuario demo', role: 'ADMIN' }
 
 function api(body) {
+  if(String(body.action).startsWith('users.')) return usersDemo(body,usuario)
   if(String(body.action).startsWith('calendar.')) return calendarDemo(body)
   if(String(body.action).startsWith('ops.')) return operationsDemo(body)
   switch (body.action) {

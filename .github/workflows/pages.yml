@@ -26,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npm run test:ui
       - run: npm run test:history
+      - run: npm run test:users
       - run: npm run test:db
       - run: npm run build
         env:
@@ -46,4 +47,5 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+
 
