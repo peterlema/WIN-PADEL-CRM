@@ -1,7 +1,7 @@
 name: Validar costos Bar
 on:
   push:
-    branches: [main, bar-costos-provisionales]
+    branches: [main, bar-compras-simples]
   pull_request:
     paths: ['src/components/Bar*', 'src/components/StockCatalog.jsx', 'supabase/**']
 permissions:
@@ -18,4 +18,10 @@ jobs:
       - run: npm ci
       - run: npm run test:bar
       - run: node supabase/tests/bar-costs.test.mjs
+      - run: node scripts/bar-cost-input.test.mjs
+      - run: npm run test:money
+      - run: node supabase/tests/bar-purchases.test.mjs
       - run: npm run build
+      - run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chrome webkit
+      - run: npx playwright test --config=playwright.money.config.js

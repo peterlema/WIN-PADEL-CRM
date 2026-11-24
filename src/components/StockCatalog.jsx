@@ -68,7 +68,7 @@ export default function StockCatalog() {
         {canEdit&&<button type="button" onClick={add}>+ Agregar producto</button>}
       </div>
     </div>
-    <p className="win-bar-warning">Los costos conjuntos pendientes no se reparten automáticamente. «Sin definir» indica que falta un dato; no significa cero. Los mínimos de reposición se configuran por producto.</p>
+    <p className="win-bar-warning">Los costos provisionales están disponibles para operar. Las diferencias históricas son informativas. Las compras nuevas permiten costo unitario, total o reparto estimado por referencias.</p>
     {error&&<p className="win-bar-message" role="alert">{error}</p>}
     {notice&&<p className="win-bar-message good" role="status">{notice}</p>}
     {canEdit&&editing!==null&&<form className="bar-product-editor" onSubmit={save}>
@@ -94,7 +94,7 @@ export default function StockCatalog() {
           {canEdit&&<div className="bar-catalog-toolbar"><label>Mínimo<input aria-label={'Stock mínimo '+p.name+' '+p.variant} type="number" min="0" step="1" placeholder="Sin definir" defaultValue={p.stockMin??''} key={p.id+':'+p.stockMin} onBlur={async e=>{const v=e.target.value===''?null:Number(e.target.value);if(v===p.stockMin)return;if(v!==null&&(!Number.isInteger(v)||v<0)){setError('El mínimo debe ser un número entero positivo.');return}try{await callApi('bar.inventory.minimum.set',{requestId:crypto.randomUUID(),productId:p.id,quantity:v});await refresh()}catch(err){setError(err.message)}}}/></label><button type="button" className="secundario" onClick={()=>edit(p)}>Editar precio / producto</button></div>}
         </div>)}
       </div>)}
-    {canEdit&&<BarCosts products={products} onSaved={refresh}/>}
     <BarInventory onStockChanged={refresh}/>
+    {canEdit&&<BarCosts products={products} onSaved={refresh}/>}
   </section>
 }

@@ -4,8 +4,10 @@ import {useEffect,useRef,useState} from 'react'
 import {callApi} from '../api.js'
 export const costMoney=n=>formatMoney(n,'Pendiente')
 export function parseCost(raw){
+ if(raw==null||String(raw).trim()==='')throw new Error('Completá el costo unitario.')
  const n=parseMoneyInput(raw)
- if(!Number.isFinite(n)||n<0||n>1000000000)throw new Error('El costo debe estar entre $0 y $1.000.000.000.')
+ if(!Number.isFinite(n))throw new Error('Usá un importe argentino: 1.435 o 415,15. Podés pegarlo con $.')
+ if(n<0||n>1000000000)throw new Error('El costo debe estar entre $0 y $1.000.000.000.')
  return n
 }
 const input=moneyInputValue
@@ -16,6 +18,7 @@ export function BarProductCost({product,onSaved}){
   e.preventDefault();if(busy)return;setError('')
   try{
    const p={productId:product.id,cost:parseCost(cost),version:product.costVersion,note:note.trim()}
+   if(p.cost===Number(product.provisionalInitialCost)){setError('El costo ya está guardado con ese importe. No hace falta volver a cargarlo.');return}
    if(p.note.length<5)throw new Error('Indicá un motivo de al menos cinco caracteres.')
    const key=JSON.stringify(p);if(request.current?.key!==key)request.current={key,id:crypto.randomUUID()}
    setBusy(true);await callApi('bar.inventory.cost.set',{...p,requestId:request.current.id});request.current=null
@@ -32,42 +35,18 @@ export function BarProductCost({product,onSaved}){
   <button disabled={busy}>{busy?'Guardando…':'Guardar sólo costo provisional'}</button>
  </form>
 }
-export default function BarCosts({products,onSaved}){
- const [data,setData]=useState(null),[group,setGroup]=useState(null),[rows,setRows]=useState([]),[note,setNote]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false)
- const request=useRef(null)
- async function load(){try{setData(await callApi('bar.inventory.cost.snapshot'))}catch(e){setError(e.message)}}
- useEffect(()=>{load()},[products])
- function begin(g){
-  setGroup(g);setNote('');setError('')
-  setRows(products.filter(pr=>g.lines.some(l=>l.product_id===pr.id||(!l.product_id&&l.label.startsWith(pr.name+' ·')))).map(pr=>({
-   productId:pr.id,version:pr.costVersion,quantity:g.lines.find(l=>l.product_id===pr.id)?.quantity??'',totalCost:'',label:pr.name+' '+pr.variant
-  })))
- }
- async function reconcile(e){
-  e.preventDefault();if(busy)return
-  try{
-   const lines=rows.filter(l=>Number(l.quantity)>0).map(l=>({productId:l.productId,version:l.version,quantity:Number(l.quantity),totalCost:parseCost(l.totalCost)}))
-   if(Math.round(lines.reduce((s,l)=>s+l.totalCost,0)*100)!==Math.round(Number(group.originalTotal)*100))throw new Error('La distribución debe sumar exactamente el importe histórico del grupo.')
-   const p={purchaseId:group.purchaseId,group:group.group,lines,note:note.trim()}
-   const key=JSON.stringify(p);if(request.current?.key!==key)request.current={key,id:crypto.randomUUID()}
-   setBusy(true);setError('');await callApi('bar.inventory.cost.reconcile',{...p,requestId:request.current.id})
-   request.current=null;setGroup(null);await onSaved();await load()
-  }catch(e){setError(e.message)}finally{setBusy(false)}
- }
- return <section className="bar-inventory-section"><h4>Costos iniciales y conciliación de importes</h4>
-  <p>Los importes históricos se conservan. Los costos manuales y los márgenes que los usan son estimados. El margen bruto no es utilidad neta.</p>
-  {error&&<p className="win-bar-message" role="alert">{error}</p>}
-  {data&&<div className="bar-table-scroll"><table><thead><tr><th>Grupo</th><th>Unidades originales</th><th>Importe histórico</th><th>Referencia provisional</th><th>Diferencia de referencia</th><th>Estado</th><th></th></tr></thead><tbody>
-   {data.groups.map(g=><tr key={g.purchaseId+g.group}><td>{g.group}</td><td>{g.units}</td><td>{costMoney(g.originalTotal)}</td><td>{costMoney(g.referenceTotal)}</td><td>{g.referenceTotal==null?'Pendiente':costMoney(g.referenceTotal-g.originalTotal)}</td><td>{g.status==='RECONCILED'?'Conciliado con comprobante':'Pendiente de conciliación'}</td><td><button className="secundario" onClick={()=>begin(g)}>Conciliar con costo real</button></td></tr>)}
-  </tbody></table></div>}
-  {group&&<form className="bar-product-editor" onSubmit={reconcile}><h4>Conciliar {group.group}</h4>
-   <p>Distribuí {group.units} unidades y {costMoney(group.originalTotal)} según el comprobante. Indicá las cantidades originales por variante, no las existencias actuales. No suma stock ni modifica ventas o caja.</p>
-   {rows.map((l,i)=><div className="bar-product-fields" key={l.productId}><strong>{l.label}</strong><label>Unidades originales<input type="number" min="0" step="1" value={l.quantity} onChange={e=>setRows(rows.map((r,j)=>i===j?{...r,quantity:e.target.value}:r))}/></label><label>Importe total real de la variante ($)<MoneyInput inputMode="decimal" value={l.totalCost} onChange={e=>setRows(rows.map((r,j)=>i===j?{...r,totalCost:e.target.value}:r))}/></label></div>)}
-   <label>Comprobante / motivo obligatorio<input required minLength={5} maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>
-   <button disabled={busy}>{busy?'Conciliando…':'Guardar conciliación auditada'}</button><button type="button" className="secundario" disabled={busy} onClick={()=>setGroup(null)}>Cancelar</button>
-  </form>}
-  {data&&<details><summary>Historial completo de costos ({data.history.length})</summary><div className="bar-table-scroll"><table><thead><tr><th>Fecha</th><th>Usuario</th><th>Producto</th><th>Acción</th><th>Costo anterior</th><th>Costo nuevo</th><th>Motivo / comprobante</th></tr></thead><tbody>
-   {data.history.map(a=><tr key={a.id}><td>{new Date(a.created_at).toLocaleString('es-AR',{timeZone:'America/Argentina/Buenos_Aires'})}</td><td>{a.actorName}</td><td>{a.after_record.name} {a.after_record.variant}</td><td>{a.action==='cost.set'?'Costo provisional manual':'Conciliación real'}</td><td>{costMoney(a.before_record?.unit_cost)}</td><td>{costMoney(a.after_record.unit_cost)}</td><td>{a.after_record.reason||a.after_record.evidence}</td></tr>)}
-  </tbody></table></div></details>}
- </section>
+
+export default function BarCosts({products}){
+ const [data,setData]=useState(null),[error,setError]=useState('')
+ useEffect(()=>{let active=true;callApi('bar.inventory.cost.snapshot').then(d=>{if(active){setData(d);setError('')}}).catch(e=>{if(active)setError(e.message)});return()=>{active=false}},[products])
+ return <details className="bar-inventory-section"><summary>Historial de costos y diferencias históricas (informativo)</summary>
+ <p>Los costos vigentes ya se pueden usar. Las diferencias entre referencias aproximadas y facturas históricas no bloquean ventas, inventario, compras ni pagos. No hace falta conciliarlas para operar.</p>
+ {error&&<p role="alert">{error}</p>}
+ {data&&<><div className="bar-table-scroll"><table><thead><tr><th>Grupo</th><th>Importe histórico exacto</th><th>Referencia provisional</th><th>Diferencia informativa</th></tr></thead><tbody>
+ {data.groups.map(g=><tr key={g.purchaseId+g.group}><td>{g.group}</td><td>{costMoney(g.originalTotal)}</td><td>{costMoney(g.referenceTotal)}</td><td>{g.referenceTotal==null?'Sin distribución confirmada':costMoney(g.referenceTotal-g.originalTotal)}</td></tr>)}
+ </tbody></table></div>
+ <details><summary>Historial completo de modificaciones ({data.history.length})</summary><div className="bar-table-scroll"><table><thead><tr><th>Fecha</th><th>Usuario</th><th>Producto</th><th>Costo anterior</th><th>Costo nuevo</th><th>Motivo</th></tr></thead><tbody>
+ {data.history.map(a=><tr key={a.id}><td>{new Date(a.created_at).toLocaleString('es-AR',{timeZone:'America/Argentina/Buenos_Aires'})}</td><td>{a.actorName}</td><td>{a.after_record.name} {a.after_record.variant}</td><td>{costMoney(a.before_record?.unit_cost)}</td><td>{costMoney(a.after_record.unit_cost)}</td><td>{a.after_record.reason||a.after_record.evidence}</td></tr>)}
+ </tbody></table></div></details></>}
+ </details>
 }
