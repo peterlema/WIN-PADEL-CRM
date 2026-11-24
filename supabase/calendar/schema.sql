@@ -99,7 +99,12 @@ create or replace function public.win_calendar_customer(a uuid,p jsonb,required_
 declare cid uuid:=nullif(p->>'customerId','')::uuid;n text:=btrim(coalesce(p->>'customerName',''));ph text:=public.win_calendar_phone(p->>'phone');old public.win_customers;begin
  if cid is not null then
   select * into old from public.win_customers where id=cid;
-  if not found or (required_ and old.phone is null) then raise exception 'CUSTOMER_REQUIRED';end if;return cid;
+  if not found then raise exception 'CUSTOMER_REQUIRED';end if;
+  if required_ and public.win_calendar_phone(old.phone) is null then
+   if ph is null then raise exception 'CUSTOMER_REQUIRED';end if;
+   update public.win_customers set phone=ph,updated_at=now() where id=cid;
+   insert into public.win_cash_audit(actor_id,action,entity_type,entity_id,detail) values(a,'CALENDAR_CUSTOMER_ENRICH','CALENDAR',cid::text,jsonb_build_object('before',to_jsonb(old),'phone',ph));
+  end if;return cid;
  end if;
  if required_ and (length(n)<3 or ph is null) then raise exception 'CUSTOMER_REQUIRED';end if;
  if n='' and ph is null then return null;end if;
