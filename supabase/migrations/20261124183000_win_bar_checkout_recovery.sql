@@ -34,7 +34,7 @@ begin
  select * into prior from public.win_bar_order_payments where request_id=p_request_id;
  if found then
   if prior.paid_by<>uid or prior.order_id<>p_order_id or prior.amount<>p_amount or prior.method<>p_method then raise exception 'REQUEST_ID_REUSED';end if;
-  return jsonb_build_object('orderId',p_order_id,'remaining',(select o.total-coalesce((select sum(p.amount) from public.win_bar_order_payments p where p.order_id=o.id),0) from public.win_bar_orders o where o.id=p_order_id),'replayed',true);
+  return jsonb_build_object('orderId',p_order_id,'remaining',(select wo.total-coalesce((select sum(wp.amount) from public.win_bar_order_payments wp where wp.order_id=wo.id),0) from public.win_bar_orders wo where wo.id=p_order_id),'replayed',true);
  end if;
  select * into sh from public.win_bar_cash_shifts where status='OPEN' for update;
  if not found then raise exception 'BAR_SHIFT_NOT_OPEN';end if;
@@ -88,7 +88,7 @@ begin
   if payment_.order_id is distinct from (p_payload->>'orderId')::uuid or payment_.amount is distinct from (p_payload->>'amount')::numeric or payment_.method is distinct from p_payload->>'method' then raise exception 'REQUEST_ID_REUSED';end if;
   if not exists(select 1 from public.win_bar_cash_movements m where m.id=payment_.bar_cash_movement_id and m.order_id=payment_.order_id and m.amount_signed=payment_.amount and m.payment_method=payment_.method and m.recorded_by=actor) then
    return jsonb_build_object('state','INCONSISTENT','requestId',p_request_id);end if;
-  select o.total-coalesce(sum(p.amount),0) into balance_ from public.win_bar_orders o left join public.win_bar_order_payments p on p.order_id=o.id where o.id=payment_.order_id group by o.id;
+  select wo.total-coalesce(sum(wp.amount),0) into balance_ from public.win_bar_orders wo left join public.win_bar_order_payments wp on wp.order_id=wo.id where wo.id=payment_.order_id group by wo.id;
   return jsonb_build_object('state','FOUND','requestId',p_request_id,'result',jsonb_build_object('orderId',payment_.order_id,'remaining',balance_,'replayed',true));
  end if;
 end;$$;
