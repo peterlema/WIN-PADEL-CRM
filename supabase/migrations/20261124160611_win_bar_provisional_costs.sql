@@ -61,10 +61,15 @@ begin
  from public.win_bar_inventory_audit a join win_auth.login_accounts u on u.id=a.actor_id where a.action in ('cost.set','cost.reconcile')),'[]'),
  'groups',coalesce((select jsonb_agg(jsonb_build_object('purchaseId',q.id,'group',cg->>'group','originalTotal',cg->'total',
  'units',(select sum(l.quantity) from public.win_bar_purchase_lines l where l.purchase_id=q.id and l.cost_group=cg->>'group'),
- 'status',case when exists(select 1 from public.win_bar_cost_reconciliations c where c.purchase_id=q.id and c.group_name=cg->>'group') then 'RECONCILED' else 'PENDING' end,
- 'referenceTotal',(select sum(l.quantity*case when l.product_id is not null then pr.provisional_initial_cost else
- (select min(x.provisional_initial_cost) from public.win_products x where l.label like x.name||' ·%' and x.business_unit='CAFE_BAR') end)
- from public.win_bar_purchase_lines l left join public.win_products pr on pr.id=l.product_id where l.purchase_id=q.id and l.cost_group=cg->>'group'),
+ 'status',case when exists(select 1 from public.win_bar_cost_reconciliations c where c.purchase_id=q.id and c.group_name=cg->>'group'
+ and not exists(select 1 from public.win_bar_inventory_audit a join public.win_products pr on pr.id=a.reference_id
+ join public.win_bar_purchase_lines l on (l.product_id=pr.id or (l.product_id is null and l.label like pr.name||' ·%'))
+ where l.purchase_id=q.id and l.cost_group=cg->>'group' and a.action='cost.set' and a.created_at>c.created_at)) then 'RECONCILED' else 'PENDING' end,
+ 'referenceTotal',(select case when count(*)=count(z.reference_cost) then sum(z.quantity*z.reference_cost) end from (
+ select l.quantity,case when l.product_id is not null then pr.provisional_initial_cost else
+ (select case when count(distinct x.provisional_initial_cost)=1 and count(*)=count(x.provisional_initial_cost) then min(x.provisional_initial_cost) end from public.win_products x
+ where l.label like x.name||' ·%' and x.business_unit='CAFE_BAR') end reference_cost
+ from public.win_bar_purchase_lines l left join public.win_products pr on pr.id=l.product_id where l.purchase_id=q.id and l.cost_group=cg->>'group') z),
  'lines',(select jsonb_agg(to_jsonb(l)) from public.win_bar_purchase_lines l where l.purchase_id=q.id and l.cost_group=cg->>'group')))
  from public.win_bar_purchases q cross join lateral jsonb_array_elements(q.cost_groups) cg where q.kind='HISTORICAL'),'[]'));
  end if;
