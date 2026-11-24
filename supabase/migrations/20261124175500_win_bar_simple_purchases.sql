@@ -40,10 +40,11 @@ begin
   if base_ is null then unknown_=unknown_+1;else known_=known_+base_;end if;
   allweight=allweight+coalesce(base_,weight_);
   rows_=rows_||jsonb_build_array(jsonb_build_object('productId',pid,'quantity',qty,'label',pr.name||case when pr.variant<>'' then ' · '||pr.variant else '' end,
-   'base',base_,'weight',weight_,'estimated',coalesce((item->>'estimated')::boolean,false)));
+   'base',base_,'weight',weight_,'reference',qty*coalesce(pr.provisional_initial_cost,pr.unit_cost),'estimated',coalesce((item->>'estimated')::boolean,false)));
  end loop;
  if invoice is null then
-  select round(sum(coalesce((x->>'base')::numeric,(x->>'weight')::numeric)),2) into invoice from jsonb_array_elements(rows_)x;
+  if exists(select 1 from jsonb_array_elements(rows_) x where x->>'base' is null and x->>'reference' is null) then raise exception 'BAR_COST_INPUT_REQUIRED';end if;
+  select round(sum(coalesce((x->>'base')::numeric,(x->>'reference')::numeric)),2) into invoice from jsonb_array_elements(rows_)x;
  end if;
  if invoice<0 or invoice>1000000000 then raise exception 'BAR_MONEY_RANGE';end if;
  scale_all=known_>invoice or (unknown_=0 and known_<>invoice);
@@ -62,7 +63,7 @@ begin
  select jsonb_agg(jsonb_build_object('productId',x->'productId','label',x->'label','quantity',x->'quantity','totalCost',amount,
  'unitCost',round(amount/(x->>'quantity')::numeric,8),
  'estimated',(x->>'estimated')::boolean or (jsonb_array_length(rows_)>1 and x->>'base' is null) or scale_all or (p->>'totalCost' is null and x->>'base' is null),
- 'origin',case when scale_all then 'Ajuste automático al total de factura' when x->>'base' is null and jsonb_array_length(rows_)>1 then 'Reparto estimado por costos de referencia'
+ 'origin',case when scale_all then 'Ajuste automático al total de factura' when x->>'base' is null and jsonb_array_length(rows_)>1 and x->>'reference' is null then 'Reparto estimado por cantidades (sin referencia)' when x->>'base' is null and jsonb_array_length(rows_)>1 then 'Reparto estimado por costos de referencia'
  when x->>'base' is null and p->>'totalCost' is not null then 'Total de factura' when x->>'base' is null then 'Costo de referencia estimado' else 'Costo informado' end,
  'adjustment',case when x->>'base' is not null then amount-(x->>'base')::numeric else 0 end) order by ord) into lines_ from allocated;
  res=jsonb_build_object('total',invoice,'lines',lines_,'estimated',exists(select 1 from jsonb_array_elements(lines_)x where (x->>'estimated')::boolean),

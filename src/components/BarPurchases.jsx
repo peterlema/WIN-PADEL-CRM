@@ -19,7 +19,12 @@ export default function BarPurchases({data,products,onChanged}){
  const row=()=>({productId:products.find(p=>p.active)?.id||'',quantity:1,costMode:'TOTAL',cost:'',estimated:false})
  const open=()=>{setError('');setQuote(null);setForm({type:'purchase',supplier:'',purchaseDate:today(),state:'RECEIVED',payment:'UNPAID',method:'CASH',totalCost:'',lines:[row()],note:''})}
  const change=(i,patch)=>setForm(f=>({...f,lines:f.lines.map((l,j)=>i===j?{...l,...patch,estimated:false}:l)}))
- const payload=()=>({totalCost:amount(form.totalCost),lines:form.lines.map(l=>({productId:l.productId,quantity:Number(l.quantity),costMode:l.costMode,cost:amount(l.cost),estimated:l.estimated}))})
+ const payload=()=>{
+  const totalCost=amount(form.totalCost)
+  const lines=form.lines.map(l=>({productId:l.productId,quantity:Number(l.quantity),costMode:l.costMode,cost:l.costMode==='REFERENCE'?null:amount(l.cost),estimated:l.estimated}))
+  if(totalCost==null&&lines.some(l=>l.cost==null&&products.find(p=>p.id===l.productId)?.provisionalInitialCost==null&&products.find(p=>p.id===l.productId)?.unitCost==null))throw new Error('Indicá el total del pedido o un costo para los productos sin referencia.')
+  return {totalCost,lines}
+ }
  const signature=JSON.stringify(form?.type==='purchase'?{lines:form.lines,totalCost:form.totalCost}:null)
  useEffect(()=>{
   if(form?.type!=='purchase')return
