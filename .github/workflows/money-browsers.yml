@@ -1,0 +1,27 @@
+name: Verificar moneda en Chrome y WebKit
+on:
+  push:
+    branches: [improvement/argentine-money]
+permissions:
+  contents: read
+jobs:
+  browsers:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false @playwright/test
+      - run: npx playwright install --with-deps chrome webkit
+      - run: npm run test:money
+      - run: npm run build
+      - run: npx playwright test --config=playwright.money.config.js
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: money-browser-results
+          path: playwright-report
