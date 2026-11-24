@@ -7,7 +7,7 @@ page.on('pageerror',e=>errors.push(e.message))
 await page.goto('https://peterlema.github.io/WIN-PADEL-CRM/?check=0.12.0',{waitUntil:'networkidle'})
 await page.getByText('WIN Gestión v0.12.0',{exact:false}).waitFor()
 console.log('OK versión publicada 0.12.0 y pantalla de ingreso')
-await page.goto('https://peterlema.github.io/WIN-PADEL-CRM/?check=0.12.0#/demo/caja',{waitUntil:'networkidle'})
+await page.goto('https://peterlema.github.io/WIN-PADEL-CRM/?check=0.12.0-demo#/demo/caja',{waitUntil:'networkidle'})
 await page.getByRole('heading',{name:'Caja del turno',exact:true}).waitFor()
 for(const name of ['Abono','Reserva regular','Clase','Rendición','Evento / Cancha abierta','Gasto','Retiro','Tienda','Otros ingresos']){
  const button=page.getByRole('button',{name:'+ '+name,exact:true})
