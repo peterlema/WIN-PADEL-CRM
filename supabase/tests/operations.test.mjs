@@ -141,5 +141,38 @@ assert.equal(Number((await api('one','day',{date:day})).provisional),-58000);
 await control('admin','decide',{id:proposed.id,approve:false,note:'No corresponde esta nueva modificación'});
 assert.equal(Number((await one('select amount_signed from public.win_ops_ledger where id=$1',[mv.id])).amount_signed),58000);
 console.log('OK aprobación sucesiva, efecto provisional y rechazo sin duplicar dinero');
+
+// Historical data is reporting-only, source-keyed, and never opens or moves cash.
+const historyDay=(await one("select (current_date-20)::text d")).d
+const collectedDay=(await one("select (current_date-10)::text d")).d
+const cashBefore=await one('select count(*)::int n from public.win_cash_movements')
+const nativeBalance=await api('one','balance',{teacherId:coach.id})
+const historyFacts=[
+ ['entry','legacy-reserve',{type:'RESERVA',status:'ACTIVE',activity_date:historyDay,payment_date:historyDay,occurred_at:historyDay+'T12:00:00-03:00',author:'Origen',quantity:2,cash:100,transfer:0,win_net:100,gross:100,courts:[],unknown_price:false,tiny_price:false}],
+ ['entry','legacy-class',{type:'CLASE',status:'ACTIVE',teacher:'Docente histórico sin alta',activity_date:historyDay,payment_date:historyDay,occurred_at:historyDay+'T12:00:00-03:00',author:'Origen',quantity:2,participants:3,cash:0,transfer:0,courts:[],unknown_price:true,tiny_price:false}],
+ ['allocation','receipt|day|method',{type:'RENDICION',status:'ACTIVE',teacher:'Docente histórico sin alta',activity_date:historyDay,payment_date:collectedDay,occurred_at:collectedDay+'T12:00:00-03:00',author:'Origen',method:'Transferencia',amount:60}],
+ ['entry','legacy-void',{type:'RESERVA',status:'VOID',activity_date:historyDay,payment_date:historyDay,occurred_at:historyDay+'T12:00:00-03:00',quantity:1,cash:9999,transfer:0,win_net:9999,courts:[],unknown_price:false,tiny_price:false}]
+]
+for(let i=0;i<2;i++)for(const [entity,id,facts] of historyFacts)await q(`insert into public.win_history_rows(source_id,entity,origin_id,source_row,raw,facts,content_hash)values('test-source',$1,$2,2,'[]',$3,'test')on conflict(source_id,entity,origin_id)do nothing`,[entity,id,JSON.stringify(facts)])
+assert.equal((await one("select count(*)::int n from public.win_history_rows where source_id='test-source'")).n,4)
+const historicReport=await api('admin','admin',{start:historyDay,end:historyDay})
+assert.equal(Number(historicReport.totals.collected),100)
+assert.equal(Number(historicReport.totals.activityNet),100)
+assert.equal(Number(historicReport.activity.find(x=>x.type==='RESERVA').count),2)
+const historicalTeacher=historicReport.academy.find(x=>x.name==='Docente histórico sin alta')
+assert.equal(Number(historicalTeacher.classes),2);assert.equal(Number(historicalTeacher.unknown_price),2)
+assert.equal(historicReport.academyDaily.find(x=>x.teacher_id===historicalTeacher.id).classes,2)
+assert.equal(historicReport.academyDaily.find(x=>x.teacher_id===historicalTeacher.id).activitynet,null)
+assert.equal(historicalTeacher.balance.balance,null)
+assert.equal(historicReport.occupancy.historyIncomplete,true);assert.equal(historicReport.occupancy.netPerHour,null)
+const receiptReport=await api('admin','admin',{start:collectedDay,end:collectedDay})
+assert.equal(Number(receiptReport.totals.collected),60);assert.equal(Number(receiptReport.totals.activityNet),0)
+assert.equal((await one('select count(*)::int n from public.win_cash_movements')).n,cashBefore.n)
+assert.deepEqual(await api('one','balance',{teacherId:coach.id}),nativeBalance)
+assert.equal((await one("select has_table_privilege('anon','public.win_admin_ledger','select') allowed")).allowed,false)
+assert.equal((await one("select has_function_privilege('anon','public.win_admin_report_(date,date)','execute') allowed")).allowed,false)
+await fail(()=>api('one','admin',{start:historyDay,end:collectedDay}),'NOT_AUTHORIZED')
+console.log('OK histórico: fuente/IDs, cantidad, dos fechas, anulación, docente, datos incompletos y caja intacta')
+
 await db.close()
 console.log('PASS operaciones y conciliación integral')

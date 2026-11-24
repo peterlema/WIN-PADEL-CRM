@@ -24,6 +24,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm run test:history
+      - run: npm run test:db
       - run: npm run build
         env:
           VITE_BASE: /WIN-PADEL-CRM/

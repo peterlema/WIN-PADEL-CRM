@@ -72,3 +72,7 @@ Después de autorizar: aplicar una sola migración, desplegar `win-api` con sus 
 Verificación operativa: pie V0.13.0 y commit, ingresar con los usuarios existentes, comprobar lecturas/permisos, turno abierto y saldo anterior, y revisar la primera reserva/cobro real acordada con el responsable. No insertar ventas de prueba en la caja real. Frente a fallos, detener cargas, conservar solicitudes/idempotencia y revisar antes de cambiar versiones. No volver a un backend financiero anterior a ciegas después de recibir pagos parciales.
 
 Fuera de alcance por decisión funcional: importación masiva, mensajería automática, señas obligatorias, créditos generales y devoluciones automáticas. Playmix sigue activo hasta una migración y validación posteriores.
+
+## Continuidad recuperada
+
+Se integra el histórico de main a5a3d9f y las comparaciones de Administración. Ver CONTINUIDAD-PUBLICACION.md para el corte de Cloudflare y GASTOS-ADMINISTRATIVOS-INTEGRACION.md para el diseño posterior. Las autorizaciones del usuario para continuar ya permiten los cambios técnicos incrementales; sigue pendiente el acceso autenticado a Cloudflare y la verificación del corte.
