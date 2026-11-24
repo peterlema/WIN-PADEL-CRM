@@ -48,7 +48,7 @@ export default function QuickBar({soloVenta=false}){
   setLoading(true);setError('')
   try {
    const [p,c,o,sh]=await Promise.all([
-    callApi('bar.products'),callApi('bar.customers'),callApi('bar.pending'),callApi('cash.state')
+    callApi('bar.products'),callApi('bar.customers'),callApi('bar.pending'),callApi('bar.inventory.cash.state')
    ])
    setProducts(p.products||[]);setCustomers(c.customers||[])
    setPending(o.orders||[]);setShift(sh.shift||null);setUncertain(false)
@@ -145,7 +145,7 @@ export default function QuickBar({soloVenta=false}){
   finally{setBusy(false)}
  }
  function chooseSettle(p){setPaymentOrder(p);setPaymentAmount(String(p.balance).replace('.',','));paymentRequest.current=crypto.randomUUID();setError('')}
- const formatDate=v=>new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(v))
+ const formatDate=v=>new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hourCycle:'h23',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(v))
  return <div className={'bar-pos'+(soloVenta?' bar-pos-solo':'')}>
   <div className="bar-pos-main">
   <section className="win-bar-card bar-pos-catalogo">
@@ -158,9 +158,9 @@ export default function QuickBar({soloVenta=false}){
     <div className="bar-pos-filters">{categories.map(x=><button key={x} type="button" aria-pressed={category===x} onClick={()=>setCategory(x)}>{x}</button>)}</div>
     <input className="bar-pos-search-input" type="search" aria-label="Buscar producto" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Buscar: Gatorade, Coca…" />
    </div>
-   <div className="bar-pos-products">{shown.map(p=><button className="bar-pos-product" type="button" key={p.id} disabled={p.salePrice==null||Number(p.salePrice)<=0} onClick={()=>put(p)}>
+   <div className="bar-pos-products">{shown.map(p=><button className="bar-pos-product" type="button" key={p.id} disabled={p.salePrice==null||Number(p.salePrice)<=0||(p.stockKnown&&p.stock<=0)} onClick={()=>put(p)}>
     <span className="bar-pos-name">{p.name}</span>{p.variant&&<small>{p.variant}</small>}
-    <strong>{hasPrice(p)?MONEY(p.salePrice):'Sin precio'}</strong>
+    <strong>{hasPrice(p)?MONEY(p.salePrice):'Sin precio'}</strong><small>{p.stockKnown?p.stock+' disponibles':'Sin conteo'}</small>
     {cart[p.id]>0&&<b className="bar-pos-badge">{cart[p.id]}</b>}
    </button>)}</div>
    {!loading&&!shown.length&&<p className="win-bar-empty">No hay productos para vender con este filtro.</p>}
@@ -192,9 +192,9 @@ export default function QuickBar({soloVenta=false}){
      {!bookingId&&<div className="bar-pos-court-manual"><CourtPicker value={court} onChange={setCourt}/><TimePicker label="Inicio del turno" value={courtStart} onChange={setCourtStart} required/></div>}
      <p className="win-bar-muted">{destination==='IMMEDIATE'?(selected?'Se cobra ahora y queda asociado a '+selected.holder+'.':'Se cobra ahora y queda asociado a esa cancha y horario.'):selected?'Vinculado a la reserva '+selected.holder+'. Se mostrará como pendiente hasta cobrarlo.':'Si no aparece una reserva, registrá cancha y horario para localizar el consumo después.'}</p>
     </div>}
-    <label>Observación (opcional)<input value={note} maxLength={400} onChange={e=>setNote(e.target.value)} placeholder="Ej. Llevó a la cancha; cobra Recepción" /></label>
+    <label>Observación (opcional)<input value={note} maxLength={400} onChange={e=>setNote(e.target.value)} placeholder="Ej. Llevó a la cancha; pendiente de cobro en Bar" /></label>
     <button type="submit" disabled={!shift||!items.length||cannotSubmit||busy||uncertain||(destination==='IMMEDIATE'&&!cliente)}>{busy?'Guardando…':destination==='IMMEDIATE'?'Cobrar '+MONEY(total):'Guardar pendiente '+MONEY(total)}</button>
-    {!shift&&<p className="win-bar-warning">Para registrar entregas o cobros debe haber una caja abierta por Recepción.</p>}
+    {!shift&&<p className="win-bar-warning">Para registrar entregas o cobros debe haber una Caja Bar abierta desde la pestaña Caja Bar.</p>}
    </ValidatedForm>
   </section>
   </div>
@@ -214,7 +214,7 @@ export default function QuickBar({soloVenta=false}){
     <button disabled={busy||uncertain}>Confirmar cobro</button>
    </form>}
   </section>
-  {!soloVenta&&<p className="win-bar-warning">Control de stock: cada entrega crea una salida en Supabase. Las existencias físicas seguirán sin saldo calculado hasta registrar el conteo inicial. No usar esta versión para cobrar operaciones reales sin probar antes la conciliación con Recepción.</p>}
+  {!soloVenta&&<p className="win-bar-warning">Cada entrega descuenta existencias una sola vez. Los cobros usan exclusivamente Caja Bar. El inventario físico y la conciliación histórica se consultan en Stock y precios.</p>}
  </div>
 }
 
