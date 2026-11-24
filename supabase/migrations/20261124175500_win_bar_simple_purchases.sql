@@ -249,7 +249,7 @@ begin
  insert into public.win_bar_inventory_audit(actor_id,action,reference_id,after_record) values(actor,p_action,target,p);
  insert into public.win_bar_inventory_requests(request_id,actor_id,action,payload,result) values(req,actor,p_action,p,result_);
  return result_;
-end;$function$
+end;$function$;
 
 CREATE OR REPLACE FUNCTION public.win_bar_stock_guard()
  RETURNS trigger
@@ -285,7 +285,7 @@ begin
    cost_version=cost_version+1,stock_configured=true,updated_by=new.recorded_by,updated_at=now() where id=p.id;
  end if;
  return new;
-end;$function$
+end;$function$;
 
 CREATE OR REPLACE FUNCTION public.win_bar_initial_cost_set(p_actor uuid, p_product uuid, p_cost numeric, p_note text, p_version bigint)
  RETURNS void
@@ -312,7 +312,7 @@ begin
  where id=p_product returning * into new_;
  insert into public.win_bar_inventory_audit(actor_id,action,reference_id,before_record,after_record)
  values(p_actor,'cost.set',p_product,to_jsonb(old_),to_jsonb(new_)||jsonb_build_object('reason',btrim(p_note),'origin','Costo provisional manual'));
-end;$function$
+end;$function$;
 
 CREATE OR REPLACE FUNCTION public.win_bar_cost_api(p_token text, p_action text, p jsonb DEFAULT '{}'::jsonb)
  RETURNS jsonb
@@ -400,4 +400,4 @@ begin
  else raise exception 'BAR_ACTION_INVALID';end if;
  insert into public.win_bar_inventory_requests(request_id,actor_id,action,payload,result) values(req,actor,p_action,p,result_);
  return result_;
-end;$function$
+end;$function$;
