@@ -104,6 +104,10 @@ begin
   if dt is null or dur is null then raise exception 'BOOKING_INVALID';end if;
   if p->>'kind'='CLASE' then
    b.business_date=dt;b.duration_min=dur;b.teacher_id=nullif(p->>'teacherId','')::uuid;b.lesson=coalesce(p->'lesson','{}')-'configuredPct';
+   if nullif(p->>'id','') is not null then
+    select cb.lesson into lesson_ from public.win_court_bookings cb where cb.id=(p->>'id')::uuid and cb.performed_at is not null;
+    if lesson_ ? 'configuredPct' then b.lesson=b.lesson||jsonb_build_object('configuredPct',lesson_->'configuredPct');end if;
+   end if;
    return public.win_calendar_economics(b);
   end if;
   return jsonb_build_object('cash',public.win_court_price_(dt,'CASH',dur),'transfer',public.win_court_price_(dt,'TRANSFER',dur));

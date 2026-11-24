@@ -8,7 +8,9 @@ create or replace function public.win_calendar_phone(p text) returns text langua
 declare n text:=regexp_replace(coalesce(p,''),'[^0-9]','','g');begin
  if n='' then return null;end if;
  if left(n,2)='00' then n=substr(n,3);end if;
- if length(n)=11 and left(n,1)='0' then n=substr(n,2);end if;
+ if length(n) in(11,13) and left(n,1)='0' then n=substr(n,2);end if;
+ -- Formato móvil local de Buenos Aires: 011 15 XXXX XXXX.
+ if length(n)=12 and left(n,4)='1115' then n='11'||substr(n,5);end if;
  if length(n)=10 then n='549'||n;elsif length(n)=12 and left(n,2)='54' then n='549'||substr(n,3);end if;
  if length(n) not between 8 and 15 then raise exception 'PHONE_INVALID';end if;return n;
 end $$;
@@ -60,6 +62,7 @@ create index if not exists win_calendar_allocations_booking_idx on public.win_ca
 create table if not exists public.win_calendar_participants (
  booking_id uuid not null references public.win_court_bookings(id),customer_id uuid not null references public.win_customers(id),primary key(booking_id,customer_id)
 );
+create index if not exists win_calendar_participants_customer_idx on public.win_calendar_participants(customer_id,booking_id);
 create table if not exists public.win_calendar_requests (
  request_id uuid primary key,actor_id uuid not null references win_auth.login_accounts(id),action text not null,payload jsonb not null,result jsonb not null,created_at timestamptz not null default now()
 );
