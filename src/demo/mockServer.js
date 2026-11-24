@@ -37,6 +37,12 @@ function api(body) {
   if(String(body.action).startsWith('calendar.')) return calendarDemo(body)
   if(String(body.action).startsWith('ops.')) return operationsDemo(body)
   switch (body.action) {
+    case 'bar.inventory.access': return {allowed:['ADMIN','BAR'].includes(usuario.role)}
+    case 'bar.products': return {products:configDemo.list().productos.filter(p=>p.unidad==='CAFE_BAR').map(p=>({id:p.id,name:p.nombre,variant:'',active:p.activo,sale_price:p.precio,category:p.categoria}))}
+    case 'bar.customers': return {customers:[]}
+    case 'bar.pending': return {orders:[]}
+    case 'bar.courts': return {bookings:[]}
+    case 'bar.inventory.cash.state': return {shift:null}
     case 'login': return { token: 'd'.repeat(64), user: usuario, expiresAt: new Date(Date.now() + 8 * 3600e3).toISOString() }
     case 'me': return { user: usuario, expiresAt: new Date(Date.now() + 8 * 3600e3).toISOString() }
     case 'logout': return { ok: true }
