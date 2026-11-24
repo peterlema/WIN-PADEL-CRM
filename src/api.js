@@ -12,9 +12,12 @@ export async function callApi(action, data = {}, token = readToken()) {
   try {
     response = await fetch(API_URL, { method: 'POST', headers, body: JSON.stringify({ action, ...data }), cache: 'no-store' })
   } catch {
-    throw new Error('No se pudo conectar con el servidor. Comprobá la conexión y consultá el estado antes de repetir.')
+    const e = new Error('No se pudo conectar con el servidor. Comprobá la conexión y consultá el estado antes de repetir.')
+    e.network = true
+    throw e
   }
-  const result = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(result.error || 'No se pudo completar la operación.')
+  let result
+  try { result = await response.json() } catch { const e = new Error('No se pudo leer la confirmación. Consultá el estado antes de repetir.'); e.network = true; throw e }
+  if (!response.ok) { const e = new Error(result.error || 'No se pudo completar la operación.'); e.status = response.status; e.code = result.code; throw e }
   return result
 }

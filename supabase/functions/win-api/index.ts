@@ -1,4 +1,5 @@
 import { operationsError } from './operations.ts';
+import { calendarError } from './calendar.ts';
 import { createClient } from "npm:@supabase/supabase-js@2.119.2";
 
 const allowedOrigins = new Set([
@@ -52,6 +53,11 @@ Deno.serve(async req=>{
     if(!identity) return reply({error:"Sesión inválida o vencida"},401,origin);
     if(action==="me") return reply({user:{id:identity.account_id,name:identity.display_name,role:identity.role},expiresAt:identity.expires_at},200,origin);
     if(action==="logout") { await db.rpc("win_pin_logout",{p_token:token});return reply({ok:true},200,origin); }
+    if(action.startsWith("calendar.")) {
+      const {data:result,error}=await db.rpc("win_calendar_api",{p_token:token,p_action:action.slice(9),p:data});
+      if(error){const failure=calendarError(error);return reply({error:failure.message,code:failure.code},failure.status,origin);}
+      return reply(result,200,origin);
+    }
     if(action.startsWith("ops.")) {
       const {data:result,error}=await db.rpc("win_ops_api",{p_token:token,p_action:action.slice(4),p_data:data});
       if(error){const failure=operationsError(error);return reply({error:failure.message},failure.status,origin);}

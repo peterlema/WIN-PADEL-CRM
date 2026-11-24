@@ -13,10 +13,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Crear migración incremental con CLI
-        run: |
-          npx --yes supabase@2.81.3 --help > /dev/null
-          npx --yes supabase@2.81.3 migration new win_calendar_m05
+      - run: cat supabase/calendar/schema.sql supabase/calendar/api.sql supabase/calendar/integration.sql supabase/calendar/compatibility.sql | cmp - supabase/migrations/20261124010226_win_calendar_m05.sql
       - run: npm ci
       - run: npm run test:db
       - run: npm run build
