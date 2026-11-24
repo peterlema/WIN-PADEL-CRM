@@ -1,4 +1,6 @@
 const messages: Record<string,string> = {
+ MOVE_CLASS_RATE_CHANGE:'La nueva fecha cambia la tarifa o remuneración de la clase. Revisá el acuerdo desde Editar actividad; el movimiento no se guardó.',
+ MOVE_NOT_ALLOWED:'Sólo se pueden mover reservas, clases y fechas de abono futuras que todavía no comenzaron.',MOVE_IN_PAST:'El nuevo horario debe ser futuro.',MOVE_UNCHANGED:'Elegí otra cancha u horario.',ABONO_MOVE_SCOPE:'Mové sólo esta fecha del abono dentro de la misma jornada. La recurrencia semanal no se cambia desde el arrastre.',
  SESSION_INVALID:'La sesión venció. Volvé a ingresar.',NOT_AUTHORIZED:'Tu usuario no tiene permiso para esta operación.',
  REQUEST_REQUIRED:'Falta identificar la solicitud. Cerrá y volvé a abrir el formulario.',REQUEST_ID_REUSED:'La solicitud ya se usó con otros datos. Consultá el resultado antes de continuar.',
  BOOKING_INVALID:'Revisá la fecha, cancha, horario y duración.',DURATION_INVALID:'Revisá la duración.',PHONE_INVALID:'Revisá el teléfono: incluí el código de área.',
@@ -31,6 +33,7 @@ const messages: Record<string,string> = {
  EDIT_AT_ORIGIN:'Abrí la actividad original en Calendario para corregirla.',ACTION_INVALID:'Operación no disponible.'
 };
 export function calendarError(error: {message?:string;code?:string}) {
+ if(error.code==='23P01')return {code:'COURT_TAKEN',message:messages.COURT_TAKEN,status:409};
  const code=Object.keys(messages).find(key=>String(error.message||'').includes(key));
  return {code:code||'CALENDAR_ERROR',message:code?messages[code]:'No se pudo confirmar la operación. Consultá su estado antes de repetir.',status:code==='SESSION_INVALID'?401:code==='NOT_AUTHORIZED'?403:code?409:500};
 }

@@ -62,6 +62,11 @@ Deno.serve(async req=>{
       }
       return reply(result,200,origin);
     }
+    if(action==="calendar.move") {
+      const {data:result,error}=await db.rpc("win_calendar_move",{p_token:token,p:data});
+      if(error){const failure=calendarError(error);return reply({error:failure.message,code:failure.code},failure.status,origin);}
+      return reply(result,200,origin);
+    }
     if(action.startsWith("calendar.")) {
       const {data:result,error}=await db.rpc("win_calendar_api",{p_token:token,p_action:action.slice(9),p:data});
       if(error){const failure=calendarError(error);return reply({error:failure.message,code:failure.code},failure.status,origin);}
