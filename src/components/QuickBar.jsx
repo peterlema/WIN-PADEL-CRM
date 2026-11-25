@@ -1,3 +1,5 @@
+import BarBankConfig from './BarBankConfig.jsx'
+import {barDate} from '../barDate.js'
 import MoneyInput from './MoneyInput.jsx'
 import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import ValidatedForm from './ValidatedForm.jsx'
@@ -20,6 +22,8 @@ export default function QuickBar({soloVenta=false}){
  const [bookings,setBookings]=useState([])
  const [pending,setPending]=useState([])
  const [shift,setShift]=useState(undefined)
+ const [bankState,setBankState]=useState(null)
+ const [bankAdmin,setBankAdmin]=useState(false)
  const [loading,setLoading]=useState(true)
  const [busy,setBusy]=useState(false)
  const [uncertain,setUncertain]=useState(false)
@@ -57,7 +61,7 @@ export default function QuickBar({soloVenta=false}){
     callApi('bar.products'),callApi('bar.customers'),callApi('bar.pending'),callApi('bar.inventory.cash.state'),callApi('me')
    ])
    setProducts(p.products||[]);setCustomers(c.customers||[])
-   setPending(o.orders||[]);setShift(sh.shift||null);setOwner(me.user.id)
+   setPending(o.orders||[]);setShift(sh.shift||null);setOwner(me.user.id);setBankState(sh);setBankAdmin(me.user.role==='ADMIN')
   }catch(e){setError(e.message||'No se pudo actualizar el Bar.')}
   finally{setLoading(false)}
  },[])
@@ -179,7 +183,7 @@ export default function QuickBar({soloVenta=false}){
   finally{transactionBusy.current=false;setBusy(false)}
  }
  function chooseSettle(p){setPaymentOrder(p);setPaymentAmount(String(p.balance).replace('.',','));paymentRequest.current=crypto.randomUUID();setError('')}
- const formatDate=v=>new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',hourCycle:'h23',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).format(new Date(v))
+ const formatDate=barDate
  return <div className={'bar-pos'+(soloVenta?' bar-pos-solo':'')}>
   <div className="bar-pos-main">
   <section className="win-bar-card bar-pos-catalogo">
@@ -211,7 +215,7 @@ export default function QuickBar({soloVenta=false}){
     <fieldset className="bar-pos-choice"><legend>¿Cómo se registra?</legend>
      {[['IMMEDIATE','Cobrar ahora'],['COURT','Pendiente de cancha'],['ACCOUNT','Cuenta corriente']].map(([id,label])=><button type="button" key={id} aria-pressed={destination===id} onClick={()=>setDestination(id)}>{label}</button>)}
     </fieldset>
-    {destination==='IMMEDIATE'&&<fieldset className="win-bar-methods"><legend>Medio de pago</legend>{payMethods.map(([v,label])=><button key={v} type="button" className={method===v?'selected':''} onClick={()=>setMethod(v)}>{label}</button>)}</fieldset>}
+    {destination==='IMMEDIATE'&&<fieldset className="win-bar-methods"><legend>Medio de pago</legend>{payMethods.map(([v,label])=><button key={v} type="button" disabled={v==='TRANSFER'&&!bankState?.bankConfigured} className={method===v?'selected':''} onClick={()=>setMethod(v)}>{label}</button>)}</fieldset>}
     {destination==='IMMEDIATE'&&<fieldset className="bar-pos-choice bar-pos-cliente"><legend>¿De qué cancha era?</legend>
      <button type="button" aria-pressed={cliente==='COURT'} onClick={()=>setCliente('COURT')}>Cancha y horario</button>
      <button type="button" aria-pressed={cliente==='UNKNOWN'} onClick={()=>{setCliente('UNKNOWN');setBookingId('')}}>No conozco cliente</button>
@@ -232,6 +236,7 @@ export default function QuickBar({soloVenta=false}){
     {!shift&&<p className="win-bar-warning">Para registrar entregas o cobros debe haber una Caja Bar abierta desde la pestaña Caja Bar.</p>}
     </fieldset>
    </ValidatedForm>
+   {!bankState?.bankConfigured&&bankState&&<BarBankConfig data={bankState} canEdit={bankAdmin} onSaved={reload}/>}
   </section>
   </div>
   <section className="win-bar-card">
@@ -246,7 +251,7 @@ export default function QuickBar({soloVenta=false}){
     <div className="win-bar-row"><h3>Cobrar consumo pendiente</h3><button type="button" className="secundario" onClick={()=>setPaymentOrder(null)}>Cerrar</button></div>
     <p className="win-bar-muted">Saldo: {MONEY(paymentOrder.balance)}. Podés cobrar una parte y dejar el resto pendiente.</p>
     <label>Importe que se recibe ($)<MoneyInput inputMode="decimal" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)} required/></label>
-    <fieldset className="win-bar-methods"><legend>Medio</legend>{payMethods.map(([id,label])=><button key={id} type="button" className={paymentMethod===id?'selected':''} onClick={()=>setPaymentMethod(id)}>{label}</button>)}</fieldset>
+    <fieldset className="win-bar-methods"><legend>Medio</legend>{payMethods.map(([id,label])=><button key={id} type="button" disabled={id==='TRANSFER'&&!bankState?.bankConfigured} className={paymentMethod===id?'selected':''} onClick={()=>setPaymentMethod(id)}>{label}</button>)}</fieldset>
     <button disabled={busy||uncertain}>Confirmar cobro</button>
    </fieldset></form>}
   </section>
