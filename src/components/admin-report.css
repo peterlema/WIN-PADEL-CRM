@@ -52,3 +52,5 @@
 .admin-page .admin-filters p,.admin-page .admin-dates label{font-size:14px}
 .admin-page .admin-stat span{font-size:13px}
 @media(max-width:650px){.admin-page .admin-fold{padding:16px}.admin-record>div{grid-template-columns:1fr;gap:6px}.admin-page .admin-data-table table{min-width:520px}.admin-table-tools input[type=search]{max-width:none}.admin-column-picker{margin-left:0}}
+
+.admin-detail-target{min-width:0;scroll-margin-top:16px}
