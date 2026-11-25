@@ -61,7 +61,7 @@ begin
   if not public.win_bar_bank_ready_() then raise exception 'BAR_BANK_REQUIRED';end if;
   new.bank_account_snapshot=b.account_label;
   new.bank_destination_snapshot=jsonb_build_object('bankName',b.bank_name,'accountHolder',b.account_holder,'alias',b.bank_alias,
-   'cbuCvu',b.cbu_cvu,'confirmedAt',b.confirmed_at,'confirmedBy',b.confirmed_by);
+   'cbuCvu',b.cbu_cvu,'confirmedAt',b.confirmed_at,'confirmedBy',b.confirmed_by,'accountRole',case when new.amount_signed>0 then 'DESTINATION' else 'SOURCE' end);
  else
   new.bank_account_snapshot=null;new.bank_destination_snapshot=null;
  end if;
