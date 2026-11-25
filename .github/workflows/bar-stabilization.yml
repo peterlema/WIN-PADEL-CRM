@@ -32,6 +32,9 @@ jobs:
       - run: npx playwright test --config=playwright.daily.config.js
       - run: npx playwright test --config=playwright.money.config.js
       - run: npx playwright test --config=playwright.checkout.config.js
+      - name: Verificar publicación real
+        if: github.ref == 'refs/heads/main'
+        run: node scripts/bar-production-smoke.mjs
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
