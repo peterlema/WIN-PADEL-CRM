@@ -1,7 +1,7 @@
 {
   "name": "win-padel-crm",
   "private": true,
-  "version": "0.17.5",
+  "version": "0.17.6",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,7 +17,8 @@
     "test:money": "node scripts/money.test.mjs && node scripts/money-render.test.mjs && node scripts/admin-presentation.test.mjs",
     "test:bar-purchases": "node supabase/tests/bar-purchases.test.mjs",
     "test:bar-checkout": "node supabase/tests/bar-checkout.test.mjs && node scripts/bar-transactions.test.mjs",
-    "test:bar-bank": "node supabase/tests/bar-bank.test.mjs"
+    "test:bar-bank": "node supabase/tests/bar-bank.test.mjs",
+    "test:bar-transfer": "node supabase/tests/bar-transfer-optional.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",
