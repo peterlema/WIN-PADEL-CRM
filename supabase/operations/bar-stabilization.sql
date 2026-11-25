@@ -154,7 +154,7 @@ begin
  if actor is null then raise exception 'SESSION_INVALID';end if;
  if not public.win_bar_allowed(actor) then raise exception 'NOT_AUTHORIZED';end if;
  action_=replace(coalesce(p_payload->>'action',''),'bar.inventory.','');
- if p_request_id is null or action_ not in ('bank.save','cash.open','cash.close','cash.out','purchase.save','purchase.receive','purchase.pay') then raise exception 'ORDER_INVALID';end if;
+ if p_request_id is null or action_ not in ('stock.out','bank.save','cash.open','cash.close','cash.out','purchase.save','purchase.receive','purchase.pay') then raise exception 'ORDER_INVALID';end if;
  if not pg_try_advisory_xact_lock(hashtextextended('bar-request:'||p_request_id::text,0)) then return jsonb_build_object('state','IN_PROGRESS');end if;
  select * into saved from public.win_bar_inventory_requests where request_id=p_request_id;
  if not found then return jsonb_build_object('state','NOT_FOUND');end if;

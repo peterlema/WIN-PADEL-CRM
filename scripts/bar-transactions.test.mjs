@@ -52,7 +52,7 @@ try{
 }finally{await vite.close()}
 console.log('PASS recuperación: journal antes de enviar, error validación/servidor rechazado, respuesta perdida ya confirmada, ausencia y reintento mismo requestId, bloqueo IN_PROGRESS/INCONSISTENT, persistencia por usuario y recuperación de pago parcial.')
 
-for(const action of ['bar.inventory.cash.open','bar.inventory.cash.close','bar.inventory.cash.out','bar.inventory.purchase.save','bar.inventory.purchase.receive','bar.inventory.purchase.pay']){
+for(const action of ['bar.inventory.stock.out','bar.inventory.cash.open','bar.inventory.cash.close','bar.inventory.cash.out','bar.inventory.purchase.save','bar.inventory.purchase.receive','bar.inventory.purchase.pay']){
  const saved=new Storage(),p={requestId:crypto.randomUUID(),amount:123.45},responses=[],queries=[]
  let sends=0
  const call=async(a,v)=>{

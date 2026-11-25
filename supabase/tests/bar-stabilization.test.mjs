@@ -32,7 +32,11 @@ const id=()=>crypto.randomUUID()
 const inv=(action,p={},token='tok-pedro')=>scalar('select win_bar_inventory_api($1,$2,$3::jsonb) v',[token,action,JSON.stringify(p)])
 const mutate=(action,p={})=>inv(action,{requestId:id(),...p})
 const reject=async(f,code)=>assert.rejects(f,e=>e.message.includes(code))
-const previous=(await mutate('cash.open',{openingCash:0})).id
+const previous=(assert.ok((await inv('cash.state',{movementShift:shift})).movements.length>0)
+const beforeOut=await stock(),out={requestId:id(),productId:water,quantity:1,kind:'WASTE',note:'Merma sólo en prueba'}
+await inv('stock.out',out);await inv('stock.out',out);assert.equal(await stock(),beforeOut-1)
+assert.equal((await scalar("select win_bar_request_status('tok-pedro',$1,'INVENTORY',$2::jsonb) v",[out.requestId,JSON.stringify({...out,action:'bar.inventory.stock.out'})])).state,'FOUND')
+await mutate('cash.open',{openingCash:0})).id
 await mutate('cash.close',{shiftId:previous,countedCash:0})
 await db.exec(readFileSync(new URL('../migrations/20261125010000_win_bar_bank_destination.sql',import.meta.url),'utf8'))
 await db.exec(readFileSync(new URL('../migrations/20261125020000_win_bar_transfer_without_bank_requirement.sql',import.meta.url),'utf8'))

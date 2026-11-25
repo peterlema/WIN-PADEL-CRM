@@ -1,11 +1,13 @@
 name: Verificar Bar diario
 on:
   push:
-    branches: [stabilize/bar-daily]
+    branches: [main, stabilize/bar-daily]
+  pull_request:
+    paths: ['src/components/Bar*', 'src/components/QuickBar.jsx', 'src/barTransactions.js', 'src/barDisplay.js', 'src/bar-daily.css', 'supabase/**', 'scripts/browser/bar-daily.spec.js']
 permissions:
   contents: read
 concurrency:
-  group: bar-daily-fixed
+  group: bar-daily-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   verify:
