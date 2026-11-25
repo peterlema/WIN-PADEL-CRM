@@ -51,6 +51,6 @@ test('Caja Bar presenta fecha argentina, responsable y transferencia separada de
  await expect(page.getByText('25.200',{exact:false}).first()).toBeVisible()
  await expect(page.getByRole('cell',{name:'24/11/2026 23:03',exact:true}).first()).toBeVisible()
  await expect(page.getByRole('cell',{name:'$1.500,50',exact:true}).first()).toBeVisible()
- await expect(page.getByRole('columnheader',{name:/Cuenta bancaria del Bar/i})).toBeVisible()
- await expect(page.getByRole('columnheader',{name:/Transferencias recibidas/i})).toBeVisible()
+ await expect(page.locator('th').filter({hasText:'Cuenta bancaria del Bar'})).toBeVisible()
+ await expect(page.locator('th').filter({hasText:'Transferencias recibidas'})).toBeVisible()
 })
