@@ -1,4 +1,4 @@
-export const inventoryTransactions=['bar.inventory.stock.out','bar.inventory.bank.save','bar.inventory.cash.open','bar.inventory.cash.close','bar.inventory.cash.out','bar.inventory.purchase.save','bar.inventory.purchase.receive','bar.inventory.purchase.pay']
+export const inventoryTransactions=['bar.inventory.private.save','bar.inventory.private.pay','bar.inventory.stock.out','bar.inventory.bank.save','bar.inventory.cash.open','bar.inventory.cash.close','bar.inventory.cash.out','bar.inventory.purchase.save','bar.inventory.purchase.receive','bar.inventory.purchase.pay']
 // Financial retry recovery. No totals or authorization rules live in the browser.
 export const journalKey=owner=>'win_bar_transaction:'+owner
 export function readBarTransaction(storage,owner){
@@ -29,7 +29,7 @@ async function send(call,storage,owner,j){
   if(!confirmed(j.action,r))throw Object.assign(new Error('Confirmación incompleta.'),{network:true})
   clear(storage,owner);return {state:'CONFIRMED',action:j.action,result:r}
  }catch(e){
-  if(rejected(e)){clear(storage,owner);throw e}
+  if(rejected(e)){clear(storage,owner);e.uncertain=false;throw e}
   return recoverBarTransaction({call,storage,owner})
  }
 }

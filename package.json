@@ -1,7 +1,7 @@
 {
   "name": "win-padel-crm",
   "private": true,
-  "version": "0.19.0",
+  "version": "0.20.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -20,7 +20,8 @@
     "test:bar-bank": "node supabase/tests/bar-bank.test.mjs",
     "test:bar-transfer": "node supabase/tests/bar-transfer-optional.test.mjs",
     "test:bar-daily": "node supabase/tests/bar-stabilization.test.mjs",
-    "test:admin-reports": "node scripts/admin-reports.test.mjs"
+    "test:admin-reports": "node scripts/admin-reports.test.mjs",
+    "test:bar-private": "node supabase/tests/bar-private-accounts.test.mjs && node scripts/xlsx-export.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",

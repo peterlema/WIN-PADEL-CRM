@@ -36,8 +36,7 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
  const [destination,setDestination]=useState('IMMEDIATE')
  const [method,setMethod]=useState('CASH')
  const [accountId,setAccountId]=useState('')
- const [newName,setNewName]=useState('')
- const [showNew,setShowNew]=useState(false)
+ const [quote,setQuote]=useState(null),[quoteError,setQuoteError]=useState(''),[quoting,setQuoting]=useState(false),[quoteRefresh,setQuoteRefresh]=useState(0)
  const [day,setDay]=useState(TODAY())
  const [bookingId,setBookingId]=useState('')
  const [court,setCourt]=useState('C1')
@@ -93,7 +92,7 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
    const r=await recoverBarTransaction({call:callApi,storage:sessionStorage,owner,retry})
    if(r.state==='CONFIRMED'){finish(r.action,r.result);await reload()}
    else if(r.state==='EMPTY'){setUncertain(false);setRecoveryStatus('')}
-  }catch(e){setUncertain(true);setRecoveryStatus(e.recoveryStatus||'UNAVAILABLE');setError(e.message)}
+  }catch(e){if(e.uncertain===false){failed(e);if(e.code==='PRIVATE_QUOTE_STALE'){setQuote(null);setQuoteRefresh(n=>n+1)}}else{setUncertain(true);setRecoveryStatus(e.recoveryStatus||'UNAVAILABLE');setError(e.message)}}
   finally{transactionBusy.current=false;setBusy(false)}
  }
  async function refresh(){
@@ -110,7 +109,17 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
  const shown=soloVenta?matching.filter(hasPrice):[...matching.filter(hasPrice),...matching.filter(p=>!hasPrice(p))]
  const sinPrecio=matching.filter(p=>!hasPrice(p))
  const items=Object.entries(cart).map(([id,qty])=>({...products.find(p=>p.id===id),quantity:qty})).filter(p=>p.id)
- const total=items.reduce((v,p)=>v+Number(p.salePrice||0)*p.quantity,0)
+ const publicTotal=items.reduce((v,p)=>v+Number(p.salePrice||0)*p.quantity,0)
+ const quoteKey=JSON.stringify({customerId:accountId,items:items.map(p=>({id:p.id,quantity:p.quantity}))})
+ const quoteReady=destination!=='ACCOUNT'||(quote?.key===quoteKey&&quote.valid===true)
+ const total=destination==='ACCOUNT'?(quoteReady?Number(quote.total):null):publicTotal
+ const applied=p=>destination==='ACCOUNT'?quote?.lines?.find(l=>l.productId===p.id)?.price:p.salePrice
+ useEffect(()=>{
+  if(destination!=='ACCOUNT'||!accountId||!items.length){setQuote(null);setQuoteError('');setQuoting(false);return}
+  let live=true;setQuote(null);setQuoteError('');setQuoting(true)
+  const timer=setTimeout(()=>callApi('bar.inventory.private.quote',JSON.parse(quoteKey)).then(q=>{if(live){setQuote({...q,key:quoteKey});if(!q.valid)setQuoteError(q.lines.filter(l=>!l.valid).map(l=>l.name+': '+l.error).join('. '))}}).catch(e=>live&&setQuoteError(e.message)).finally(()=>live&&setQuoting(false)),200)
+  return()=>{live=false;clearTimeout(timer)}
+ },[destination,quoteKey,quoteRefresh])
  const selected=bookings.find(b=>b.id===bookingId)
  const selectedCourt=selected?.court||court
  const selectedStart=selected?.start||courtStart
@@ -131,30 +140,19 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
   if(busy||uncertain)return
   setCart(old=>{const next={...old},n=(next[id]||0)+delta;if(n<=0)delete next[id];else next[id]=Math.min(n,100);return next})
  }
- async function addCustomer(e){
-  e.preventDefault()
-  if(busy)return
-  setBusy(true);setError('')
-  try {
-   const r=await callApi('bar.customer.create',{name:newName.trim()})
-   const response=await callApi('bar.customers')
-   setCustomers(response.customers||[]);setAccountId(r.id);setShowNew(false);setNewName('')
-   setNotice('Cuenta creada para '+r.name+'.')
-  }catch(e){setError(e.message||'No se pudo crear la persona.')}
-  finally{setBusy(false)}
- }
  async function place(e){
   e.preventDefault()
   if(transactionBusy.current||busy||uncertain||!shift||!owner)return
   if(!items.length){setError('Seleccioná al menos un producto.');return}
   if(cannotSubmit){setError('Hay productos sin precio de venta.');return}
   if(destination==='IMMEDIATE'&&method==='TRANSFER'&&!bankReady){setError('Configurá la cuenta del Bar en Caja Bar para cobrar transferencias.');return}
-  if(destination==='ACCOUNT'&&!accountId){setError('Elegí o agregá una persona.');return}
+  if(destination==='ACCOUNT'&&(!accountId||!quoteReady)){setError('Elegí una cuenta autorizada y esperá un precio válido.');return}
   if(conCancha&&(!selectedCourt||(destination==='COURT'&&!selectedStart))){setError('Seleccioná una reserva o indicá cancha y horario.');return}
   transactionBusy.current=true;setBusy(true);setError('');setNotice('')
   const payload={
     requestId:requestId.current,items:items.map(p=>({id:p.id,quantity:p.quantity})),
     destination,customerId:destination==='ACCOUNT'?accountId:null,
+    ...(destination==='ACCOUNT'?{quoteFingerprint:quote.fingerprint}:{}),
     bookingId:conCancha&&selected?.id?selected.id:null,
     court:conCancha?selectedCourt:null,courtDate:conCancha?day:null,courtStart:conCancha?(selectedStart||null):null,
     clientUnknown:destination==='IMMEDIATE'&&cliente==='UNKNOWN',
@@ -163,7 +161,7 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
   try{
    const r=await submitBarTransaction({call:callApi,storage:sessionStorage,owner,action:'bar.order.place',payload})
    finish(r.action,r.result);await reload()
-  }catch(e){failed(e)}
+  }catch(e){failed(e);if(e.code==='PRIVATE_QUOTE_STALE'){setQuote(null);setQuoteRefresh(n=>n+1)}}
   finally{transactionBusy.current=false;setBusy(false)}
  }
  async function settle(e){
@@ -204,7 +202,7 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
   <section className="win-bar-card bar-pos-carrito">
    <div className="win-bar-row"><h3>Carrito <span className="bar-pos-count">{items.reduce((n,p)=>n+p.quantity,0)} unidades</span></h3>{items.length>0&&<button type="button" className="enlace" disabled={busy||uncertain} onClick={()=>setCart({})}>Vaciar</button>}</div>
    {!items.length?<p className="win-bar-empty">Tocá una bebida para agregarla.</p>:<div className="bar-pos-cart">
-    {items.map(p=><div className="bar-pos-cart-line" key={p.id}><div><strong>{p.name}{p.variant?' · '+p.variant:''}</strong><small>{MONEY(p.salePrice)} c/u</small></div><div className="bar-pos-qty"><button type="button" disabled={busy||uncertain} onClick={()=>changeQty(p.id,-1)}>−</button><b>{p.quantity}</b><button type="button" onClick={()=>changeQty(p.id,1)}>+</button></div><b>{MONEY(p.quantity*Number(p.salePrice))}</b></div>)}
+    {items.map(p=><div className="bar-pos-cart-line" key={p.id}><div><strong>{p.name}{p.variant?' · '+p.variant:''}</strong><small>{MONEY(applied(p))} c/u{destination==='ACCOUNT'?' · Precio de la cuenta':''}</small></div><div className="bar-pos-qty"><button type="button" disabled={busy||uncertain} onClick={()=>changeQty(p.id,-1)}>−</button><b>{p.quantity}</b><button type="button" onClick={()=>changeQty(p.id,1)}>+</button></div><b>{applied(p)==null?'Pendiente':MONEY(p.quantity*Number(applied(p)))}</b></div>)}
    </div>}
    <ValidatedForm id="bar-checkout-form" error={error} className="win-bar-form bar-pos-checkout" onSubmit={place}>
     <fieldset disabled={busy||uncertain} style={{border:0,padding:0,minWidth:0}}>
@@ -218,9 +216,10 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
      <button type="button" aria-pressed={cliente==='UNKNOWN'} onClick={()=>{setCliente('UNKNOWN');setBookingId('')}}>No conozco cliente</button>
     </fieldset></details>}
     {destination==='ACCOUNT'&&<div className="bar-pos-inline">
-      <label>Persona / socio<select value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="">Elegir una persona</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-      <button type="button" className="secundario" onClick={()=>setShowNew(s=>!s)}>+ Nueva persona</button>
-      {showNew&&<div className="bar-pos-inline-form"><label>Nombre de la persona<input value={newName} maxLength={120} onChange={e=>setNewName(e.target.value)}/></label><button type="button" disabled={busy||newName.trim().length<2} onClick={addCustomer}>Crear cuenta</button></div>}
+      <label>Cuenta corriente autorizada<select aria-label="Cuenta corriente autorizada" value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="">Elegir titular autorizado</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+      <p className="win-bar-muted">Uso privado para titulares autorizados por Administración. Los precios se calculan automáticamente.</p>
+      {quoting&&<p role="status">Calculando precios de la cuenta…</p>}{quoteError&&<p role="alert" className="win-bar-warning">{quoteError} Solicitá revisión administrativa.</p>}
+      {quoteReady&&quote&&<p>Precio aplicado para <strong>{quote.holder}</strong> · Total {MONEY(quote.total)}</p>}
     </div>}
     {conCancha&&<div className="bar-pos-inline">
      <label>Fecha del turno<input type="date" value={day} onChange={e=>{setDay(e.target.value);setBookingId('')}}/></label>
@@ -233,7 +232,7 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
     {!shift&&<p className="win-bar-warning">Para registrar entregas o cobros debe haber una Caja Bar abierta desde la pestaña Caja Bar.</p>}
     </fieldset>
    </ValidatedForm>
-   <div className="bar-charge-footer"><div className="bar-pos-total"><span>Total</span><strong>{MONEY(total)}</strong></div>    <button type="submit" form="bar-checkout-form" disabled={!shift||!items.length||cannotSubmit||busy||uncertain||(destination==='IMMEDIATE'&&method==='TRANSFER'&&!bankReady)}>{busy?'Guardando…':destination==='IMMEDIATE'?'Cobrar '+MONEY(total):'Guardar pendiente '+MONEY(total)}</button></div>
+   <div className="bar-charge-footer"><div className="bar-pos-total"><span>Total</span><strong>{MONEY(total)}</strong></div>    <button type="submit" form="bar-checkout-form" disabled={!shift||!items.length||cannotSubmit||!quoteReady||busy||uncertain||(destination==='IMMEDIATE'&&method==='TRANSFER'&&!bankReady)}>{busy?'Guardando…':destination==='IMMEDIATE'?'Cobrar '+MONEY(total):'Guardar pendiente '+MONEY(total)}</button></div>
    {!bankReady&&<p className="win-bar-muted">Transferencias pendientes de configurar. <button type="button" className="enlace" onClick={onOpenCash}>Ir a Caja Bar</button></p>}
   </section>
   </div>
