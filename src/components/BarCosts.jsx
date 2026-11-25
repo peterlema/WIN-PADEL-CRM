@@ -1,3 +1,4 @@
+import {barDateTime} from '../barDisplay.js'
 import MoneyInput from './MoneyInput.jsx'
 import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
 import {useEffect,useRef,useState} from 'react'
@@ -46,7 +47,7 @@ export default function BarCosts({products}){
  {data.groups.map(g=><tr key={g.purchaseId+g.group}><td>{g.group}</td><td>{costMoney(g.originalTotal)}</td><td>{costMoney(g.referenceTotal)}</td><td>{g.referenceTotal==null?'Sin distribución confirmada':costMoney(g.referenceTotal-g.originalTotal)}</td></tr>)}
  </tbody></table></div>
  <details><summary>Historial completo de modificaciones ({data.history.length})</summary><div className="bar-table-scroll"><table><thead><tr><th>Fecha</th><th>Usuario</th><th>Producto</th><th>Costo anterior</th><th>Costo nuevo</th><th>Motivo</th></tr></thead><tbody>
- {data.history.map(a=><tr key={a.id}><td>{new Date(a.created_at).toLocaleString('es-AR',{timeZone:'America/Argentina/Buenos_Aires'})}</td><td>{a.actorName}</td><td>{a.after_record.name} {a.after_record.variant}</td><td>{costMoney(a.before_record?.unit_cost)}</td><td>{costMoney(a.after_record.unit_cost)}</td><td>{a.after_record.reason||a.after_record.evidence}</td></tr>)}
+ {data.history.map(a=><tr key={a.id}><td>{barDateTime(a.created_at)}</td><td>{a.actorName}</td><td>{a.after_record.name} {a.after_record.variant}</td><td>{costMoney(a.before_record?.unit_cost)}</td><td>{costMoney(a.after_record.unit_cost)}</td><td>{a.after_record.reason||a.after_record.evidence}</td></tr>)}
  </tbody></table></div></details></>}
  </details>
 }

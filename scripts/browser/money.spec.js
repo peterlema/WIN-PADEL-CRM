@@ -61,10 +61,11 @@ test('diferencias históricas: informativas y sin formulario obligatorio',async(
 })
 test('Caja Bar: entero grande y decimales se envían como números',async({page})=>{
  await page.getByRole('button',{name:'Caja Bar',exact:true}).click()
- const input=page.getByLabel('Efectivo real para apertura ($)',{exact:true})
+ await page.getByRole('button',{name:'Abrir Caja Bar',exact:true}).click()
+ const input=page.getByLabel('Fondo inicial real ($)',{exact:true})
  await input.fill('150000');await input.press('Tab');await expect(input).toHaveValue('$150.000')
  const request=page.waitForRequest(r=>r.method()==='POST'&&r.postDataJSON()?.action==='bar.inventory.cash.open')
- await page.getByRole('button',{name:'Abrir Caja Bar',exact:true}).click()
+ await page.getByRole('button',{name:'Confirmar apertura',exact:true}).click()
  expect((await request).postDataJSON().openingCash).toBe(150000)
  await expect(input).toHaveValue('$150.000')
 })

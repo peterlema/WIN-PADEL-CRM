@@ -1,0 +1,74 @@
+name: Verificar Bar diario
+on:
+  push:
+    branches: [main, stabilize/bar-daily]
+  pull_request:
+    paths: ['src/components/Bar*', 'src/components/QuickBar.jsx', 'src/barTransactions.js', 'src/barDisplay.js', 'src/bar-daily.css', 'supabase/**', 'scripts/browser/bar-daily.spec.js']
+permissions:
+  contents: read
+concurrency:
+  group: bar-daily-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Leer versión actualmente publicada
+        run: node scripts/bar-production-smoke.mjs --inspect
+      - run: npm ci
+      - run: node supabase/tests/bar-stabilization.test.mjs
+      - run: npm run test:bar
+      - run: npm run test:bar-costs
+      - run: npm run test:bar-purchases
+      - run: npm run test:bar-checkout
+      - run: npm run test:money
+      - run: npm run build
+      - run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chrome webkit
+      - run: npx playwright test --config=playwright.daily.config.js
+      - run: npx playwright test --config=playwright.bank.config.js
+      - run: npx playwright test --config=playwright.money.config.js
+      - run: npx playwright test --config=playwright.checkout.config.js
+      - name: Verificar publicación real
+        if: github.ref == 'refs/heads/main'
+        run: node scripts/bar-production-smoke.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: bar-daily-browser-results
+          path: |
+            test-results
+            playwright-report
+
+  postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: isolated-test
+          POSTGRES_DB: bar_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm install --no-save --package-lock=false pg@8.16.3
+      - run: node supabase/tests/bar-stabilization.test.mjs
+        env:
+          BAR_TEST_DATABASE_URL: postgres://postgres:isolated-test@localhost:5432/bar_test

@@ -51,3 +51,15 @@ try{
  assert.equal(barFailure({code:'',message:'fetch failed'}).body.outcome,'UNKNOWN')
 }finally{await vite.close()}
 console.log('PASS recuperación: journal antes de enviar, error validación/servidor rechazado, respuesta perdida ya confirmada, ausencia y reintento mismo requestId, bloqueo IN_PROGRESS/INCONSISTENT, persistencia por usuario y recuperación de pago parcial.')
+
+for(const action of ['bar.inventory.stock.out','bar.inventory.cash.open','bar.inventory.cash.close','bar.inventory.cash.out','bar.inventory.purchase.save','bar.inventory.purchase.receive','bar.inventory.purchase.pay']){
+ const saved=new Storage(),p={requestId:crypto.randomUUID(),amount:123.45},responses=[],queries=[]
+ let sends=0
+ const call=async(a,v)=>{
+  if(a==='bar.request.status'){queries.push(v);return {state:responses.length?'FOUND':'NOT_FOUND',result:responses[0]}}
+  sends++;responses.push({ok:true,id:'isolated'});throw Object.assign(new Error('Respuesta perdida'),{network:true})
+ }
+ const r=await submitBarTransaction({call,storage:saved,owner,action,payload:p})
+ assert.equal(r.state,'CONFIRMED');assert.equal(sends,1);assert.equal(queries[0].kind,'INVENTORY');assert.equal(queries[0].payload.action,action);assert.equal(queries[0].requestId,p.requestId);assert.equal(saved.getItem(journalKey(owner)),null)
+}
+console.log('PASS solicitudes de inventario: respuesta perdida se recupera sin duplicar compras, recepciones, pagos ni movimientos de caja.')

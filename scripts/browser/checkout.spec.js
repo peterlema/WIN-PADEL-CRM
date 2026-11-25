@@ -30,7 +30,6 @@ async function install(page,mode){
  await page.goto('/#/bar')
  await expect(page.getByText('Caja abierta',{exact:true})).toBeVisible()
  await page.getByRole('button',{name:/^Agua Manaos/}).click()
- await page.getByRole('button',{name:'No conozco cliente',exact:true}).click()
  return state
 }
 test('rechazo del servidor no se presenta como resultado incierto',async({page})=>{

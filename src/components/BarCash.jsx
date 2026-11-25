@@ -1,34 +1,49 @@
-import MoneyInput from './MoneyInput.jsx'
-import {formatMoney,parseMoneyInput} from '../money.js'
-import {barDate} from '../barDate.js'
-import {useEffect,useRef,useState} from 'react'
+import {useCallback,useEffect,useState} from 'react'
 import {callApi} from '../api.js'
-const money=value=>formatMoney(value,'Sin definir')
+import {formatMoney,parseMoneyInput} from '../money.js'
+import {barDateTime,barMethods,barKind} from '../barDisplay.js'
+import MoneyInput from './MoneyInput.jsx'
+import Modal from './Modal.jsx'
+import ValidatedForm from './ValidatedForm.jsx'
+import useBarTransaction from './useBarTransaction.js'
+import BarTransactionNotice from './BarTransactionNotice.jsx'
+import BarBankConfig from './BarBankConfig.jsx'
+const money=n=>formatMoney(n,'Pendiente')
+function Totals({t={}}){return <dl className="bar-totals">{[['Fondo inicial',t.openingCash],['Cobros en efectivo',t.cashSales],['Cobros por transferencia',t.transferSales],['Cobros con tarjeta',t.cardSales],['Egresos por transferencia',t.transferOut],['Egresos con tarjeta',t.cardOut],['Pagos a proveedores',t.supplierPayments],['Gastos',t.expenses],['Retiros',t.withdrawals],['Egresos pagados en efectivo',t.cashOut],['Efectivo esperado',t.cashExpected]].map(([label,n])=><div key={label}><dt>{label}</dt><dd>{money(n)}</dd></div>)}</dl>}
 export default function BarCash(){
- const [data,setData]=useState(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[amount,setAmount]=useState(''),[note,setNote]=useState('')
- const request=useRef({key:null,id:null})
- async function load(){setData(await callApi('bar.inventory.cash.state'))}
- useEffect(()=>{load().catch(e=>setError(e.message))},[])
- async function run(action,p){if(busy)return;setBusy(true);setError('');const key=JSON.stringify([action,p]);if(request.current.key!==key)request.current={key,id:crypto.randomUUID()};try{await callApi('bar.inventory.'+action,{...p,requestId:request.current.id});request.current={key:null,id:null};setAmount('');setNote('');await load()}catch(e){setError(e.message)}finally{setBusy(false)}}
- return <section className="win-bar-card"><div className="win-bar-row"><h3>Caja Bar</h3><button className="secundario" disabled={busy} onClick={()=>load().catch(e=>setError(e.message))}>Actualizar</button></div>
- <p className="win-bar-muted">Caja y banco exclusivos del Bar. Los movimientos y cuentas de Recepción se mantienen independientes.</p>
- {error&&<p className="win-bar-message" role="alert">{error}</p>}
- {!data?<p>Cargando…</p>:<>
- <p><strong>{data.shift?'Caja Bar abierta':'Caja Bar cerrada'}</strong>{data.shift&&' · Apertura: '+barDate(data.shift.opened_at)}</p>
- {data.shift&&<div className="bar-product-fields"><p>Efectivo físico esperado: <strong>{money(data.cashExpected)}</strong></p><p>Transferencias recibidas: <strong>{money(data.totals?.transfersReceived||0)}</strong></p><p>Pagos por transferencia: <strong>{money(data.totals?.transfersPaid||0)}</strong></p><p>Tarjeta: <strong>{money(data.totals?.cardsReceived||0)}</strong></p></div>}
- <p className="win-bar-muted">Las transferencias y tarjetas no aumentan el efectivo físico esperado.</p>
- <form className="bar-product-editor" onSubmit={e=>{e.preventDefault();run(data.shift?'cash.close':'cash.open',data.shift?{shiftId:data.shift.id,countedCash:parseMoneyInput(amount),note}:{openingCash:parseMoneyInput(amount)})}}>
- <label>{data.shift?'Efectivo contado al cerrar ($)':'Efectivo real para apertura ($)'}<MoneyInput min="0" required value={amount} onChange={e=>setAmount(e.target.value)}/></label>
- {data.shift&&<label>Motivo de diferencia / observación<input maxLength={1000} value={note} onChange={e=>setNote(e.target.value)}/></label>}
- <button disabled={busy}>{data.shift?'Confirmar cierre Caja Bar':'Abrir Caja Bar'}</button>
- </form>
- <p className="win-bar-muted">Transferencias habilitadas sin configurar una cuenta bancaria. Verificá el ingreso y compartí el comprobante en el grupo.</p>
- <h4>Aperturas y cierres de Caja Bar</h4><div className="bar-table-scroll"><table><thead><tr><th scope="col">Responsable</th><th scope="col">Estado</th><th scope="col">Apertura</th><th scope="col">Cierre</th><th scope="col">Efectivo inicial</th><th scope="col">Efectivo contado</th><th scope="col">Transferencias recibidas</th><th scope="col">Pagos por transferencia</th><th scope="col">Tarjeta</th></tr></thead><tbody>
- {(data.shifts||[]).map(s=><tr key={s.id}><td>{s.responsible}</td><td>{s.status==='OPEN'?'Abierto':'Cerrado'}</td><td>{barDate(s.opened_at)}</td><td>{s.closed_at?barDate(s.closed_at):'Pendiente'}</td><td>{money(s.opening_cash)}</td><td>{s.counted_cash==null?'Pendiente':money(s.counted_cash)}</td><td>{money(s.totals?.transfersReceived||0)}</td><td>{money(s.totals?.transfersPaid||0)}</td><td>{money(s.totals?.cardsReceived||0)}</td></tr>)}
- </tbody></table></div>
- <h4>Movimientos de Caja Bar</h4><div className="bar-table-scroll"><table><thead><tr><th scope="col">Fecha</th><th scope="col">Empleado</th><th scope="col">Tipo</th><th scope="col">Medio</th><th scope="col">Importe</th><th scope="col">Pedido / referencia</th><th scope="col">Cuenta bancaria del Bar</th></tr></thead><tbody>
- {(data.movements||[]).map(m=><tr key={m.id}><td>{barDate(m.occurred_at)}</td><td>{m.responsible}</td><td>{m.kind==='SALE'?'Cobro de venta':'Pago de compra'}</td><td>{{CASH:'Efectivo',TRANSFER:'Transferencia Bar',CARD:'Tarjeta'}[m.payment_method]}</td><td>{money(m.amount_signed)}</td><td>{m.order_id||m.purchase_id||m.note}</td><td>{m.bank_destination_snapshot?<>{m.amount_signed>0?'Destino: ':'Origen: '}{m.bank_destination_snapshot.bankName} · {m.bank_destination_snapshot.accountHolder} · {m.bank_destination_snapshot.alias||m.bank_destination_snapshot.cbuCvu}</>:m.bank_account_snapshot||(m.payment_method==='TRANSFER'?'Cuenta no informada':'No corresponde')}</td></tr>)}
- </tbody></table></div>
- </>}
+ const [data,setData]=useState(null),[form,setForm]=useState(null),[error,setError]=useState(''),[movementShift,setMovementShift]=useState('OPEN')
+ const load=useCallback(async()=>{const d=await callApi('bar.inventory.cash.state',{movementShift});setData(d)},[movementShift])
+ const tx=useBarTransaction(async()=>{setForm(null);await load()})
+ useEffect(()=>{load().catch(e=>setError(e.message))},[load])
+ const locked=tx.busy||tx.uncertain,sh=data?.shift,t=data?.totals||{}
+ const canClose=sh&&(data.canManage||sh.opened_by===data.currentUserId)
+ const count=form?.amount===''?null:parseMoneyInput(form?.amount)
+ const difference=Number.isFinite(count)?count-Number(t.cashExpected||0):null
+ function submit(e){e.preventDefault()
+  if(form.type==='open')tx.run('bar.inventory.cash.open',{openingCash:parseMoneyInput(form.amount)})
+  else if(form.type==='close')tx.run('bar.inventory.cash.close',{shiftId:sh.id,countedCash:parseMoneyInput(form.amount),note:form.note})
+  else tx.run('bar.inventory.cash.out',{shiftId:sh.id,amount:parseMoneyInput(form.amount),kind:form.kind,method:form.method,note:form.note})
+ }
+ return <section className="win-bar-card">
+  <div className="win-bar-row"><div><h3>Caja Bar</h3><p className="win-bar-muted">{sh?'Abierta por '+sh.responsible+' · '+barDateTime(sh.opened_at):'Sin turno abierto'}</p></div><div className="bar-catalog-toolbar"><button className="secundario" disabled={locked} onClick={()=>load().catch(e=>setError(e.message))}>Actualizar</button>{!sh?<button disabled={locked||!tx.ready} onClick={()=>setForm({type:'open',amount:''})}>Abrir Caja Bar</button>:canClose&&<><button className="secundario" disabled={locked} onClick={()=>setForm({type:'out',amount:'',note:'',kind:'EXPENSE',method:'CASH'})}>Registrar gasto / retiro</button><button disabled={locked} onClick={()=>setForm({type:'close',amount:'',note:''})}>Cerrar y arquear</button></>}</div></div>
+  <BarTransactionNotice transaction={tx}/>{error&&<p role="alert">{error}</p>}
+  <p className="win-bar-muted">Transferencias habilitadas sin configurar una cuenta bancaria. Verificá el ingreso y compartí el comprobante en el grupo.</p>
+  <BarBankConfig data={data} canEdit={data?.canManage===true} onSaved={load} disabled={locked}/>
+  {sh&&<><Totals t={t}/><p className="win-bar-muted">El efectivo esperado incluye fondo y movimientos en efectivo. Transferencias y tarjetas se controlan por separado.</p></>}
+  <div className="win-bar-row"><h4>Movimientos de Caja Bar</h4><label>Turno de movimientos<select aria-label="Turno de movimientos" value={movementShift} onChange={e=>setMovementShift(e.target.value)}><option value="OPEN">Turno abierto</option><option value="ALL">Todos · últimos 200</option>{(data?.shifts||[]).filter(s=>s.status==='CLOSED').map(s=><option key={s.id} value={s.id}>{barDateTime(s.opened_at)} · {s.responsible}</option>)}</select></label></div>
+  <div className="bar-table-scroll"><table><thead><tr><th>Fecha</th><th>Movimiento / empleado</th><th>Medio</th><th className="num">Importe</th><th>Referencia</th><th>Cuenta bancaria del Bar</th></tr></thead><tbody>{(data?.movements||[]).map(m=><tr key={m.id}><td className="bar-nowrap">{barDateTime(m.occurred_at)}</td><td>{barKind[m.kind]}<small>{m.author}</small></td><td>{barMethods.find(x=>x[0]===m.payment_method)?.[1]}</td><td className="num">{money(m.amount_signed)}</td><td>{m.note||m.order_id||m.purchase_id}</td><td>{m.bank_destination_snapshot?<>{m.amount_signed>0?'Destino: ':'Origen: '}{m.bank_destination_snapshot.bankName} · {m.bank_destination_snapshot.accountHolder} · {m.bank_destination_snapshot.alias||m.bank_destination_snapshot.cbuCvu}</>:m.bank_account_snapshot||(m.payment_method==='TRANSFER'?'Cuenta no informada':'No corresponde')}</td></tr>)}</tbody></table>{data&&!(data.movements||[]).length&&<p>Sin movimientos para este filtro.</p>}</div>
+  <details><summary>Turnos e historial de arqueos</summary>{(data?.shifts||[]).map(s=><details className="bar-shift-history" key={s.id}><summary>{barDateTime(s.opened_at)} · {s.responsible} · {s.status==='OPEN'?'Abierto':'Cerrado'} · Diferencia: {money(s.totals?.difference)}</summary><Totals t={s.closing_snapshot||s.totals}/><p>Contado: {money(s.counted_cash)} · Cierre: {barDateTime(s.closed_at)}{s.note?' · '+s.note:''}</p></details>)}</details>
+  {data?.canManage&&<details><summary>Auditoría de cuenta bancaria</summary>{(data.bankHistory||[]).map((h,i)=><p key={i}>{barDateTime(h.created_at)} · {h.author} · {h.after_record.bank_name||h.after_record.accountLabel} · {h.after_record.account_holder} · {h.after_record.bank_alias||h.after_record.cbu_cvu}</p>)}</details>}
+  {form&&<Modal titulo={{bank:'Cuenta bancaria exclusiva del Bar',open:'Abrir Caja Bar',close:'Cierre y arqueo de Caja Bar',out:'Registrar egreso real del Bar'}[form.type]} onCerrar={()=>{if(!locked)setForm(null)}} footer={<><button form="bar-cash-action" type="submit" disabled={locked||!tx.ready}>{tx.busy?'Confirmando…':form.type==='bank'?'Confirmar cuenta':form.type==='close'?'Confirmar cierre':form.type==='open'?'Confirmar apertura':'Registrar egreso real'}</button><button className="secundario" type="button" disabled={locked} onClick={()=>setForm(null)}>Cancelar</button></>}>
+   <BarTransactionNotice transaction={tx}/><ValidatedForm id="bar-cash-action" error={tx.error} onSubmit={submit}><fieldset disabled={locked} className="bar-plain-fields">
+    <>
+     {form.type==='close'&&<><Totals t={t}/><p>Contá únicamente el efectivo físico.</p></>}
+     <label>{form.type==='open'?'Fondo inicial real ($)':form.type==='close'?'Efectivo contado ($)':'Importe realmente pagado / retirado ($)'}<MoneyInput min={form.type==='out'?0.01:0} required value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></label>
+     {form.type==='close'&&<p className={difference?'win-bar-warning':'win-bar-message good'}>Diferencia de caja: <strong>{money(difference)}</strong></p>}
+     {form.type==='out'&&<div className="bar-product-fields"><label>Tipo<select value={form.kind} onChange={e=>setForm({...form,kind:e.target.value})}><option value="EXPENSE">Gasto</option><option value="WITHDRAWAL">Retiro</option></select></label><label>Medio<select value={form.method} onChange={e=>setForm({...form,method:e.target.value})}>{barMethods.map(([k,l])=><option  key={k} value={k}>{l}</option>)}</select></label></div>}
+     {form.type!=='open'&&<label>{form.type==='close'?'Motivo de la diferencia / observación':'Concepto / comprobante'}<input maxLength={1000} required={form.type==='out'||(difference!==null&&difference!==0)} minLength={5} value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></label>}
+    </>
+   </fieldset></ValidatedForm>
+  </Modal>}
  </section>
 }
