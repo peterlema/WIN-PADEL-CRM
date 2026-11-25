@@ -60,6 +60,7 @@ test('Administración confirma banco y actualiza alias a CVU; fecha argentina y 
  const first=s.requests.find(p=>p.action==='bar.inventory.bank.save')
  expect(first.expectedUpdatedAt).toBeNull();expect(first.confirmExclusive).toBe(true)
  await page.getByRole('button',{name:'Actualizar cuenta para transferencias',exact:true}).click()
+ await expect(page.getByRole('heading',{name:'Cuenta exclusiva del Bar',exact:true})).toBeVisible()
  await page.getByLabel('Tipo de destino',{exact:true}).selectOption('CBU')
  await page.getByLabel('CBU / CVU del Bar',{exact:true}).fill('1234567890123456789012')
  await page.getByRole('checkbox').check()

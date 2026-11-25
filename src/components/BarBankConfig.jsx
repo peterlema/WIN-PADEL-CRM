@@ -26,10 +26,10 @@ export default function BarBankConfig({data,canEdit,onSaved,disabled=false}){
  <BarTransactionNotice transaction={tx}/><ValidatedForm id="bar-bank-form" error={error||tx.error} onSubmit={save}><fieldset disabled={locked} className="bar-plain-fields"><div className="bar-product-fields">
  <label>Banco o billetera<input required minLength={2} maxLength={100} value={form.bankName} onChange={e=>setForm({...form,bankName:e.target.value})}/></label>
  <label>Titular de la cuenta<input required minLength={2} maxLength={120} value={form.accountHolder} onChange={e=>setForm({...form,accountHolder:e.target.value})}/></label>
- <label>Tipo de destino<select value={form.kind} onChange={e=>setForm({...form,kind:e.target.value,destination:''})}><option value="ALIAS">Alias</option><option value="CBU">CBU / CVU</option></select></label>
- <label>{form.kind==='ALIAS'?'Alias del Bar':'CBU / CVU del Bar'}<input required maxLength={form.kind==='ALIAS'?40:22} value={form.destination} onChange={e=>setForm({...form,destination:e.target.value})}/></label></div>
+ <label>Tipo de destino<select aria-label="Tipo de destino" value={form.kind} onChange={e=>setForm({...form,kind:e.target.value,destination:''})}><option value="ALIAS">Alias</option><option value="CBU">CBU / CVU</option></select></label>
+ <label>{form.kind==='ALIAS'?'Alias del Bar':'CBU / CVU del Bar'}<input required maxLength={40} value={form.destination} onChange={e=>setForm({...form,destination:e.target.value})}/></label></div>
  <label>Motivo del registro o actualización<input required minLength={5} maxLength={1000} value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></label>
- <label><input required type="checkbox" checked={form.confirmExclusive} onChange={e=>setForm({...form,confirmExclusive:e.target.checked})}/>Confirmo que estos son los datos reales de la cuenta exclusiva del Bar.</label>
+ <label className="bar-check"><input required type="checkbox" checked={form.confirmExclusive} onChange={e=>setForm({...form,confirmExclusive:e.target.checked})}/>Confirmo que estos son los datos reales de la cuenta exclusiva del Bar.</label>
  <p className="win-bar-muted">La cuenta de Recepción se administra por separado. Cada transferencia nueva conservará la cuenta confirmada al registrarse.</p>
  </fieldset></ValidatedForm></Modal>}
  </section>
