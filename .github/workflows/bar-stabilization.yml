@@ -17,10 +17,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - uses: supabase/setup-cli@v1
-        with:
-          version: latest
-      - run: supabase migration new --help
       - run: npm ci
       - run: node supabase/tests/bar-stabilization.test.mjs
       - run: npm run test:bar

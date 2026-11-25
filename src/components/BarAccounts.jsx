@@ -17,10 +17,10 @@ export default function BarAccounts(){
  return <section className="win-bar-card"><div className="win-bar-row"><div><h3>Cuentas corrientes y consumos</h3><p className="win-bar-muted">Entregas, cobros parciales y saldos por persona o cancha. Cobrar una deuda no vuelve a descontar stock.</p></div><button className="secundario" disabled={locked||loading} onClick={load}>Actualizar</button></div>
   <BarTransactionNotice transaction={tx}/>{error&&<p role="alert" className="win-bar-message">{error}</p>}
   <div className="bar-account-filters">
-   <label>Estado<select value={filter.status} onChange={e=>update('status',e.target.value)}><option value="ALL">Todos</option><option value="PENDING">Pendientes</option><option value="PAID">Pagados</option></select></label>
-   <label>Tipo<select value={filter.audience} onChange={e=>update('audience',e.target.value)}><option value="ALL">Todos</option><option value="CLIENT">Por persona / clientes</option><option value="EMPLOYEE">Empleados</option><option value="COURT">Pendientes de cancha</option></select></label>
+   <label>Estado<select aria-label="Estado" value={filter.status} onChange={e=>update('status',e.target.value)}><option value="ALL">Todos</option><option value="PENDING">Pendientes</option><option value="PAID">Pagados</option></select></label>
+   <label>Tipo<select aria-label="Tipo" value={filter.audience} onChange={e=>update('audience',e.target.value)}><option value="ALL">Todos</option><option value="CLIENT">Por persona / clientes</option><option value="EMPLOYEE">Empleados</option><option value="COURT">Pendientes de cancha</option></select></label>
    <label>Persona<input type="search" value={filter.person} onChange={e=>update('person',e.target.value)} placeholder="Cliente o empleado"/></label>
-   <label>Cancha<select value={filter.court} onChange={e=>update('court',e.target.value)}><option value="">Todas</option>{['C4','C3','C2','C1'].map(k=><option key={k}>{k}</option>)}</select></label>
+   <label>Cancha<select aria-label="Cancha" value={filter.court} onChange={e=>update('court',e.target.value)}><option value="">Todas</option>{['C4','C3','C2','C1'].map(k=><option key={k}>{k}</option>)}</select></label>
    <label>Desde<input type="date" value={filter.start} onChange={e=>update('start',e.target.value)}/></label><label>Hasta<input type="date" value={filter.end} onChange={e=>update('end',e.target.value)}/></label>
   </div>
   <p>{data?.total||0} consumos · Saldo del filtro: <strong>{formatMoney(data?.pending||0)}</strong>{loading?' · Actualizando…':''}</p>
