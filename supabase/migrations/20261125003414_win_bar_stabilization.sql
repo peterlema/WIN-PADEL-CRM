@@ -109,7 +109,7 @@ begin
    'shifts',coalesce((select jsonb_agg(to_jsonb(x) order by x.opened_at desc) from
     (select s.*,a.display_name responsible,public.win_bar_shift_totals(s.id) totals from public.win_bar_cash_shifts s join win_auth.login_accounts a on a.id=s.opened_by order by s.opened_at desc limit 50)x),'[]'),
    'movements',coalesce((select jsonb_agg(to_jsonb(x) order by x.occurred_at desc) from
-    (select m.*,a.display_name author from public.win_bar_cash_movements m join win_auth.login_accounts a on a.id=m.recorded_by where sh.id is not null and m.shift_id=sh.id order by m.occurred_at desc limit 200)x),'[]'),
+    (select m.*,a.display_name author from public.win_bar_cash_movements m join win_auth.login_accounts a on a.id=m.recorded_by where(coalesce(p->>'movementShift','OPEN')='ALL' or(coalesce(p->>'movementShift','OPEN')='OPEN' and m.shift_id=sh.id) or m.shift_id::text=p->>'movementShift') order by m.occurred_at desc limit 200)x),'[]'),
    'bankHistory',case when r='ADMIN' then coalesce((select jsonb_agg(to_jsonb(x) order by x.created_at desc) from
     (select i.created_at,i.before_record,i.after_record,a.display_name author from public.win_bar_inventory_audit i join win_auth.login_accounts a on a.id=i.actor_id where i.action='bank.save' order by i.created_at desc limit 30)x),'[]') else '[]'::jsonb end);
  end if;
