@@ -27,6 +27,7 @@ jobs:
       - run: npm ci
       - run: node supabase/tests/bar-private-accounts.test.mjs
       - run: node scripts/xlsx-export.test.mjs
+      - run: node scripts/private-recovery.test.mjs
       - run: npm run test:bar-checkout
       - run: npm run build
       - run: npm install --no-save --package-lock=false @playwright/test@1.56.1

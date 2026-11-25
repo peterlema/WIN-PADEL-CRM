@@ -13,7 +13,7 @@ export default function useBarTransaction(onConfirmed){
  async function recover(retry=false){
   if(active.current||!owner)return;active.current=true;setBusy(true);setError('')
   try{const r=await recoverBarTransaction({call:callApi,storage:sessionStorage,owner,retry});if(r.state==='CONFIRMED')await finish(r);else if(r.state==='EMPTY'){setUncertain(false);setStatus('')}}
-  catch(e){setUncertain(true);setStatus(e.recoveryStatus||'UNAVAILABLE');setError(e.message)}
+  catch(e){if(e.uncertain===false)failure(e);else{setUncertain(true);setStatus(e.recoveryStatus||'UNAVAILABLE');setError(e.message)}}
   finally{active.current=false;setBusy(false)}
  }
  useEffect(()=>{if(owner){try{if(readBarTransaction(sessionStorage,owner))recover(false)}catch(e){setUncertain(true);setError(e.message)}}},[owner])

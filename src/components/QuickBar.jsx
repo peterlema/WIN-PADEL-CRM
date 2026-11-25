@@ -92,7 +92,7 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
    const r=await recoverBarTransaction({call:callApi,storage:sessionStorage,owner,retry})
    if(r.state==='CONFIRMED'){finish(r.action,r.result);await reload()}
    else if(r.state==='EMPTY'){setUncertain(false);setRecoveryStatus('')}
-  }catch(e){setUncertain(true);setRecoveryStatus(e.recoveryStatus||'UNAVAILABLE');setError(e.message)}
+  }catch(e){if(e.uncertain===false){failed(e);if(e.code==='PRIVATE_QUOTE_STALE'){setQuote(null);setQuoteRefresh(n=>n+1)}}else{setUncertain(true);setRecoveryStatus(e.recoveryStatus||'UNAVAILABLE');setError(e.message)}}
   finally{transactionBusy.current=false;setBusy(false)}
  }
  async function refresh(){

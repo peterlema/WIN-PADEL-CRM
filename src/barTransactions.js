@@ -29,7 +29,7 @@ async function send(call,storage,owner,j){
   if(!confirmed(j.action,r))throw Object.assign(new Error('Confirmación incompleta.'),{network:true})
   clear(storage,owner);return {state:'CONFIRMED',action:j.action,result:r}
  }catch(e){
-  if(rejected(e)){clear(storage,owner);throw e}
+  if(rejected(e)){clear(storage,owner);e.uncertain=false;throw e}
   return recoverBarTransaction({call,storage,owner})
  }
 }
