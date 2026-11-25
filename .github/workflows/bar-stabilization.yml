@@ -10,7 +10,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-24.04
-    timeout-minutes: 12
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -25,3 +25,15 @@ jobs:
       - run: npm run test:bar-checkout
       - run: npm run test:money
       - run: npm run build
+      - run: npm install --no-save --package-lock=false @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chrome webkit
+      - run: npx playwright test --config=playwright.daily.config.js
+      - run: npx playwright test --config=playwright.money.config.js
+      - run: npx playwright test --config=playwright.checkout.config.js
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: bar-daily-browser-results
+          path: |
+            test-results
+            playwright-report
