@@ -46,6 +46,9 @@ test('MacBook: orden, búsqueda, páginas, columnas, detalle y filtros conservad
  // Find the table by its visible tools caption, independently of the fold heading.
  const grid=page.locator('.admin-data-table').filter({hasText:'Movimientos financieros'}).last()
  await expect(grid.locator('tbody tr')).toHaveCount(10)
+ const dimensions=await grid.locator('.admin-table-wrap').evaluate(el=>({scroll:el.scrollWidth,width:el.clientWidth}))
+ expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.width+2)
+ expect(await grid.locator('th').first().evaluate(el=>getComputedStyle(el).position)).toBe('sticky')
  await grid.getByRole('button',{name:'Siguiente',exact:true}).click()
  await expect(grid.getByText('Pág. 2 / 3')).toBeVisible()
  await grid.getByRole('button',{name:/^Importe/}).click()
@@ -79,6 +82,8 @@ test('histórico completo: totales estables al buscar/paginar, vistas y selecci�
  const grid=page.locator('.admin-data-table').filter({hasText:'Ingresos por jornada'}).last()
  await expect(grid.getByText(/Total período/)).toBeVisible()
  const totals=await grid.locator('tfoot').innerText()
+ const dimensions=await grid.locator('.admin-table-wrap').evaluate(el=>({scroll:el.scrollWidth,width:el.clientWidth}))
+ expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.width+2)
  await grid.getByRole('button',{name:'Siguiente',exact:true}).click()
  expect(await grid.locator('tfoot').innerText()).toBe(totals)
  await grid.getByRole('searchbox').fill('01/01/2025')

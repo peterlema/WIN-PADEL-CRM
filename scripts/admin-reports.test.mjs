@@ -38,6 +38,9 @@ try{
  html=render(props);assert.ok(html.indexOf('Registro 4999')<html.indexOf('Registro 4998'))
  memory.set(key,JSON.stringify({columns:[0,2]}));html=render(props)
  assert.ok(!html.includes('<th class="" aria-sort="none"><button type="button" class="admin-sort">Concepto'))
+ memory.set('win_admin_table_Fechas_Fecha',JSON.stringify({sort:{index:0,direction:1}}))
+ const dates=render({caption:'Fechas',head:['Fecha'],rows:[[React.createElement('button',null,'02/12/2026')],[React.createElement('button',null,'31/01/2026')]]})
+ assert.ok(dates.indexOf('31/01/2026')<dates.indexOf('02/12/2026'))
  const chart=renderToStaticMarkup(React.createElement(Bars,{rows:[{date:'2026-11-25',collected:-1234.5}],field:'collected',label:'Importe exacto'}))
  assert.ok(chart.includes('-$1.234,50'));assert.ok(!chart.includes('NaN'))
  if(process.env.WIN_ADMIN_SNAPSHOT){
