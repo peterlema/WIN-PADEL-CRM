@@ -70,19 +70,12 @@ test('Caja Bar: entero grande y decimales se envían como números',async({page}
  await expect(input).toHaveValue('$150.000')
 })
 
-test('empleados: borrador desactivado con moneda compartida',async({page})=>{
- await page.getByRole('button',{name:'Precios empleados',exact:true}).click()
- await page.getByRole('button',{name:'Preparar borrador',exact:true}).click()
- const input=page.getByLabel('Precio final ($)',{exact:true})
- await expect(input).toHaveValue('$1.500,50')
- await input.fill('1250,50');await input.press('Tab');await expect(input).toHaveValue('$1.250,50')
- await page.getByLabel('Motivo del borrador',{exact:true}).fill('Prueba de formato aislada')
- const request=page.waitForRequest(r=>r.method()==='POST'&&r.postDataJSON()?.action==='bar.employee.policy.save')
- await page.getByRole('button',{name:'Guardar borrador desactivado',exact:true}).click()
- expect((await request).postDataJSON().value).toBe(1250.5)
- await expect(input).toHaveValue('$1.250,50')
+test('condiciones individuales fuera de la tabla de productos',async({page})=>{
+ await expect(page.getByRole('button',{name:'Precios empleados',exact:true})).toHaveCount(0)
+ await page.getByRole('button',{name:'Stock y precios',exact:true}).click()
+ await expect(page.getByRole('columnheader',{name:'Precio socio',exact:true})).toHaveCount(0)
+ await expect(page.getByRole('columnheader',{name:'Precio público',exact:true})).toBeVisible()
 })
-
 test('costos provisionales: decimales y valor numérico conservados',async({page})=>{
  await page.getByRole('button',{name:'Stock y precios',exact:true}).click()
  await page.getByRole('button',{name:'Editar precio / producto',exact:true}).click()

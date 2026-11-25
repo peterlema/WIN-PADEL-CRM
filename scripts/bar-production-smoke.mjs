@@ -15,7 +15,7 @@ for(let attempt=0;attempt<36;attempt++){
   const version=code.match(/WIN Gestión v[`"'\s,]*(\d+\.\d+\.\d+)/)?.[1];console.log('Versión web publicada:',version||'Sin identificar')
   if(process.argv.includes('--inspect')){assert.ok(version,'No se pudo identificar la versión publicada');console.log('PASS publicación existente HTTP 200, sin escrituras.');process.exit(0)}
   assert.equal(version,expected,'La versión publicada todavía no es '+expected)
-  for(const text of ['bar.inventory.accounts','bar.inventory.dashboard','bar.inventory.cash.out','bar.inventory.bank.save'])assert.ok(code.includes(text),'Falta ruta '+text)
+  for(const text of ['bar.inventory.accounts','bar.inventory.dashboard','bar.inventory.cash.out','bar.inventory.bank.save','bar.inventory.private.quote','bar.inventory.private.save','bar.inventory.private.pay'])assert.ok(code.includes(text),'Falta ruta '+text)
   const api=await fetch('https://cqvoherekzntmhyzdidj.supabase.co/functions/v1/win-api',{method:'POST',headers:{'Content-Type':'application/json','Origin':origin},body:JSON.stringify({action:'me'}),signal:AbortSignal.timeout(15000)})
   assert.equal(api.status,401,'La API debe exigir sesión')
   assert.equal(api.headers.get('access-control-allow-origin'),origin,'CORS de la aplicación')

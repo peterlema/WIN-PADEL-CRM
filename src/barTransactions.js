@@ -1,4 +1,4 @@
-export const inventoryTransactions=['bar.inventory.stock.out','bar.inventory.bank.save','bar.inventory.cash.open','bar.inventory.cash.close','bar.inventory.cash.out','bar.inventory.purchase.save','bar.inventory.purchase.receive','bar.inventory.purchase.pay']
+export const inventoryTransactions=['bar.inventory.private.save','bar.inventory.private.pay','bar.inventory.stock.out','bar.inventory.bank.save','bar.inventory.cash.open','bar.inventory.cash.close','bar.inventory.cash.out','bar.inventory.purchase.save','bar.inventory.purchase.receive','bar.inventory.purchase.pay']
 // Financial retry recovery. No totals or authorization rules live in the browser.
 export const journalKey=owner=>'win_bar_transaction:'+owner
 export function readBarTransaction(storage,owner){
