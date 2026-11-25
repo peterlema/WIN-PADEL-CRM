@@ -54,3 +54,13 @@
 @media(max-width:650px){.admin-page .admin-fold{padding:16px}.admin-record>div{grid-template-columns:1fr;gap:6px}.admin-page .admin-data-table table{min-width:520px}.admin-table-tools input[type=search]{max-width:none}.admin-column-picker{margin-left:0}}
 
 .admin-detail-target{min-width:0;scroll-margin-top:16px}
+
+/* Keep controls readable while using the vertical space of a 13-inch notebook. */
+#root:has(>.admin-page)>.marca{padding-top:14px;padding-bottom:14px}
+#root:has(>.admin-page)>.subnav{margin-bottom:12px}
+.admin-page{padding-top:6px;gap:12px}
+.admin-page .admin-tabs button{min-height:40px;padding:8px 12px}
+.admin-page>.admin-range-filters{padding:14px 18px;grid-template-columns:1fr auto;align-items:center;gap:8px}
+.admin-range-filters>.admin-periods,.admin-range-filters>.admin-dates{grid-column:1/-1}
+.admin-page .admin-range-filters>button{min-height:38px;padding:8px 12px;grid-column:2;grid-row:2}
+@media(max-width:700px){.admin-page>.admin-range-filters{grid-template-columns:1fr}.admin-page .admin-range-filters>button{grid-column:1;grid-row:auto}}
