@@ -9,8 +9,10 @@ for(let attempt=0;attempt<36;attempt++){
   const source=await html.text(),scripts=[...source.matchAll(/<script[^>]*src=["']([^"']+)["']/g)].map(m=>m[1])
   assert.ok(scripts.length,'No se encontró el script publicado')
   const code=(await Promise.all(scripts.map(async path=>{const r=await fetch(new URL(path,origin),{signal:AbortSignal.timeout(15000),cache:'no-store'});assert.equal(r.status,200);return r.text()}))).join('\n')
+  const version=code.match(/0\\.(?:17|18)\\.\\d+/g);console.log('Versiones encontradas en publicación:',[...new Set(version||[])].join(', '))
+  if(process.argv.includes('--inspect')){console.log('PASS publicación existente HTTP 200, sin escrituras.');process.exit(0)}
   assert.ok(code.includes(expected),'La versión publicada todavía no es '+expected)
-  for(const text of ['bar.inventory.accounts','bar.inventory.dashboard','bar.inventory.cash.out'])assert.ok(code.includes(text),'Falta ruta '+text)
+  for(const text of ['bar.inventory.accounts','bar.inventory.dashboard','bar.inventory.cash.out','bar.inventory.bank.save'])assert.ok(code.includes(text),'Falta ruta '+text)
   console.log('PASS producción HTTP 200; versión v'+expected+' y rutas Bar diario publicadas. Verificación pública de lectura, sin ventas ni escrituras.')
   process.exit(0)
  }catch(e){last=e;console.log('Esperando publicación '+expected+': '+e.message);await new Promise(r=>setTimeout(r,10000))}

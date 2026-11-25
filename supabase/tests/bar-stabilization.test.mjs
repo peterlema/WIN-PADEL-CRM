@@ -38,6 +38,7 @@ await db.exec(readFileSync(new URL('../migrations/20261125010000_win_bar_bank_de
 await db.exec(readFileSync(new URL('../migrations/20261125020000_win_bar_transfer_without_bank_requirement.sql',import.meta.url),'utf8'))
 const before=await scalar('select to_jsonb(s) v from win_bar_cash_shifts s where id=$1',[previous])
 await db.exec(readFileSync(new URL('../operations/bar-stabilization.sql',import.meta.url),'utf8'))
+await db.exec(readFileSync(new URL('../migrations/20261125011135_win_bar_cash_totals_compatibility.sql',import.meta.url),'utf8'))
 assert.equal(Number(await scalar('select sum(quantity_change) v from win_bar_stock_movements')),393)
 const after=await scalar('select to_jsonb(s) v from win_bar_cash_shifts s where id=$1',[previous]);delete after.closing_snapshot;assert.deepEqual(after,before)
 await db.exec(readFileSync(new URL('../operations/bar-costs-initial-20261124.sql',import.meta.url),'utf8'))
@@ -86,6 +87,7 @@ for(const [kind,amount] of [['EXPENSE',100],['WITHDRAWAL',200]]){
  assert.equal((await scalar("select win_bar_request_status('tok-pedro',$1,'INVENTORY',$2::jsonb) v",[out.requestId,JSON.stringify({...out,action:'bar.inventory.cash.out'})])).state,'FOUND')
 }
 const view=await inv('cash.state')
+assert.equal(Number(view.totals.transfersReceived),3500);assert.equal(Number(view.totals.cardsReceived),2000);assert.equal(Number(view.totals.cashNet),5700)
 assert.equal(Number(view.totals.cashExpected),6700);assert.equal(Number(view.totals.cashSales),6500);assert.equal(Number(view.totals.transferSales),3500);assert.equal(Number(view.totals.cardSales),2000)
 const report=await inv('dashboard');assert.equal(Number(report.current.sales),12000);assert.equal(Number(report.current.collected),12000)
 assert.ok(Number(report.current.estimatedCostUnits)>0);assert.equal(Number(report.previous.sales),0);assert.equal(Number(report.current.supplierPayments),500)
@@ -106,4 +108,35 @@ await q('delete from win_bar_bank_config') // disposable test only
 const bankless=await place(payload('IMMEDIATE','TRANSFER'));assert.ok(bankless.id)
 assert.equal(await scalar('select bank_destination_snapshot v from win_bar_cash_movements where order_id=$1',[bankless.id]),null)
 console.log('PASS Bar diario: banco confirmado, tres medios, deudas, cobros parciales/finales, stock único, compras/recepción/pago, egresos, arqueo y permisos; sin producción.')
+
+if(pgClient){
+ const other=new pg.Client({connectionString:process.env.BAR_TEST_DATABASE_URL});await other.connect()
+ const placeOn=(conn,p)=>conn.query('select win_bar_order_place($1,$2,$3::jsonb,$4,$5,$6,$7,$8::date,$9::time,$10,$11,$12) v',['tok-pedro',p.requestId,JSON.stringify(p.items),p.destination,p.customerId,p.bookingId,p.court,p.courtDate,p.courtStart,p.note,p.method,p.clientUnknown]).then(r=>r.rows[0].v)
+ const payOn=(conn,p)=>conn.query("select win_bar_order_pay('tok-pedro',$1,$2,$3,$4) v",[p.requestId,p.orderId,p.amount,p.method])
+ try{
+  const p=payload(),beforeStock=await stock()
+  const [a,b]=await Promise.all([placeOn(pgClient,p),placeOn(other,p)])
+  assert.equal(a.id,b.id);assert.equal(await stock(),beforeStock-1)
+  assert.equal(await scalar('select count(*)::int v from win_bar_order_payments where order_id=$1',[a.id]),1)
+  const debt=await place(payload('ACCOUNT')),stockBeforePay=await stock()
+  const payments=await Promise.allSettled([payOn(pgClient,{requestId:id(),orderId:debt.id,amount:1500,method:'CASH'}),payOn(other,{requestId:id(),orderId:debt.id,amount:1500,method:'CARD'})])
+  assert.equal(payments.filter(r=>r.status==='fulfilled').length,1)
+  assert.ok(payments.find(r=>r.status==='rejected').reason.message.includes('PAYMENT_EXCEEDS_BALANCE'))
+  assert.equal(await stock(),stockBeforePay)
+  assert.equal(Number(await scalar('select sum(amount) v from win_bar_order_payments where order_id=$1',[debt.id])),1500)
+  const sh=(await inv('cash.state')).shift.id
+  const beforeClose=await stock(),sale=payload()
+  await pgClient.query('begin')
+  const totals=(await inv('cash.state')).totals
+  await inv('cash.close',{requestId:id(),shiftId:sh,countedCash:Number(totals.cashExpected)})
+  const blockedSale=placeOn(other,sale).then(value=>({value}),error=>({error}))
+  await pgClient.query('commit')
+  const result=await blockedSale
+  assert.ok(result.error?.message.includes('BAR_SHIFT_NOT_OPEN'))
+  assert.equal(await stock(),beforeClose)
+  assert.equal(await scalar('select count(*)::int v from win_bar_orders where request_id=$1',[sale.requestId]),0)
+  console.log('PASS PostgreSQL 17 concurrente: solicitud duplicada, dos cobros sobre el mismo saldo y cierre frente a venta; un solo movimiento válido.')
+ }finally{await pgClient.query('rollback');await other.end()}
+}
+
 await db.close()
