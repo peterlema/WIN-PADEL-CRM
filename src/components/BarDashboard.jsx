@@ -1,0 +1,19 @@
+import {useEffect,useState} from 'react'
+import {callApi} from '../api.js'
+import {formatMoney} from '../money.js'
+import {barDay,barDate} from '../barDisplay.js'
+export default function BarDashboard({onNavigate}){
+ const [bounds,setBounds]=useState({start:barDay(),end:barDay()}),[data,setData]=useState(null),[error,setError]=useState(''),[refresh,setRefresh]=useState(0)
+ useEffect(()=>{let live=true;setError('');callApi('bar.inventory.dashboard',bounds).then(d=>live&&setData(d)).catch(e=>live&&setError(e.message));return()=>{live=false}},[bounds.start,bounds.end,refresh])
+ const a=data?.current||{},b=data?.previous||{},products=(data?.products||[]).filter(p=>p.active),low=products.filter(p=>p.lowStock),estimated=Number(a.estimatedCostUnits)>0||Number(a.unknownCostUnits)>0
+ const variation=k=>Number(b[k])===0?(Number(a[k])===0?'Sin variación':'Sin base anterior'):((Number(a[k])-Number(b[k]))/Math.abs(Number(b[k]))*100).toLocaleString('es-AR',{maximumFractionDigits:1})+'% frente al anterior'
+ return <section className="win-bar-card"><div className="win-bar-row"><h3>Control del Bar</h3><button className="secundario" onClick={()=>setRefresh(n=>n+1)}>Actualizar</button></div><div className="bar-account-filters"><label>Desde<input type="date" value={bounds.start} onChange={e=>setBounds({...bounds,start:e.target.value})}/></label><label>Hasta<input type="date" value={bounds.end} onChange={e=>setBounds({...bounds,end:e.target.value})}/></label><button className="secundario" onClick={()=>setBounds({start:barDay(),end:barDay()})}>Hoy</button></div>
+ {error&&<p role="alert">{error}</p>}{!data?<p>Consultando control…</p>:<><p className="win-bar-muted">{barDate(data.start)} – {barDate(data.end)} · Comparación: {barDate(data.previousStart)} – {barDate(data.previousEnd)}</p>
+ <div className="bar-dashboard-grid">{[['sales','Ventas / entregas'],['collected','Cobros recibidos'],['pending','Pendiente de estas ventas'],['purchases','Compras documentadas'],['supplierPayments','Pagos a proveedores'],['expenses','Gastos pagados'],['cogs','Costo de mercadería vendida'+(a.unknownCostUnits>0?' (parcial)':'')],['grossMargin','Margen bruto'+(estimated?' estimado':'')]].map(([k,label])=><article key={k}><span>{label}</span><strong>{formatMoney(a[k])}</strong><small>{variation(k)}</small></article>)}</div>
+ <p>Cobros: efectivo {formatMoney(a.cash)} · transferencias {formatMoney(a.transfer)} · tarjetas {formatMoney(a.card)}. Retiros: {formatMoney(a.withdrawals)}.</p>
+ <p className="win-bar-muted">Ventas se atribuyen a la entrega; cobros y pagos, al movimiento de dinero. Comprar no implica pagar ni recibir mercadería. El margen bruto no es utilidad neta.{estimated?' Incluye '+a.estimatedCostUnits+' unidades con costo provisional y '+a.unknownCostUnits+' sin costo completo; el margen sólo calcula líneas con costo conocido.':''}</p>
+ <div className="bar-dashboard-columns"><section><div className="win-bar-row"><h4>Productos más vendidos</h4><button className="secundario" onClick={()=>onNavigate('accounts')}>Consultar cuentas</button></div><table><thead><tr><th>Producto</th><th className="num">Unidades</th><th className="num">Ventas</th></tr></thead><tbody>{a.topProducts.map(p=><tr key={p.product_id}><td>{p.name}</td><td className="num">{p.units}</td><td className="num">{formatMoney(p.sales)}</td></tr>)}</tbody></table></section>
+ <section><div className="win-bar-row"><h4>Stock disponible: {products.reduce((n,p)=>n+(p.stockKnown?Number(p.stock):0),0)} unidades</h4><button className="secundario" onClick={()=>onNavigate('stock')}>Ver stock</button></div><p>{low.length} productos debajo o en el mínimo. {products.filter(p=>p.stockMin==null).length} sin mínimo definido.</p>{low.map(p=><p key={p.id}><strong>{p.name} {p.variant}</strong>: {p.stock} unidades · mínimo {p.stockMin}</p>)}<button onClick={()=>onNavigate('purchases')}>Compras y reposición</button></section></div>
+ </>}
+ </section>
+}

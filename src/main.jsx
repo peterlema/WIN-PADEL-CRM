@@ -17,6 +17,7 @@ import './admin.css'
 import './config.css'
 import './tema-win.css'
 import './operations.css'
+import './bar-daily.css'
 
 // MODO DEMO (#/demo): pantallas de adentro con datos de ejemplo, sin iniciar sesión ni llamar al backend real.
 const DEMO = window.location.hash.startsWith('#/demo')

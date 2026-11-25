@@ -1,3 +1,6 @@
+import useBarTransaction from './useBarTransaction.js'
+import BarTransactionNotice from './BarTransactionNotice.jsx'
+import {barDate} from '../barDisplay.js'
 import {useEffect,useRef,useState} from 'react'
 import {callApi} from '../api.js'
 import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
@@ -14,7 +17,7 @@ function amount(raw){
  return n
 }
 export default function BarPurchases({data,products,onChanged}){
- const [form,setForm]=useState(null),[quote,setQuote]=useState(null),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('')
+ const [form,setForm]=useState(null),[quote,setQuote]=useState(null),[error,setError]=useState(''),[notice,setNotice]=useState('')
  const requests=useRef(new Map())
  const row=()=>({productId:products.find(p=>p.active)?.id||'',quantity:1,costMode:'TOTAL',cost:'',estimated:false})
  const open=()=>{setError('');setQuote(null);setForm({type:'purchase',supplier:'',purchaseDate:today(),state:'RECEIVED',payment:'UNPAID',method:'CASH',totalCost:'',lines:[row()],note:''})}
@@ -32,16 +35,9 @@ export default function BarPurchases({data,products,onChanged}){
   const timer=setTimeout(async()=>{try{const d=await callApi('bar.inventory.purchase.preview',payload());if(active)setQuote(d)}catch(e){if(active)setQuote({error:e.message})}},300)
   return()=>{active=false;clearTimeout(timer)}
  },[signature])
- async function run(action,p){
-  if(busy)return;setBusy(true);setError('');setNotice('')
-  const key=JSON.stringify([action,p]);if(!requests.current.has(key))requests.current.set(key,crypto.randomUUID())
-  try{
-   await callApi('bar.inventory.'+action,{...p,requestId:requests.current.get(key)})
-   requests.current.delete(key);setForm(null);await onChanged()
-   setNotice(action==='purchase.save'?'Compra guardada. Se recibió mercadería y se registró un pago sólo si lo confirmaste.':action==='purchase.receive'?'Recepción registrada una sola vez.':'Pago registrado una sola vez en Caja Bar.')
-  }catch(e){setError(e.message+(e.network?' Actualizá antes de reintentar; se conserva la misma solicitud.':''))}
-  finally{setBusy(false)}
- }
+ const tx=useBarTransaction(async()=>{setForm(null);await onChanged()})
+ const busy=tx.busy||tx.uncertain
+ async function run(action,p){await tx.run('bar.inventory.'+action,p)}
  async function submit(e){
   e.preventDefault();setError('')
   try{
@@ -56,18 +52,18 @@ export default function BarPurchases({data,products,onChanged}){
  const purchases=(data.purchases||[]).filter(p=>p.kind==='OPERATIONAL')
  const pending=purchases.filter(p=>p.status!=='RECEIVED'||p.payment_status!=='PAID'),complete=purchases.filter(p=>!pending.includes(p))
  const article=p=><article className="bar-purchase" key={p.id}><div className="win-bar-row"><strong>{p.supplier}</strong><b>{money(p.total)}</b></div>
-  <p>{p.purchase_date} · {({ORDERED:'Pedido',PARTIAL:'Recibido parcialmente',RECEIVED:'Recibido'})[p.status]} · {p.payment_status==='PAID'?'Pagado':p.payment_status==='PARTIAL'?'Pago parcial':'Pendiente de pago'}</p>
+  <p>{barDate(p.purchase_date)} · {({ORDERED:'Pedido',PARTIAL:'Recibido parcialmente',RECEIVED:'Recibido'})[p.status]} · {p.payment_status==='PAID'?'Pagado':p.payment_status==='PARTIAL'?'Pago parcial':'Pendiente de pago'}</p>
   <div className="bar-table-scroll"><table><thead><tr><th>Producto</th><th>Pedidas</th><th>Recibidas</th><th>Costo unitario</th><th>Total</th><th>Origen</th></tr></thead><tbody>{p.lines.map(l=><tr key={l.id}><td>{l.label}</td><td>{l.quantity}</td><td>{l.received_quantity}</td><td>{money(l.total_cost==null?null:l.total_cost/l.quantity)}</td><td>{money(l.total_cost)}</td><td>{l.cost_estimated?'Estimado editable · ':''}{l.cost_origin||'Costo informado'}</td></tr>)}</tbody></table></div>
   <div className="bar-catalog-toolbar">{p.status!=='RECEIVED'&&<button disabled={busy} onClick={()=>{setError('');setForm({type:'receive',purchaseId:p.id,note:'',lines:p.lines.filter(l=>l.received_quantity<l.quantity).map(l=>({...l,receive:l.quantity-l.received_quantity}))})}}>Recibir mercadería</button>}
   {p.payment_status!=='PAID'&&<button className="secundario" disabled={busy||p.total==null} onClick={()=>{setError('');setForm({type:'pay',purchaseId:p.id,amount:'',method:'CASH',note:''})}}>Registrar pago realizado</button>}</div>
  </article>
  return <section className="bar-inventory-section"><div className="win-bar-row"><h4>Compras y pagos pendientes</h4><button disabled={busy} onClick={open}>+ Nueva compra</button></div>
  <p className="win-bar-muted">Las diferencias históricas son informativas. Un pedido no suma stock; una recepción no genera pagos.</p>
- {error&&<p role="alert" className="win-bar-message">{error}</p>}{notice&&<p role="status" className="win-bar-message good">{notice}</p>}
+ <BarTransactionNotice transaction={tx}/>{error&&<p role="alert" className="win-bar-message">{error}</p>}{notice&&<p role="status" className="win-bar-message good">{notice}</p>}
  {pending.length?pending.map(article):<p>No hay compras ni pagos pendientes.</p>}
  {complete.length>0&&<details><summary>Compras completas y pagadas ({complete.length})</summary>{complete.map(article)}</details>}
  {form&&<Modal titulo={form.type==='purchase'?'Nueva compra':form.type==='receive'?'Recibir mercadería':'Registrar pago realizado'} onCerrar={()=>{if(!busy)setForm(null)}} footer={<><button type="submit" form="bar-purchase-simple" disabled={busy}>{busy?'Guardando…':form.type==='purchase'?(form.payment==='PAID'?'Guardar compra y registrar pago real':'Guardar compra'):form.type==='receive'?'Confirmar recepción':'Confirmar pago real'}</button><button type="button" className="secundario" disabled={busy} onClick={()=>setForm(null)}>Cancelar</button></>}>
- <ValidatedForm id="bar-purchase-simple" error={error} onSubmit={submit} className="bar-inventory-form">
+ <BarTransactionNotice transaction={tx}/><ValidatedForm id="bar-purchase-simple" error={error||tx.error} onSubmit={submit} className="bar-inventory-form"><fieldset disabled={busy} className="bar-plain-fields">
  {form.type==='purchase'&&<>
  <div className="bar-product-fields"><label>Proveedor<input required minLength={2} maxLength={160} value={form.supplier} onChange={e=>setForm({...form,supplier:e.target.value})}/></label>
  <label>Fecha<input required type="date" value={form.purchaseDate} onChange={e=>setForm({...form,purchaseDate:e.target.value})}/></label>
@@ -88,6 +84,6 @@ export default function BarPurchases({data,products,onChanged}){
  {form.type==='pay'&&<label>Importe pagado<MoneyInput required min={0.01} max={1000000000} value={form.amount} onChange={e=>setForm({...form,amount:e.target.value})}/></label>}
  {(form.type==='pay'||form.payment==='PAID')&&<><p className="win-bar-warning">Confirmá únicamente un pago efectivamente realizado. Se registra un egreso en Caja Bar; las transferencias usan la cuenta bancaria configurada del Bar.</p><label>Medio de pago<select value={form.method} onChange={e=>setForm({...form,method:e.target.value})}><option value="CASH">Efectivo de Caja Bar</option><option value="TRANSFER">Cuenta bancaria del Bar</option><option value="CARD">Tarjeta</option></select></label></>}
  <label>Nota / comprobante (opcional)<input maxLength={1000} value={form.note} onChange={e=>setForm({...form,note:e.target.value})}/></label>
- </ValidatedForm></Modal>}
+ </fieldset></ValidatedForm></Modal>}
  </section>
 }

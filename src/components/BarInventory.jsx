@@ -1,3 +1,4 @@
+import {barDateTime} from '../barDisplay.js'
 import BarPurchases from './BarPurchases.jsx'
 import MoneyInput from './MoneyInput.jsx'
 import {formatMoney,parseMoneyInput,moneyInputValue} from '../money.js'
@@ -8,7 +9,7 @@ import {callApi} from '../api.js'
 const money = value => formatMoney(value,'Pendiente')
 const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Argentina/Buenos_Aires'}).format(new Date())
 const labels={OPENING:'Conteo inicial',RECEIPT:'Recepción de compra',SALE:'Venta / entrega',WASTE:'Merma',INTERNAL:'Consumo interno',COMPLIMENTARY:'Cortesía',ADJUSTMENT:'Ajuste'}
-const date=v=>new Intl.DateTimeFormat('es-AR',{timeZone:'America/Argentina/Buenos_Aires',dateStyle:'short',timeStyle:'short',hourCycle:'h23'}).format(new Date(v))
+const date=barDateTime
 export default function BarInventory({purchasesOnly=false,onStockChanged=()=>{}}){
  const [data,setData]=useState(null),[products,setProducts]=useState([]),[error,setError]=useState(''),[notice,setNotice]=useState(''),[busy,setBusy]=useState(false)
  const [form,setForm]=useState(null),[movementProduct,setMovementProduct]=useState('')
