@@ -2,7 +2,7 @@ name: Validar Administración interactiva
 on:
   push:
     branches: [improvement/admin-reports, main]
-    paths: ['src/**', 'scripts/admin*', 'scripts/browser/admin-reports.spec.js', 'playwright.admin.config.js', '.github/workflows/admin-reports.yml']
+    paths: ['src/**', 'scripts/admin*', 'scripts/bar-production-smoke.mjs', 'scripts/browser/admin-reports.spec.js', 'playwright.admin.config.js', '.github/workflows/admin-reports.yml']
 permissions:
   contents: read
 jobs:
