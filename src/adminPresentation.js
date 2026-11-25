@@ -2,7 +2,12 @@ import {formatMoney,parseMoneyInput,moneyInputValue} from './money.js'
 // Presentation only: these helpers never write or replace server accounting totals.
 export const missing = 'Sin datos'
 export const money = value => formatMoney(value,'Sin datos')
-export const compactMoney=money
+export const compactMoney=value=>{
+ if(value==null)return missing
+ const n=Number(value),absolute=Math.abs(n),scale=absolute>=1e9?1e9:absolute>=1e6?1e6:absolute>=1e3?1e3:1
+ return (n<0?'-':'')+'$'+(absolute/scale).toLocaleString('es-AR',{maximumFractionDigits:1})+(scale===1e9?' mil M':scale===1e6?' M':scale===1e3?' mil':'')
+}
+export const displayDate=value=>/^\d{4}-\d{2}-\d{2}$/.test(value||'')?value.slice(8,10)+'/'+value.slice(5,7)+'/'+value.slice(0,4):value
 export const shortDate = d => d ? d.slice(8,10)+'/'+d.slice(5,7) : missing
 export const weekday = d => d ? String(new Date(d+'T12:00:00Z').getUTCDay()) : ''
 export function groupDays(rows,mode='day') {

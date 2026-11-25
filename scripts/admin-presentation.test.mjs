@@ -15,7 +15,7 @@ const daily=[{date:'2026-11-16',collected:100,expenses:20,previousDate:'2026-11-
 const weeks=groupDays(daily,'week');assert.equal(weeks.length,2);assert.equal(weeks[0].collected,300);assert.equal(weeks[0].previous.collected,200);assert.equal(weeks[0].previousEnd,'2026-11-10');assert.equal(weeks[1].collected,-25);assert.equal(weeks[1].comparisonAvailable,false)
 assert.equal(groupDays(daily,'month')[0].collected,275)
 assert.equal(groupDays(daily,'day'),daily)
-assert.equal(money(null),'Sin datos');assert.equal(compactMoney(2000000),'$2.000.000');assert.equal(compactMoney(-1000),'-$1.000')
+assert.equal(money(null),'Sin datos');assert.equal(compactMoney(2000000),'$2 M');assert.equal(compactMoney(-1000),'-$1 mil')
 console.log('Presentación: caché por sesión, deduplicación, caducidad, errores y agrupaciones verificadas')
 
 const rolling=Array.from({length:28},(_,i)=>({date:new Date(Date.parse('2026-10-28T12:00:00Z')+i*86400000).toISOString().slice(0,10),collected:1,comparisonAvailable:true}));assert.equal(groupDays(rolling,'week').length,4);assert.equal(groupDays(rolling,'week')[3].collected,7)

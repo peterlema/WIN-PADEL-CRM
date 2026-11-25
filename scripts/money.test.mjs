@@ -22,5 +22,5 @@ for(const n of [0,.01,1.5,1500,1250.5,150000,1250000,-12345.67]){
  assert.equal(JSON.parse(JSON.stringify({amount:parseMoneyInput(raw)})).amount,n)
 }
 const {money}=await import('../src/calendarUtils.js');const {money:admin,compactMoney}=await import('../src/adminPresentation.js')
-assert.equal(money(1250.5),formatMoney(1250.5));assert.equal(admin(-1250.5),formatMoney(-1250.5));assert.equal(compactMoney(1250000),'$1.250.000')
+assert.equal(money(1250.5),formatMoney(1250.5));assert.equal(admin(-1250.5),formatMoney(-1250.5));assert.equal(compactMoney(1250000),'$1,3 M')
 console.log('PASS moneda AR: formatos, negativos, decimales, puntos de miles, entrada incompleta preservada y payload numérico sin cambios.')
