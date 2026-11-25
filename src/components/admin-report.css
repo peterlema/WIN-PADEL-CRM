@@ -1,0 +1,66 @@
+.admin-page{min-width:0}
+.admin-page .admin-card,.admin-report-views,.admin-data-table{min-width:0}
+.admin-page .admin-fold{padding:18px 22px}
+.admin-fold h3{margin:0}
+.admin-fold-toggle{display:flex;justify-content:space-between;align-items:center;gap:14px;width:100%;background:transparent;color:#232344;text-align:left;padding:4px 0;border:0;font-size:18px;min-height:40px}
+.admin-fold-toggle small{display:block;font-size:14px;font-weight:400;margin-top:4px}
+.admin-fold-body{padding-top:16px}
+.admin-table-tools{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin:12px 0;font-size:14px}
+.admin-table-tools input[type=search]{flex:1;min-width:150px;max-width:320px;padding:9px 12px;font-size:14px}
+.admin-table-tools>span,.admin-table-note{font-size:13px;color:#62687a}
+.admin-page .admin-data-table .admin-table-wrap{max-height:480px;overflow:auto;border:1px solid #e6e8ee;border-radius:8px}
+.admin-page .admin-data-table table{width:100%;min-width:0;font-size:14px}
+.admin-page .admin-data-table th,.admin-page .admin-data-table td{padding:9px 10px;vertical-align:top;overflow-wrap:anywhere;line-height:1.4}
+.admin-page .admin-data-table th{position:sticky;top:0;z-index:1;background:#f5f5fa}
+.admin-page .admin-data-table tfoot td{position:sticky;bottom:0;background:#f5f5fa;font-weight:700}
+.admin-page .admin-data-table td.admin-number,.admin-page .admin-data-table th.admin-number{text-align:right;font-variant-numeric:tabular-nums}
+.admin-page .admin-data-table td.admin-number{overflow-wrap:normal}.admin-exact-money{white-space:nowrap}
+.admin-sort{font:inherit;font-weight:700;color:#4d5367;background:transparent;border:0;padding:0;min-height:34px;text-align:inherit;width:100%;line-height:1.35}
+.admin-sort span{white-space:nowrap}
+.admin-row-detail{padding:6px 8px;background:#fff3f6;border:1px solid #ebcbd3;color:#8d2441;white-space:nowrap;font-size:13px;min-height:34px}
+.admin-data-table tbody tr{cursor:pointer}
+.admin-data-table tbody tr:focus-visible,.admin-sort:focus-visible,.admin-plot [role=button]:focus-visible{outline:2px solid #d44664;outline-offset:-2px}
+.admin-pagination{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:14px}
+.admin-pagination button{min-height:36px}
+.admin-column-picker{position:relative;margin-left:auto}
+.admin-column-picker summary{cursor:pointer;padding:8px;border:1px solid #d5dae2;border-radius:8px}
+.admin-column-picker>div{position:absolute;right:0;top:100%;z-index:5;display:grid;gap:9px;min-width:245px;max-height:330px;overflow:auto;background:white;border:1px solid #d5dae2;border-radius:10px;padding:14px;box-shadow:0 8px 24px #23234422}
+.admin-column-picker label{display:flex;align-items:center;gap:8px;font-size:14px}
+.admin-column-picker input{width:18px;height:18px}
+.admin-dialog{max-width:min(760px,90vw);max-height:85vh;overflow:auto;border:1px solid #d5dae2;border-radius:16px;padding:24px;color:#232344;background:white}
+.admin-dialog::backdrop{background:#15152888}
+.admin-dialog>header{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.admin-record{display:grid;gap:12px;font-size:15px}
+.admin-record>div{display:grid;grid-template-columns:minmax(140px,1fr) 2fr;gap:18px;border-bottom:1px solid #ececf2;padding:10px 0}
+.admin-record dt{font-weight:700}.admin-record dd{margin:0;overflow-wrap:anywhere}
+.admin-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.admin-chart-panel{min-width:0;margin:16px 0}
+.admin-chart-modes,.admin-chart-legend{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-bottom:10px;font-size:14px}
+.admin-chart-modes button[aria-pressed=true]{background:#232344;color:white}
+.admin-chart-legend span{display:flex;align-items:center;gap:6px}
+.admin-chart-legend i{width:12px;height:12px;background:#d44664;border-radius:3px}
+.admin-chart-legend span:nth-child(2) i{background:#232344}
+.admin-chart-legend small,.admin-chart-note{font-size:13px;color:#62687a}
+.admin-plot{position:relative;min-width:0}.admin-plot svg{display:block;font-size:13px;fill:#575d70}
+.admin-plot [role=button]{cursor:pointer}
+.admin-chart-tooltip{position:absolute;top:0;pointer-events:none;z-index:3;display:grid;gap:5px;width:225px;background:#232344;color:white;padding:12px;border-radius:10px;box-shadow:0 5px 20px #0002;font-size:14px}
+.admin-chart-tooltip strong{font-size:19px}
+.admin-report-views>.admin-periods{justify-content:flex-end;margin-bottom:12px}
+.admin-detail-selects{display:flex;gap:12px;flex-wrap:wrap;margin:12px 0}
+.admin-detail-selects label{display:grid;gap:5px;flex:1;min-width:160px;font-size:14px}
+.admin-detail-selects select{font-size:14px;padding:10px;min-height:40px}
+.admin-page .admin-filters p,.admin-page .admin-dates label{font-size:14px}
+.admin-page .admin-stat span{font-size:13px}
+@media(max-width:650px){.admin-page .admin-fold{padding:16px}.admin-record>div{grid-template-columns:1fr;gap:6px}.admin-page .admin-data-table table{min-width:520px}.admin-table-tools input[type=search]{max-width:none}.admin-column-picker{margin-left:0}}
+
+.admin-detail-target{min-width:0;scroll-margin-top:16px}
+
+/* Keep controls readable while using the vertical space of a 13-inch notebook. */
+#root:has(>.admin-page)>.marca{padding-top:14px;padding-bottom:14px}
+#root:has(>.admin-page)>.subnav{margin-bottom:12px}
+.admin-page{padding-top:6px;gap:12px}
+.admin-page .admin-tabs button{min-height:40px;padding:8px 12px}
+.admin-page>.admin-range-filters{padding:14px 18px;grid-template-columns:1fr auto;align-items:center;gap:8px}
+.admin-range-filters>.admin-periods,.admin-range-filters>.admin-dates{grid-column:1/-1}
+.admin-page .admin-range-filters>button{min-height:38px;padding:8px 12px;grid-column:2;grid-row:2}
+@media(max-width:700px){.admin-page>.admin-range-filters{grid-template-columns:1fr}.admin-page .admin-range-filters>button{grid-column:1;grid-row:auto}}
