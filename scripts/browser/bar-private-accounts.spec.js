@@ -35,6 +35,7 @@ async function setup(page,role='ADMIN',{lostPay=false,quoteBlocked=false}={}){
 test('productos: tabla compacta sin precio socio y diez columnas administrativas',async({page})=>{
  await setup(page);await page.getByRole('button',{name:'Stock y precios',exact:true}).click()
  const table=page.locator('.bar-stock-sheet table');await expect(table).toBeVisible()
+ if(await table.getByRole('columnheader').count()!==10)console.log('STOCK_TABLE_DIAGNOSTIC',await table.ariaSnapshot(),await table.innerHTML())
  await expect(table.getByRole('columnheader')).toHaveCount(10)
  await expect(table.getByRole('columnheader',{name:'Precio socio',exact:true})).toHaveCount(0)
  await expect(table.getByRole('columnheader',{name:'Ganancia bruta unitaria',exact:true})).toBeVisible()

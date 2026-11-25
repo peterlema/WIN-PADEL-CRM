@@ -21,11 +21,8 @@ jobs:
           cache: npm
       - name: Generar archivo de migración
         run: |
-          npx --yes supabase migration new --help
-          npx --yes supabase migration new win_bar_private_accounts
-          target=$(find supabase/migrations -name '*_win_bar_private_accounts.sql' | sort | tail -1)
-          cp supabase/operations/bar-private-accounts.sql "$target"
-          echo "MIGRATION_FILE=$target"
+          cmp supabase/operations/bar-private-accounts.sql supabase/migrations/20261125163707_win_bar_private_accounts.sql
+          echo "MIGRATION_FILE=supabase/migrations/20261125163707_win_bar_private_accounts.sql"
       - run: node scripts/bar-production-smoke.mjs --inspect
       - run: npm ci
       - run: node supabase/tests/bar-private-accounts.test.mjs

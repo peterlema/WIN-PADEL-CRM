@@ -444,7 +444,23 @@ begin
  end if;
  return public.win_bar_request_status_v190_(p_token,p_request_id,p_kind,p_payload);
 end;$$;
-do $$declare f record;begin
+
+-- Operators receive public prices and quantities, never cost/margin or private configuration.
+alter function public.win_bar_products_list(text) rename to win_bar_products_list_v190_;
+create function public.win_bar_products_list(p_token text) returns jsonb language plpgsql stable set search_path='' as $
+declare role_ text;result_ jsonb;products_ jsonb;
+begin
+ result_=public.win_bar_products_list_v190_(p_token);
+ select role into role_ from public.win_pin_session(p_token);
+ if role_='ADMIN' then return result_;end if;
+ select coalesce(jsonb_agg(pr-'unitCost'-'grossMarginUnit'-'grossMarginPercent'-'inventoryValue'-'provisionalInitialCost'-'automaticUnitCost'-'initialBasisCost'-'initialCostFraction'-'costOrigin'),'[]')
+ into products_ from jsonb_array_elements(result_->'products')pr;
+ return jsonb_build_object('products',products_,'canEdit',false);
+end;$;
+revoke all on function public.win_bar_products_list(text),public.win_bar_products_list_v190_(text) from public,anon,authenticated;
+grant execute on function public.win_bar_products_list(text),public.win_bar_products_list_v190_(text) to service_role;
+
+do $declare f record;begin
  for f in select p.oid::regprocedure signature from pg_proc p join pg_namespace n on n.oid=p.pronamespace
  where n.nspname='public' and (p.proname like 'win_bar_private%' or p.proname in('win_bar_inventory_api','win_bar_inventory_v190_','win_bar_request_status','win_bar_request_status_v190_','win_bar_customer_create','win_bar_customers')) loop
  execute format('revoke all on function %s from public,anon,authenticated',f.signature);

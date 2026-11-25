@@ -56,6 +56,8 @@ await db.exec(readFileSync(new URL('../operations/bar-private-accounts.sql',impo
 assert.deepEqual(await scalar('select to_jsonb(i)-$2 v from win_bar_order_items i where order_id=$1',[historical.id,'private_policy_snapshot']),historyBefore)
 assert.equal(await stock(),stockBefore)
 assert.equal((await inv('private.list')).accounts.length,0)
+assert.equal((await scalar("select win_bar_products_list('tok-bar') v")).products[0].unitCost,undefined)
+assert.ok((await scalar("select win_bar_products_list('tok-pedro') v")).products[0].unitCost!=null)
 assert.equal((await scalar("select win_bar_customers('tok-pedro') v")).customers.length,0)
 await reject(()=>oldPlace(orderPayload(legacy)),'PRIVATE_ACCOUNT_UNAUTHORIZED')
 await reject(()=>scalar("select win_bar_customer_create('tok-bar','No autorizado') v"),'PRIVATE_ACCOUNT_ADMIN_REQUIRED')
