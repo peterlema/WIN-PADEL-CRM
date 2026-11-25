@@ -19,6 +19,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - run: npx --yes supabase migration new win_bar_cash_totals_compatibility
       - run: npm ci
       - run: node supabase/tests/bar-stabilization.test.mjs
       - run: npm run test:bar
