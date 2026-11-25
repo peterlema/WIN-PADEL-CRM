@@ -59,7 +59,7 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
     callApi('bar.products'),callApi('bar.customers'),callApi('bar.pending'),callApi('bar.inventory.cash.state'),callApi('me')
    ])
    setProducts(p.products||[]);setCustomers(c.customers||[])
-   setPending(o.orders||[]);setShift(sh.shift||null);setBankReady(sh.bankConfigured===true);setOwner(me.user.id)
+   setPending(o.orders||[]);setShift(sh.shift||null);setBankReady(sh.transfersEnabled!==false);setOwner(me.user.id)
   }catch(e){setError(e.message||'No se pudo actualizar el Bar.')}
   finally{setLoading(false)}
  },[])
@@ -212,6 +212,7 @@ export default function QuickBar({soloVenta=false,onOpenCash=()=>{},onOpenAccoun
      {[['IMMEDIATE','Cobrar ahora'],['COURT','Pendiente de cancha'],['ACCOUNT','Cuenta corriente']].map(([id,label])=><button type="button" key={id} aria-pressed={destination===id} onClick={()=>setDestination(id)}>{label}</button>)}
     </fieldset>
     {destination==='IMMEDIATE'&&<fieldset className="win-bar-methods"><legend>Medio de pago</legend>{payMethods.map(([v,label])=><button key={v} type="button" disabled={v==='TRANSFER'&&!bankReady} title={v==='TRANSFER'&&!bankReady?'Configurá la cuenta exclusiva del Bar':''} className={method===v?'selected':''} onClick={()=>setMethod(v)}>{label}</button>)}</fieldset>}
+    {destination==='IMMEDIATE'&&method==='TRANSFER'&&<p className="win-bar-warning">Verificá el ingreso y compartí la foto del comprobante en el grupo.</p>}
     {destination==='IMMEDIATE'&&<details className="bar-pos-optional"><summary>Asociar cancha (opcional)</summary><fieldset className="bar-pos-choice bar-pos-cliente"><legend>Identificación opcional</legend>
      <button type="button" aria-pressed={cliente==='COURT'} onClick={()=>setCliente('COURT')}>Cancha y horario</button>
      <button type="button" aria-pressed={cliente==='UNKNOWN'} onClick={()=>{setCliente('UNKNOWN');setBookingId('')}}>No conozco cliente</button>

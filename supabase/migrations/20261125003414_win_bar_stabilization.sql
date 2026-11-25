@@ -1,12 +1,4 @@
-
--- Additive stabilization. No opening seed and no historic updates.
-alter table public.win_bar_bank_config add column bank_name text;
-alter table public.win_bar_bank_config add column account_holder text;
-alter table public.win_bar_bank_config add column identifier_type text check(identifier_type in ('ALIAS','CBU','CVU'));
-alter table public.win_bar_bank_config add column account_identifier text;
-alter table public.win_bar_bank_config add column confirmed_at timestamptz;
-alter table public.win_bar_bank_config add column confirmed_by uuid references win_auth.login_accounts(id);
-alter table public.win_bar_cash_movements add column bank_details_snapshot jsonb;
+-- Stabilization after v0.17.6. Bank configuration and optional transfers stay unchanged.
 alter table public.win_bar_cash_shifts add column closing_snapshot jsonb;
 alter table public.win_bar_cash_movements drop constraint win_bar_cash_movements_kind_check;
 alter table public.win_bar_cash_movements drop constraint win_bar_cash_movements_check;
@@ -22,25 +14,6 @@ alter table public.win_bar_orders add constraint bar_destination_check check(
  (destination='COURT' and court is not null and court_date is not null and court_start is not null and customer_id is null and not client_unknown));
 create index win_bar_movements_time on public.win_bar_cash_movements(occurred_at);
 create index win_bar_orders_time on public.win_bar_orders(created_at);
-create function public.win_bar_bank_ready() returns boolean language sql stable set search_path='' as $$
- select exists(select 1 from public.win_bar_bank_config where confirmed_at is not null and confirmed_by is not null
- and nullif(btrim(bank_name),'') is not null and nullif(btrim(account_holder),'') is not null
- and identifier_type in ('ALIAS','CBU','CVU') and nullif(btrim(account_identifier),'') is not null)
-$$;
-create or replace function public.win_bar_cash_guard() returns trigger language plpgsql set search_path='' as $$
-declare sh public.win_bar_cash_shifts%rowtype;b public.win_bar_bank_config%rowtype;
-begin
- select * into sh from public.win_bar_cash_shifts where id=new.shift_id for update;
- if not found or sh.status<>'OPEN' then raise exception 'BAR_SHIFT_NOT_OPEN';end if;
- if not public.win_bar_allowed(new.recorded_by) then raise exception 'NOT_AUTHORIZED';end if;
- if new.payment_method='TRANSFER' then
-  if not public.win_bar_bank_ready() then raise exception 'BAR_BANK_REQUIRED';end if;
-  select * into b from public.win_bar_bank_config for share;
-  new.bank_account_snapshot=b.account_label;
-  new.bank_details_snapshot=jsonb_build_object('bank',b.bank_name,'holder',b.account_holder,'identifierType',b.identifier_type,'identifier',b.account_identifier,'confirmedAt',b.confirmed_at);
- end if;
- return new;
-end;$$;
 create function public.win_bar_shift_totals(p_shift uuid) returns jsonb language sql stable set search_path='' as $$
  select jsonb_build_object('openingCash',s.opening_cash,
  'cashSales',coalesce(sum(m.amount_signed) filter(where m.kind='SALE' and m.payment_method='CASH'),0),
@@ -107,7 +80,7 @@ create function public.win_bar_period_summary(start_ date,end_ date) returns jso
   'unknownCostUnits',(select coalesce(sum(quantity) filter(where unit_cost is null),0) from lines_),
   'topProducts',coalesce((select jsonb_agg(to_jsonb(x)) from(select product_id,max(product_label) name,sum(quantity) units,sum(amount) sales from lines_ group by product_id order by sum(quantity) desc,product_id limit 8)x),'[]'))
 $$;
-alter function public.win_bar_inventory_api(text,text,jsonb) rename to win_bar_inventory_v174_;
+alter function public.win_bar_inventory_api(text,text,jsonb) rename to win_bar_inventory_v176_;
 create function public.win_bar_inventory_api(p_token text,p_action text,p jsonb default '{}') returns jsonb language plpgsql set search_path='' as $$
 declare actor uuid;r text;req uuid;saved public.win_bar_inventory_requests%rowtype;result_ jsonb;before_ jsonb;
  b public.win_bar_bank_config%rowtype;sh public.win_bar_cash_shifts%rowtype;target uuid;totals jsonb;
@@ -115,7 +88,7 @@ declare actor uuid;r text;req uuid;saved public.win_bar_inventory_requests%rowty
 begin
  select s.account_id,s.role into actor,r from public.win_pin_session(p_token)s;
  if actor is null then raise exception 'SESSION_INVALID';end if;
- if p_action='access' then return public.win_bar_inventory_v174_(p_token,p_action,p);end if;
+ if p_action='access' then return public.win_bar_inventory_v176_(p_token,p_action,p);end if;
  if not public.win_bar_allowed(actor) then raise exception 'NOT_AUTHORIZED';end if;
  if p_action='accounts' then return public.win_bar_accounts(p_token,p);end if;
  if p_action='dashboard' then
@@ -131,7 +104,7 @@ begin
   select s.* into sh from public.win_bar_cash_shifts s where status='OPEN';
   select * into b from public.win_bar_bank_config;
   return jsonb_build_object('canManage',r='ADMIN','currentUserId',actor,'shift',case when sh.id is not null then to_jsonb(sh)||(select jsonb_build_object('responsible',display_name) from win_auth.login_accounts where id=sh.opened_by) end,
-   'bankConfigured',public.win_bar_bank_ready(),'bankAccount',b.account_label,'bank',case when b.singleton is not null then to_jsonb(b) end,
+   'transfersEnabled',true,'bankConfigured',public.win_bar_bank_ready_(),'canConfigureBank',r='ADMIN','bankConfig',case when b.singleton is not null then to_jsonb(b) end,'bankAccount',b.account_label,'bank',case when b.singleton is not null then to_jsonb(b) end,
    'totals',public.win_bar_shift_totals(sh.id),'cashExpected',coalesce((public.win_bar_shift_totals(sh.id)->>'cashExpected')::numeric,0),
    'shifts',coalesce((select jsonb_agg(to_jsonb(x) order by x.opened_at desc) from
     (select s.*,a.display_name responsible,public.win_bar_shift_totals(s.id) totals from public.win_bar_cash_shifts s join win_auth.login_accounts a on a.id=s.opened_by order by s.opened_at desc limit 50)x),'[]'),
@@ -140,7 +113,7 @@ begin
    'bankHistory',case when r='ADMIN' then coalesce((select jsonb_agg(to_jsonb(x) order by x.created_at desc) from
     (select i.created_at,i.before_record,i.after_record,a.display_name author from public.win_bar_inventory_audit i join win_auth.login_accounts a on a.id=i.actor_id where i.action='bank.save' order by i.created_at desc limit 30)x),'[]') else '[]'::jsonb end);
  end if;
- if p_action not in ('bank.save','cash.close','cash.out') then return public.win_bar_inventory_v174_(p_token,p_action,p);end if;
+ if p_action not in ('cash.close','cash.out') then return public.win_bar_inventory_v176_(p_token,p_action,p);end if;
  req=(p->>'requestId')::uuid;if req is null then raise exception 'BAR_REQUEST_REQUIRED';end if;
  perform pg_advisory_xact_lock(hashtextextended('bar-request:'||req::text,0));
  select * into saved from public.win_bar_inventory_requests where request_id=req;
@@ -149,19 +122,7 @@ begin
   return saved.result||jsonb_build_object('replayed',true);
  end if;
  note_=btrim(coalesce(p->>'note',''));if length(note_)>1000 then raise exception 'BAR_DATA_INVALID';end if;
- if p_action='bank.save' then
-  if r<>'ADMIN' then raise exception 'NOT_AUTHORIZED';end if;
-  if p->>'confirmed' is distinct from 'true' or length(btrim(coalesce(p->>'bank',''))) not between 2 and 120 or length(btrim(coalesce(p->>'holder',''))) not between 2 and 160
-   or p->>'identifierType' is null or p->>'identifierType' not in ('ALIAS','CBU','CVU') then raise exception 'BAR_BANK_INVALID';end if;
-  if nullif(p->>'identifier','') is null or (p->>'identifierType' in ('CBU','CVU') and p->>'identifier' !~ '^[0-9]{22}$') or
-    (p->>'identifierType'='ALIAS' and (length(btrim(coalesce(p->>'identifier',''))) not between 6 and 20 or p->>'identifier' !~ '^[a-zA-Z0-9.-]+$')) then raise exception 'BAR_BANK_INVALID';end if;
-  perform pg_advisory_xact_lock(hashtextextended('bar-bank',0));
-  select to_jsonb(c) into before_ from public.win_bar_bank_config c;
-  insert into public.win_bar_bank_config(account_label,bank_name,account_holder,identifier_type,account_identifier,confirmed_by,confirmed_at,updated_by)
-   values(btrim(p->>'bank')||' · '||btrim(p->>'holder')||' · '||btrim(p->>'identifier'),btrim(p->>'bank'),btrim(p->>'holder'),p->>'identifierType',btrim(p->>'identifier'),actor,now(),actor)
-   on conflict(singleton) do update set account_label=excluded.account_label,bank_name=excluded.bank_name,account_holder=excluded.account_holder,
-    identifier_type=excluded.identifier_type,account_identifier=excluded.account_identifier,confirmed_by=actor,confirmed_at=now(),updated_by=actor,updated_at=now();
- elsif p_action='cash.close' then
+ if p_action='cash.close' then
   select * into sh from public.win_bar_cash_shifts where id=(p->>'shiftId')::uuid for update;
   if not found or sh.status<>'OPEN' then raise exception 'BAR_SHIFT_NOT_OPEN';end if;
   if sh.opened_by<>actor and r<>'ADMIN' then raise exception 'NOT_AUTHORIZED';end if;
@@ -184,11 +145,11 @@ begin
  insert into public.win_bar_inventory_requests(request_id,actor_id,action,payload,result) values(req,actor,p_action,p,result_);
  return result_;
 end;$$;
-alter function public.win_bar_request_status(text,uuid,text,jsonb) rename to win_bar_request_status_v174_;
+alter function public.win_bar_request_status(text,uuid,text,jsonb) rename to win_bar_request_status_v176_;
 create function public.win_bar_request_status(p_token text,p_request_id uuid,p_kind text,p_payload jsonb default '{}') returns jsonb language plpgsql set search_path='' as $$
 declare actor uuid;saved public.win_bar_inventory_requests%rowtype;action_ text;
 begin
- if p_kind is distinct from 'INVENTORY' then return public.win_bar_request_status_v174_(p_token,p_request_id,p_kind,p_payload);end if;
+ if p_kind is distinct from 'INVENTORY' then return public.win_bar_request_status_v176_(p_token,p_request_id,p_kind,p_payload);end if;
  select account_id into actor from public.win_pin_session(p_token);
  if actor is null then raise exception 'SESSION_INVALID';end if;
  if not public.win_bar_allowed(actor) then raise exception 'NOT_AUTHORIZED';end if;
@@ -202,10 +163,10 @@ begin
  return jsonb_build_object('state','FOUND','result',saved.result||jsonb_build_object('replayed',true));
 end;$$;
 do $$declare signature regprocedure;begin
- foreach signature in array array['public.win_bar_bank_ready()'::regprocedure,'public.win_bar_shift_totals(uuid)'::regprocedure,
+ foreach signature in array array['public.win_bar_shift_totals(uuid)'::regprocedure,
  'public.win_bar_accounts(text,jsonb)'::regprocedure,'public.win_bar_period_summary(date,date)'::regprocedure,
- 'public.win_bar_inventory_api(text,text,jsonb)'::regprocedure,'public.win_bar_inventory_v174_(text,text,jsonb)'::regprocedure,
- 'public.win_bar_request_status(text,uuid,text,jsonb)'::regprocedure,'public.win_bar_request_status_v174_(text,uuid,text,jsonb)'::regprocedure] loop
+ 'public.win_bar_inventory_api(text,text,jsonb)'::regprocedure,'public.win_bar_inventory_v176_(text,text,jsonb)'::regprocedure,
+ 'public.win_bar_request_status(text,uuid,text,jsonb)'::regprocedure,'public.win_bar_request_status_v176_(text,uuid,text,jsonb)'::regprocedure] loop
  execute format('revoke all on function %s from public,anon,authenticated',signature);
  execute format('grant execute on function %s to service_role',signature);
  end loop;
