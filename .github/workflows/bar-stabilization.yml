@@ -1,0 +1,29 @@
+name: Verificar Bar diario
+on:
+  push:
+    branches: [stabilize/bar-daily]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Generar nombre de migración con CLI oficial
+        run: |
+          npx --yes supabase --help
+          npx --yes supabase migration --help
+          npx --yes supabase migration new --help
+          npx --yes supabase migration new win_bar_stabilization
+      - run: npm run test:bar
+      - run: npm run test:bar-costs
+      - run: npm run test:bar-purchases
+      - run: npm run test:bar-checkout
+      - run: npm run test:money
+      - run: npm run build
