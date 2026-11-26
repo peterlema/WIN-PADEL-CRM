@@ -1,7 +1,7 @@
 {
   "name": "win-padel-crm",
   "private": true,
-  "version": "0.21.1",
+  "version": "0.22.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -22,7 +22,8 @@
     "test:bar-daily": "node supabase/tests/bar-stabilization.test.mjs",
     "test:admin-reports": "node scripts/admin-reports.test.mjs",
     "test:bar-private": "node supabase/tests/bar-private-accounts.test.mjs && node scripts/xlsx-export.test.mjs",
-    "test:first-migration": "node supabase/tests/first-migration.test.mjs && python3 scripts/test_first_migration.py"
+    "test:first-migration": "node supabase/tests/first-migration.test.mjs && python3 scripts/test_first_migration.py",
+    "test:manual": "node supabase/tests/manual-recovery.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.2",

@@ -1,0 +1,56 @@
+
+import {createRequire} from 'node:module';
+import assert from 'node:assert/strict';
+const {chromium,webkit}=createRequire(import.meta.url)('playwright');
+const type=process.env.WIN_TEST_BROWSER==='webkit'?webkit:chromium;
+const browser=await type.launch(type===chromium?{channel:'chrome'}:{});
+const page=await browser.newPage({viewport:{width:1280,height:800}});
+const errors=[],requests=[];page.on('pageerror',e=>errors.push(e.message));
+await page.addInitScript(()=>{sessionStorage.setItem('win_session_token','isolated-manual-mode');sessionStorage.setItem('win_admin_view',JSON.stringify({range:'history'}))});
+const report=(start,end)=>({start,end,totals:{collected:10000,expenses:0,result:10000,activityNet:0,withdrawals:0,entries:1},daily:[{date:start,collected:10000,expenses:0,activityNet:0}],recent:[{id:'r1',date:start,activity_date:start,category:'RESERVA',kind:'SALE',unit:'COURTS',method:'CASH',amount:10000,note:'Cobro operativo',user:'Persona de prueba',source:'LIVE'}],operations:[],activity:[],history:{rows:999,start:'2020-01-01',end:'2026-11-23'},coverage:{start:'2026-11-26',end:'2026-11-26'},categories:[{unit:'COURTS',category:'RESERVA',kind:'SALE',count:1,collected:10000,expenses:0}],methods:[{method:'CASH',collected:10000,expenses:0}],academy:[],academyDaily:[],resources:[],events:[],occupancy:{occupiedHours:0,capacityHours:20,missingCourtDays:0},corrections:[],controls:[],shifts:[],historicalShifts:[],audit:[]});
+await page.route('**/functions/v1/win-api',async route=>{
+ const headers={'Access-Control-Allow-Origin':'*','Access-Control-Allow-Headers':'authorization,content-type','Access-Control-Allow-Methods':'POST, OPTIONS'};
+ const reply=(x,status=200)=>route.fulfill({status,headers,contentType:'application/json',body:JSON.stringify(x)});
+ if(route.request().method()==='OPTIONS')return reply({});
+ const p=route.request().postDataJSON();requests.push(p);
+ if(p.action==='me')return reply({user:{id:'admin',name:'Admin aislado',role:'ADMIN'}});
+ if(p.action==='bar.inventory.access')return reply({allowed:true});
+ if(p.action==='ops.admin')return reply(report(p.start,p.end));
+ if(p.action==='ops.export')return reply({rows:[]});
+ if(p.action==='cash.state')return reply({shift:null});
+ if(p.action==='calendar.range')return reply({rows:[],settings:{GRID_OPEN_MIN:480,GRID_CLOSE_MIN:1500},context:{coaches:[{id:'t1',name:'Profesor aislado',active:true}]}});
+ if(['calendar.pending','calendar.customers','calendar.abonos'].includes(p.action))return reply({rows:[]});
+ if(p.action==='calendar.waitlist')return reply({rows:[],opportunities:[]});
+ if(p.action==='calendar.quote')return reply({gross:70000,teacherPay:28000,winNet:42000,winPct:60});
+ if(p.action==='calendar.class.series.create')return reply({id:'series',date:p.date,count:3,bookings:[]});
+ return reply({error:'Fuera del alcance de la prueba aislada'},403);
+});
+try{
+ await page.goto('http://127.0.0.1:5182/#/admin');
+ await page.getByRole('heading',{name:'Administración',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Finanzas',exact:true}).click();
+ assert.equal(await page.getByRole('button',{name:'Histórico importado',exact:true}).count(),0);
+ assert.equal(await page.getByText(/Histórico incorporado/).count(),0);
+ await page.getByRole('button',{name:'Exportar período completo (CSV Excel)',exact:true}).click();
+ await page.goto('http://127.0.0.1:5182/#/calendario');
+ await page.getByRole('button',{name:'Crear clase',exact:true}).click();
+ const dialog=page.getByRole('dialog');
+ await dialog.getByLabel('Fecha',{exact:true}).fill('2030-01-07');
+ await dialog.getByLabel('Profesor',{exact:true}).selectOption('t1');
+ await dialog.getByLabel('Repetir esta clase semanalmente').check();
+ await dialog.getByLabel('Repetir hasta',{exact:true}).fill('2030-01-21');
+ await dialog.getByRole('button',{name:'Programar clase',exact:true}).click();
+ await page.getByText('Cambios guardados.',{exact:true}).waitFor();
+ const created=requests.find(p=>p.action==='calendar.class.series.create');
+ assert.ok(created?.requestId);assert.equal(created.classUntil,'2030-01-21');assert.equal(created.kind,'CLASE');
+ assert.equal(await page.getByRole('button',{name:'Revisar importación',exact:true}).count(),0);
+ assert.equal(await page.getByRole('button',{name:'Abonos semanales',exact:true}).count(),0);
+ await page.getByRole('button',{name:'Clientes',exact:true}).click();
+ await page.getByRole('button',{name:'Agregar cliente',exact:true}).waitFor();
+ await page.getByRole('button',{name:'Lista de espera',exact:true}).click();
+ await page.getByRole('heading',{name:'Lista de espera de abonos'}).waitFor();
+ const size=await page.evaluate(()=>({width:innerWidth,document:document.documentElement.scrollWidth}));
+ assert.ok(size.document<=size.width+2);assert.deepEqual(errors,[]);
+ assert.ok(requests.every(p=>!p.action.startsWith('calendar.registry.')&&!p.action.includes('.pay')&&!p.action.includes('.place')));
+ console.log('PASS interfaz manual '+type.name()+': administración sin importaciones, filtros/Excel, clientes, espera y clases semanales a 1280×800; API interceptada, cero escrituras reales');
+}catch(e){console.log('UI_ERRORS',errors);console.log('UI_TEXT',await page.locator('body').innerText());console.log('REQUESTS',requests.map(p=>p.action));throw e}finally{await browser.close()}

@@ -15,7 +15,7 @@ function report(start,end){
  })
  const collected=daily.reduce((n,d)=>n+d.collected,0),expenses=daily.reduce((n,d)=>n+d.expenses,0)
  return {start,end,totals:{collected,expenses,result:collected-expenses,activityNet:n*1500,withdrawals:0,entries:n},daily,recent,operations,
-  history:{start:begin,end:finish,rows:5000,baseline:{},current:{}},
+  coverage:{start:begin,end:finish},
   categories:[{unit:'COURTS',category:'RESERVA',kind:'SALE',count:n/2,collected,expenses:0}],methods:[{method:'CASH',collected,expenses}],
   activity:[{type:'CLASE',count:n/2,net:n*750,hours:n/2},{type:'RESERVA',count:n/2,net:n*750,hours:n/2}],
   academy:[{id:'t1',name:'Profesor de prueba',classes:n/2,individual:0,double:n/2,triple:0,four:0,average:2,gross:n*1250,remuneration:n*500,net:n*750,received:0,balance:{balance:0,credit:0,days:[]}}],
@@ -77,11 +77,15 @@ test('MacBook: orden, búsqueda, páginas, columnas, detalle y filtros conservad
  await page.screenshot({path:test.info().outputPath('admin-macbook.png'),fullPage:true})
  expect(requests.every(r=>['me','bar.inventory.access','ops.admin'].includes(r.action))).toBe(true)
 })
-test('histórico completo: totales estables al buscar/paginar, vistas y selección de una barra',async({page})=>{
+test('período operativo completo: totales estables al buscar/paginar, vistas y selección de una barra',async({page})=>{
  await setup(page)
- await page.getByRole('button',{name:'Histórico importado',exact:true}).click()
+ await expect(page.getByRole('button',{name:'Histórico importado',exact:true})).toHaveCount(0)
+ await page.getByRole('button',{name:'Personalizado',exact:true}).click()
+ await page.getByLabel('Desde',{exact:true}).fill(begin)
+ await page.getByLabel('Hasta',{exact:true}).fill(finish)
  const grid=page.locator('.admin-data-table').filter({hasText:'Ingresos por jornada'}).last()
  await expect(grid.getByText(/Total período/)).toBeVisible()
+ await expect(grid.getByRole('button',{name:'Siguiente',exact:true})).toBeEnabled()
  const totals=await grid.locator('tfoot').innerText()
  const dimensions=await grid.locator('.admin-table-wrap').evaluate(el=>({scroll:el.scrollWidth,width:el.clientWidth}))
  expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.width+2)
