@@ -9,12 +9,12 @@ clasificación, vínculos, revisiones, responsable y auditoría.
 
 | Fuente | Clasificación |
 |---|---|
-| Clientes, 670 filas | 513 claros, 18 duplicados exactos, 139 para revisión |
+| Clientes, 670 filas | 511 claros, 18 duplicados exactos, 141 para revisión |
 | Abonos, 78 candidatos | 43 claros, 22 para revisión, 6 regresos pendientes, 3 bajas, 2 posibles, 2 actividades internas |
 | Espera, 44 filas con contenido | 43 con nombre, 1 sin nombre; 11 necesitan completar o revisar contacto/disponibilidad |
 
 La fila sin nombre de espera conserva sus días y horario; no se supone que
-pertenezca al contacto de la fila anterior. Dos fichas potencialmente existentes en WIN se separaron tras comparar con producción, además de los 137 casos observados inicialmente. Los horarios especiales sin duración
+pertenezca al contacto de la fila anterior. Cuatro filas adicionales se separaron tras comparar con producción y verificar teléfonos que difieren en un dígito dentro del mismo apellido, además de los 137 casos observados inicialmente. Los horarios especiales sin duración
 explícita quedan pendientes. Los teléfonos escritos bajo «Precio» se interpretan
 como teléfonos, nunca como importes. La hoja demo y las secciones financieras del
 reporte de clientes quedan fuera de la carga.

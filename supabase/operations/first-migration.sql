@@ -112,7 +112,12 @@ declare obj jsonb;r public.win_migration_rows;inserted int:=0;begin
  perform pg_catalog.pg_advisory_xact_lock(438011,2);
  for obj in select * from jsonb_array_elements(p_rows) loop
   select * into r from public.win_migration_rows where source_key=obj->>'sourceKey';
-  if found then if r.original<>obj then raise exception 'IMPORT_SOURCE_CHANGED';end if;continue;end if;
+  if found then
+   if r.file_sha256 is distinct from obj->>'sha256' or r.kind is distinct from obj->>'kind' or r.original->'raw' is distinct from obj->'raw' then raise exception 'IMPORT_SOURCE_CHANGED';end if;
+   -- Derived classifications can change when a preview sees already imported
+   -- customers. The original source is stable; never overwrite reviewed rows.
+   continue;
+  end if;
   insert into public.win_migration_rows(source_key,source_file,file_sha256,sheet,cell,kind,status,original,data,reasons,created_by)
   values(obj->>'sourceKey',obj->>'file',obj->>'sha256',obj->>'sheet',obj->>'cell',obj->>'kind',obj->>'status',obj,obj,coalesce(obj->'reasons','[]'),p_actor) returning * into r;
   perform public.win_migration_apply(r.id,p_actor);inserted=inserted+1;

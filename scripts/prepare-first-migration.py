@@ -64,6 +64,13 @@ def prepare(workbooks, existing):
         if len({key(x['name']) for x in byphone[c['phone']]}) > 1:
             c['reasons'].append('Teléfono compartido por identificaciones diferentes: no fusionar')
         if c['reasons']: c['status'] = 'REVIEW'
+    clear = [c for c in clients if c['status']=='CONFIRMED']
+    for i, c in enumerate(clear):
+        for other in clear[i+1:]:
+            if key(c['name']).split()[-1:] == key(other['name']).split()[-1:] and len(c['phone'])==len(other['phone']) and sum(a!=b for a,b in zip(c['phone'],other['phone']))==1:
+                for suspect in (c,other):
+                    suspect['status']='REVIEW'
+                    suspect['reasons'].append('Mismo apellido y teléfonos que difieren en un dígito: confirmar ambas identidades')
     # Compare with current WIN identities before producing the write preview.
     # Missing telephone, aliases and probable typos require explicit linkage.
     for c in clients:

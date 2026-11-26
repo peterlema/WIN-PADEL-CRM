@@ -46,7 +46,8 @@ assert.equal((await importRows([client,abon,waiting])).inserted,0)
 assert.equal((await one('select count(*)::int n from public.win_court_abonos')).n,1)
 assert.deepEqual(await financial(),before)
 assert.equal((await one('select count(*)::int n from public.win_court_bookings')).n,0)
-await fail(()=>importRows([{...client,name:'Fuente modificada'}]),'IMPORT_SOURCE_CHANGED')
+await fail(()=>importRows([{...client,raw:{changed:true}}]),'IMPORT_SOURCE_CHANGED')
+assert.equal((await importRows([{...client,status:'REVIEW',reasons:['La vista previa ahora encuentra la ficha incorporada']}])).inserted,0)
 const aid=(await one('select abono_id from public.win_migration_rows where source_key=$1',[abon.sourceKey])).abono_id
 const series=await one('select * from public.win_court_abonos where id=$1',[aid])
 assert.equal(series.agreed_amount,null);assert.equal(series.expected_method,null)
@@ -87,11 +88,15 @@ assert.equal((await api('admin','request',{requestId:payload.requestId})).found,
 await db.exec("delete from public.win_calendar_requests;delete from public.win_cash_audit;delete from public.win_migration_rows;delete from public.win_calendar_waitlist;delete from public.win_court_abonos;delete from public.win_customers")
 if(process.argv[2]){
  const actual=JSON.parse(readFileSync(process.argv[2],'utf8'))
+ for(const old of actual.existing.customers||[])await q('insert into public.win_customers(id,name,phone,created_by) values($1,$2,$3,$4)',[old.id,old.name,old.phone,admin])
+ const identitiesBefore=await q('select id,name,phone from public.win_customers order by id')
  // Private, local-only dry run of the actual payload; never committed as fixtures.
  await importRows([...actual.clients,...actual.abonos,...actual.waitlist])
  console.log('ACTUAL_PREVIEW',JSON.stringify(await q('select kind,status,count(*)::int n from public.win_migration_rows where source_file<>\'isolated.xlsx\' group by kind,status order by kind,status')))
  assert.deepEqual(await financial(),before)
  assert.equal((await importRows([...actual.clients,...actual.abonos,...actual.waitlist])).inserted,0)
+ const ids=identitiesBefore.map(x=>x.id)
+ assert.deepEqual(await q('select id,name,phone from public.win_customers where id=any($1::uuid[]) order by id',[ids]),identitiesBefore)
 }
 console.log('OK importación idempotente, origen inmutable, 0 movimientos, recurrencias sin precio/deuda, conflicto, teléfonos compartidos, espera incompleta, permisos y revisión concurrente')
 await db.close()
