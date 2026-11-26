@@ -1,11 +1,12 @@
 const messages: Record<string,string> = {
+ IMPORT_ROW_NOT_FOUND:'La fila ya no está disponible. Actualizá la importación.',IMPORT_EDIT_AT_ORIGIN:'Este registro ya está incorporado. Editalo desde Clientes o desde su próxima fecha en Calendario.',
  MOVE_CLASS_RATE_CHANGE:'La nueva fecha cambia la tarifa o remuneración de la clase. Revisá el acuerdo desde Editar actividad; el movimiento no se guardó.',
  MOVE_NOT_ALLOWED:'Sólo se pueden mover reservas, clases y fechas de abono futuras que todavía no comenzaron.',MOVE_IN_PAST:'El nuevo horario debe ser futuro.',MOVE_UNCHANGED:'Elegí otra cancha u horario.',ABONO_MOVE_SCOPE:'Mové sólo esta fecha del abono dentro de la misma jornada. La recurrencia semanal no se cambia desde el arrastre.',
  SESSION_INVALID:'La sesión venció. Volvé a ingresar.',NOT_AUTHORIZED:'Tu usuario no tiene permiso para esta operación.',
  REQUEST_REQUIRED:'Falta identificar la solicitud. Cerrá y volvé a abrir el formulario.',REQUEST_ID_REUSED:'La solicitud ya se usó con otros datos. Consultá el resultado antes de continuar.',
  BOOKING_INVALID:'Revisá la fecha, cancha, horario y duración.',DURATION_INVALID:'Revisá la duración.',PHONE_INVALID:'Revisá el teléfono: incluí el código de área.',
  CUSTOMER_REQUIRED:'Elegí un cliente existente o completá su nombre y teléfono.',CUSTOMER_OR_REQUEST_CONFLICT:'Ya existe ese teléfono o la solicitud se está procesando. Buscá el cliente y actualizá.',
- CUSTOMER_AMBIGUOUS:'Hay varias personas con ese nombre. Elegí la cuenta existente por su teléfono.',
+ CUSTOMER_AMBIGUOUS:'Hay identificaciones distintas o un teléfono compartido. Seleccioná explícitamente la ficha correcta.',
  COURT_TAKEN:'La cancha está ocupada en ese horario. Actualizá la agenda.',ABONO_CONFLICT:'El horario coincide con otra reserva o abono en alguna fecha.',
  COACH_OVERLAP:'El profesor ya tiene una clase en ese horario.',COACH_INVALID:'Elegí un profesor habilitado y entre 1 y 4 alumnos.',
  PRICE_MISSING:'No hay una tarifa vigente para esa duración. Indicá el precio acordado.',PRICE_REASON_REQUIRED:'Explicá el cambio de precio acordado.',
