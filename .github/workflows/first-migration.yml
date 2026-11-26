@@ -1,7 +1,7 @@
 name: Verificar primera migración
 on:
   push:
-    branches: [feat/first-real-migration]
+    branches: [main, feat/first-real-migration]
   pull_request:
     paths: ['src/**', 'supabase/**', 'scripts/**']
 permissions:
@@ -17,6 +17,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: node scripts/bar-production-smoke.mjs --inspect
       - run: cmp supabase/operations/first-migration.sql supabase/migrations/20261126192140_win_first_real_migration.sql
       - run: npm run test:first-migration
       - run: npm run test:calendar-move
@@ -28,6 +29,8 @@ jobs:
           npm run preview -- --host 127.0.0.1 --port 5182 > /tmp/migration-preview.log 2>&1 &
           node scripts/first-migration-browser.mjs
           WIN_TEST_BROWSER=webkit node scripts/first-migration-browser.mjs
+      - if: github.ref == 'refs/heads/main'
+        run: node scripts/bar-production-smoke.mjs
   postgres:
     runs-on: ubuntu-24.04
     timeout-minutes: 8

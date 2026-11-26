@@ -18,6 +18,10 @@ create index if not exists win_migration_kind_status_idx on public.win_migration
 create or replace function public.win_person_key(n text) returns text language sql immutable set search_path='' as $$
  select btrim(regexp_replace(lower(translate(coalesce(n,''),'ÁÉÍÓÚÜÑáéíóúüñ','AEIOUUNaeiouun')),'[^a-z]+',' ','g'))
 $$;
+create or replace function public.win_migration_near_phone(a text,b text) returns boolean language sql immutable set search_path='' as $$
+ select a is not null and b is not null and length(a)=length(b) and length(a) between 10 and 15
+  and (select count(*) from generate_series(1,length(a)) i where substr(a,i,1)<>substr(b,i,1))=1
+$$;
 -- A household can share a telephone. A phone match alone never selects a person.
 drop index if exists public.win_customers_phone_uq;
 create index if not exists win_customers_phone_search on public.win_customers(public.win_calendar_phone(phone));
@@ -66,7 +70,8 @@ declare r public.win_migration_rows;d jsonb;cid uuid;aid uuid;wid uuid;dt date;s
  if r.kind='CLIENT' and r.status='CONFIRMED' and r.customer_id is null then
   if length(public.win_person_key(d->>'name'))<3 or d->>'phone' !~ '^[0-9]{10,15}$' or d->>'phone' is null then raise exception 'CUSTOMER_REQUIRED';end if;
   select count(*),(array_agg(id))[1] into cnt,cid from public.win_customers where public.win_person_key(name)=public.win_person_key(d->>'name') and public.win_calendar_phone(phone)=d->>'phone';
-  if cnt>1 or (cid is null and exists(select 1 from public.win_customers where public.win_person_key(name)=public.win_person_key(d->>'name') or public.win_calendar_phone(phone)=d->>'phone')) then
+  if cnt>1 or (cid is null and exists(select 1 from public.win_customers where public.win_person_key(name)=public.win_person_key(d->>'name') or public.win_calendar_phone(phone)=d->>'phone'
+   or (regexp_replace(public.win_person_key(name),'^.* ','')=regexp_replace(public.win_person_key(d->>'name'),'^.* ','') and public.win_migration_near_phone(public.win_calendar_phone(phone),d->>'phone')))) then
    update public.win_migration_rows set status='REVIEW',reasons='["Coincidencia con cliente existente que requiere selección explícita"]' where id=r.id;return;
   end if;
   if cid is null then insert into public.win_customers(name,phone,note,created_by) values(d->>'name',d->>'phone','Origen: Playmix · ficha sin pagos históricos',actor) returning id into cid;end if;
@@ -136,6 +141,7 @@ declare actor uuid;role_ text;r public.win_migration_rows;prior public.win_calen
  if not found then raise exception 'IMPORT_ROW_NOT_FOUND';end if;
  if r.revision<>coalesce((p->>'revision')::int,-1) then raise exception 'STALE_REVISION';end if;
  if length(btrim(coalesce(p->>'reason','')))<5 then raise exception 'REASON_REQUIRED';end if;
+ if r.kind<>'ABONO' and coalesce(p->>'status',r.status) not in('CONFIRMED','REVIEW','DUPLICATE') then raise exception 'IMPORT_STATUS_INVALID';end if;
  if r.abono_id is not null or r.customer_id is not null and r.kind='CLIENT' then raise exception 'IMPORT_EDIT_AT_ORIGIN';end if;
  d=r.data||jsonb_strip_nulls(jsonb_build_object('name',p->>'name','phone',p->>'phone','note',p->>'note','customerId',nullif(p->>'customerId',''),'court',p->>'court','weekday',p->'weekday','start',p->>'start','duration',p->'duration','days',p->>'days','times',p->'times'));
  update public.win_migration_rows set data=d,status=coalesce(p->>'status',r.status),reasons='[]',revision=revision+1,updated_at=now() where id=r.id;
@@ -153,6 +159,7 @@ do $$declare definition text;begin
  if position('public.win_migration_api' in definition)=0 then
   definition=replace(definition,E'begin\n a=public.win_calendar_actor',E'begin\n if p_action like ''registry.%'' then return public.win_migration_api(p_token,p_action,p);end if;\n a=public.win_calendar_actor');
   if position('public.win_migration_api' in definition)=0 then raise exception 'CALENDAR_DISPATCH_NOT_FOUND';end if;
+  definition=replace(definition,'do update set weekdays=excluded.weekdays','do update set customer_id=excluded.customer_id,weekdays=excluded.weekdays');
   execute definition;
  end if;
 end $$;

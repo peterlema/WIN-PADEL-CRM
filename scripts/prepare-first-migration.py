@@ -64,6 +64,19 @@ def prepare(workbooks, existing):
         if len({key(x['name']) for x in byphone[c['phone']]}) > 1:
             c['reasons'].append('Teléfono compartido por identificaciones diferentes: no fusionar')
         if c['reasons']: c['status'] = 'REVIEW'
+    # Compare with current WIN identities before producing the write preview.
+    # Missing telephone, aliases and probable typos require explicit linkage.
+    for c in clients:
+        if c['status'] != 'CONFIRMED': continue
+        for old in existing.get('customers') or []:
+            oldph = phone(old.get('phone')); same_name = key(old['name']) == key(c['name'])
+            if same_name and oldph == c['phone']:
+                c['existingCustomerId'] = old['id']; continue
+            same_last = key(old['name']).split()[-1:] == key(c['name']).split()[-1:]
+            near_phone = oldph and len(oldph)==len(c['phone']) and sum(a!=b for a,b in zip(oldph,c['phone']))==1
+            if same_name or oldph == c['phone'] or same_last and near_phone:
+                c['status']='REVIEW'
+                c['reasons'].append('Posible ficha existente en WIN: comparar identidad y teléfono antes de vincular')
     seen = {}
     for c in clients:
         if c['status'] != 'CONFIRMED': continue

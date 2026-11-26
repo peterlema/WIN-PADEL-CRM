@@ -35,5 +35,9 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(len(result['waitlist']),2)
         self.assertEqual(result['waitlist'][1]['name'],'')
         self.assertEqual(result['waitlist'][1]['times'],['19:00'])
+        prior={'customers':[dict(id='prior',name='Persona Trápaga',phone=None)]}
+        self.assertEqual(m.prepare(w,prior)['clients'][0]['status'],'REVIEW')
+        prior={'customers':[dict(id='prior',name='Otro Trápaga',phone='5491155551235')]}
+        self.assertEqual(m.prepare(w,prior)['clients'][0]['status'],'REVIEW')
 
 if __name__=='__main__':unittest.main()

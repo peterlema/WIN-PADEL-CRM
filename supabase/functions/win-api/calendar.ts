@@ -1,5 +1,5 @@
 const messages: Record<string,string> = {
- IMPORT_ROW_NOT_FOUND:'La fila ya no está disponible. Actualizá la importación.',IMPORT_EDIT_AT_ORIGIN:'Este registro ya está incorporado. Editalo desde Clientes o desde su próxima fecha en Calendario.',
+ IMPORT_STATUS_INVALID:'Revisá el estado permitido para esta fila.',IMPORT_ROW_NOT_FOUND:'La fila ya no está disponible. Actualizá la importación.',IMPORT_EDIT_AT_ORIGIN:'Este registro ya está incorporado. Editalo desde Clientes o desde su próxima fecha en Calendario.',
  MOVE_CLASS_RATE_CHANGE:'La nueva fecha cambia la tarifa o remuneración de la clase. Revisá el acuerdo desde Editar actividad; el movimiento no se guardó.',
  MOVE_NOT_ALLOWED:'Sólo se pueden mover reservas, clases y fechas de abono futuras que todavía no comenzaron.',MOVE_IN_PAST:'El nuevo horario debe ser futuro.',MOVE_UNCHANGED:'Elegí otra cancha u horario.',ABONO_MOVE_SCOPE:'Mové sólo esta fecha del abono dentro de la misma jornada. La recurrencia semanal no se cambia desde el arrastre.',
  SESSION_INVALID:'La sesión venció. Volvé a ingresar.',NOT_AUTHORIZED:'Tu usuario no tiene permiso para esta operación.',

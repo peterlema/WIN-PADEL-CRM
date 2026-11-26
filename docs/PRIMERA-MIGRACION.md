@@ -9,17 +9,17 @@ clasificación, vínculos, revisiones, responsable y auditoría.
 
 | Fuente | Clasificación |
 |---|---|
-| Clientes, 670 filas | 515 claros, 18 duplicados exactos, 137 para revisión |
-| Abonos, 78 candidatos | 44 claros, 21 para revisión, 6 regresos pendientes, 3 bajas, 2 posibles, 2 actividades internas |
+| Clientes, 670 filas | 513 claros, 18 duplicados exactos, 139 para revisión |
+| Abonos, 78 candidatos | 43 claros, 22 para revisión, 6 regresos pendientes, 3 bajas, 2 posibles, 2 actividades internas |
 | Espera, 44 filas con contenido | 43 con nombre, 1 sin nombre; 11 necesitan completar o revisar contacto/disponibilidad |
 
 La fila sin nombre de espera conserva sus días y horario; no se supone que
-pertenezca al contacto de la fila anterior. Los horarios especiales sin duración
+pertenezca al contacto de la fila anterior. Dos fichas potencialmente existentes en WIN se separaron tras comparar con producción, además de los 137 casos observados inicialmente. Los horarios especiales sin duración
 explícita quedan pendientes. Los teléfonos escritos bajo «Precio» se interpretan
 como teléfonos, nunca como importes. La hoja demo y las secciones financieras del
 reporte de clientes quedan fuera de la carga.
 
-Sólo las 44 series claras se activan desde su primera fecha semanal a partir del
+Sólo las 43 series claras se activan desde su primera fecha semanal a partir del
 01/12/2026, sujetas a una segunda comparación transaccional con los datos vigentes.
 No se presupone precio, pago ni asistencia. Las ocurrencias se proyectan al leer,
 sin crear reservas materiales, deudas ni movimientos financieros. El precio debe
