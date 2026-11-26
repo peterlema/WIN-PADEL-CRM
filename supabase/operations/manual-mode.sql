@@ -20,6 +20,29 @@ do $views$ declare v text;definition text;begin
   end if;
  end loop;
 end $views$;
+
+-- Report native Bar cash separately from Recepción; never copy or modify money.
+do $bar_view$declare definition text;begin
+ if to_regclass('public.win_bar_cash_movements') is not null then
+  select pg_get_viewdef('public.win_admin_ledger'::regclass,true) into definition;
+  if position('LIVE_BAR_NATIVE' in definition)=0 then
+   definition=regexp_replace(definition,';[[:space:]]*$','');
+   execute format($ddl$create or replace view public.win_admin_ledger with(security_invoker=true) as
+    select * from (%s) native_existing
+    union all
+    select 'bar-native:'||m.id::text,m.shift_id::text,m.recorded_by,m.occurred_at,m.kind,'CAFE_BAR'::text,
+     m.payment_method,m.amount_signed,m.note,(m.occurred_at at time zone 'America/Argentina/Buenos_Aires')::date,
+     case m.kind when 'SALE' then 'CAFE_BAR' when 'EXPENSE' then 'GASTO' when 'WITHDRAWAL' then 'RETIRO' else m.kind end,
+     a.display_name,'LIVE_BAR_NATIVE'::text,null::text,null::text,(o.created_at at time zone 'America/Argentina/Buenos_Aires')::date
+    from public.win_bar_cash_movements m left join win_auth.login_accounts a on a.id=m.recorded_by
+    left join public.win_bar_orders o on o.id=m.order_id
+    where not exists(select 1 from public.win_cash_movements legacy where legacy.request_id=m.request_id)
+    and not exists(select 1 from public.win_bar_order_payments p join public.win_cash_movements legacy on legacy.id=p.cash_movement_id where p.bar_cash_movement_id=m.id)
+   $ddl$,definition);
+  end if;
+ end if;
+end $bar_view$;
+
 create or replace function public.win_ops_admin(p_token text,p jsonb) returns jsonb language plpgsql stable set search_path='' as $$
 declare actor uuid;role_ text;report jsonb;first_date date;last_date date;begin
  actor=public.win_ops_actor(p_token);select role into role_ from public.win_pin_session(p_token);
