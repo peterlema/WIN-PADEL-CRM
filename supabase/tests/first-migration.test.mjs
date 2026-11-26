@@ -33,6 +33,7 @@ const ops=async(token,action,data={})=>(await one('select public.win_ops_api($1,
 
 await db.exec(readFileSync(new URL("../operations/first-migration.sql",import.meta.url),"utf8"));
 await db.exec(readFileSync(new URL("../operations/first-migration.sql",import.meta.url),"utf8"));
+for(let i=0;i<2;i++)await db.exec(readFileSync(new URL("../migrations/20261126194407_win_migration_review_phone.sql",import.meta.url),"utf8"))
 const admin=(await one("select id from win_auth.login_accounts where username='test-admin'")).id
 const row=(kind,cell,extra={})=>({sourceKey:'fixture:'+cell,sha256:'fixture',file:'isolated.xlsx',sheet:'sheet',cell,kind,status:'CONFIRMED',name:'Persona Completa',phone:'5491155550901',reasons:[],...extra})
 const client=row('CLIENT','A1')
@@ -85,6 +86,12 @@ await fail(()=>api('admin','registry.save',{...payload,requestId:uuid()}),'STALE
 assert.deepEqual((await one('select original from public.win_migration_rows where id=$1',[wr.id])).original,waiting)
 assert.deepEqual(await financial(),before)
 assert.equal((await api('admin','request',{requestId:payload.requestId})).found,true)
+const cr=await one('select * from public.win_migration_rows where source_key=$1',[ambiguous.sourceKey])
+for(const name of ['Nombre','Clase Leo'])await fail(()=>api('admin','registry.save',{requestId:uuid(),id:cr.id,revision:cr.revision,name,phone:'11 6666 0123',status:'CONFIRMED',reason:'Comprobar identificación incompleta'}),'CUSTOMER_REQUIRED')
+const approved=await api('admin','registry.save',{requestId:uuid(),id:cr.id,revision:cr.revision,name:'Identidad Verificada',phone:'11 6666 0123',status:'CONFIRMED',reason:'Nombre completo y teléfono confirmados'})
+assert.ok(approved.customer_id)
+assert.equal((await one('select phone from public.win_customers where id=$1',[approved.customer_id])).phone,'5491166660123')
+assert.deepEqual(await financial(),before)
 await db.exec("delete from public.win_calendar_requests;delete from public.win_cash_audit;delete from public.win_migration_rows;delete from public.win_calendar_waitlist;delete from public.win_court_abonos;delete from public.win_customers")
 if(process.argv[2]){
  const actual=JSON.parse(readFileSync(process.argv[2],'utf8'))
